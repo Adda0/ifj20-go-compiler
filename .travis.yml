@@ -1,0 +1,12 @@
+# .travis.yml
+# IFJ20 compiler
+# Author: František Nečas (xnecas27), FIT BUT
+
+language: c
+os: linux
+dist: xenial
+compiler: gcc
+
+script:
+  - cd src && CTESTFLAGS="-V" make test
+

@@ -7,12 +7,14 @@
 CC = gcc
 CFLAGS = -std=c11 -pedantic -Wall -Wextra
 
+CTESTFLAGS ?= ""
+
 mutable_string.o: mutable_string.c mutable_string.h
 
 test:
 	mkdir -p ../cmake-build
 	cd ../cmake-build && cmake ../
-	cd ../cmake-build && make all && ctest
+	cd ../cmake-build && make all && ctest $(CTESTFLAGS)
 
 clean:
 	rm -f *.o
