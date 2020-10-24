@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 project(ifj20_go_compiler CXX C)
+enable_testing()
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 14)
@@ -37,3 +38,5 @@ include_directories(src)
 # ------- Tests -------
 add_executable(Test_mutable_string src/mutable_string.h src/mutable_string.c src/tests/mutable_string.cpp)
 target_link_libraries(Test_mutable_string gtest gtest_main)
+
+add_test(mutable_string Test_mutable_string)

@@ -9,5 +9,10 @@ CFLAGS = -std=c11 -pedantic -Wall -Wextra
 
 mutable_string.o: mutable_string.c mutable_string.h
 
+test:
+	mkdir -p ../cmake-build
+	cd ../cmake-build && cmake ../
+	cd ../cmake-build && make all && ctest
+
 clean:
 	rm -f *.o
