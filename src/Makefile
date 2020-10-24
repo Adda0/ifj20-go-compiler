@@ -2,7 +2,7 @@
 # IFJ20 compiler
 # Author: František Nečas (xnecas27), FIT BUT
 
-.PHONY: clean
+.PHONY: clean test
 
 CC = gcc
 CFLAGS = -std=c11 -pedantic -Wall -Wextra
@@ -16,3 +16,4 @@ test:
 
 clean:
 	rm -f *.o
+	rm -rf cmake-build/

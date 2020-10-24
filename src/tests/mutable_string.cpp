@@ -36,6 +36,8 @@ TEST(MutableString, InitializedIsEmpty) {
     mstr_init(&str, 1);
     ASSERT_STREQ(mstr_content(&str), "");
     ASSERT_EQ(mstr_length(&str), 0);
+
+    mstr_free(&str);
 }
 
 TEST(MutableString, LongInitializedIsEmpty) {
@@ -43,6 +45,8 @@ TEST(MutableString, LongInitializedIsEmpty) {
     mstr_init(&str, 512);
     ASSERT_STREQ(mstr_content(&str), "");
     ASSERT_EQ(mstr_length(&str), 0);
+
+    mstr_free(&str);
 }
 
 TEST(MutableString, AppendOne) {
@@ -51,6 +55,8 @@ TEST(MutableString, AppendOne) {
     ASSERT_TRUE(mstr_append(&str, 'X'));
     ASSERT_STREQ(mstr_content(&str), "X");
     ASSERT_EQ(mstr_length(&str), 1);
+
+    mstr_free(&str);
 }
 
 TEST(MutableString, AppendMany) {
@@ -63,6 +69,8 @@ TEST(MutableString, AppendMany) {
         cmpStr += 'X';
         ASSERT_STREQ(mstr_content(&str), cmpStr.c_str());
     }
+
+    mstr_free(&str);
 }
 
 TEST(MutableString, AppendHasNullCharNoExtension) {
@@ -70,6 +78,8 @@ TEST(MutableString, AppendHasNullCharNoExtension) {
     mstr_init(&str, 2);
     ASSERT_TRUE(mstr_append(&str, 'X'));
     ASSERT_EQ(mstr_content(&str)[1], '\0');
+
+    mstr_free(&str);
 }
 
 TEST(MutableString, AppendHasNullCharExtension) {
@@ -79,4 +89,6 @@ TEST(MutableString, AppendHasNullCharExtension) {
     ASSERT_TRUE(mstr_append(&str, 'Y'));
     ASSERT_EQ(mstr_content(&str)[1], 'Y');
     ASSERT_EQ(mstr_content(&str)[2], '\0');
+
+    mstr_free(&str);
 }
