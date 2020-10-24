@@ -13,6 +13,9 @@
 
 
 bool mstr_init(MutableString *string, size_t initial_size) {
+    string->array = NULL;
+    string->used = 0;
+    string->size = initial_size;
     if (initial_size == 0) {
         return false;
     }
@@ -21,8 +24,6 @@ bool mstr_init(MutableString *string, size_t initial_size) {
         return false;
     }
     string->array[0] = '\0';
-    string->used = 0;
-    string->size = initial_size;
     return true;
 }
 
