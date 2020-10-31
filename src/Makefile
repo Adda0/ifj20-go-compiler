@@ -9,6 +9,7 @@ CFLAGS = -std=c11 -pedantic -Wall -Wextra
 
 mutable_string.o: mutable_string.c mutable_string.h
 stderr_message.o: stderr_message.c stderr_message.h
+compiler.o: compiler.c compiler.h
 
 test:
 	mkdir -p ../cmake-build
