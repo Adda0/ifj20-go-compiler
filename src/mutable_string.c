@@ -16,7 +16,7 @@ bool mstr_init(MutableString *string, size_t initial_size) {
     if (initial_size == 0) {
         return false;
     }
-    string->array = (char *) malloc(initial_size * sizeof(char));
+    string->array = (char *) malloc(sizeof(char) * initial_size);
     if (string->array == NULL) {
         return false;
     }
@@ -37,9 +37,9 @@ size_t mstr_length(MutableString *string) {
 bool mstr_append(MutableString *string, char new_element) {
     if (string->used + 1 == string->size) {
         // The array is currently full, increase its size.
-        char *new_arr = realloc(string->array, 2 * string->size);
+        char *new_arr = (char *) realloc(string->array, 2 * string->size);
         if (new_arr == NULL) {
-            new_arr = realloc(string->array, string->size + 1);
+            new_arr = (char *) realloc(string->array, string->size + 1);
             if (new_arr == NULL) {
                 return false;
             } else {
