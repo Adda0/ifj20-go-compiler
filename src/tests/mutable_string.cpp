@@ -49,6 +49,32 @@ TEST(MutableString, LongInitializedIsEmpty) {
     mstr_free(&str);
 }
 
+TEST(MutableString, Concatenate) {
+    MutableString str1, str2, res;
+    ASSERT_TRUE(mstr_init(&str1, 10));
+    ASSERT_TRUE(mstr_init(&str2, 10));
+
+    ASSERT_TRUE(mstr_append(&str1, 'a'));
+    ASSERT_TRUE(mstr_append(&str1, 'b'));
+    ASSERT_TRUE(mstr_append(&str2, 'c'));
+    ASSERT_TRUE(mstr_append(&str2, 'd'));
+
+    ASSERT_TRUE(mstr_concat(&res, &str1, &str2));
+    EXPECT_STREQ(mstr_content(&res), "abcd");
+}
+
+TEST(MutableString, ConcatenateEmpty) {
+    MutableString str1, str2, res;
+    ASSERT_TRUE(mstr_init(&str1, 10));
+    ASSERT_TRUE(mstr_init(&str2, 10));
+
+    ASSERT_TRUE(mstr_append(&str1, 'a'));
+    ASSERT_TRUE(mstr_append(&str1, 'b'));
+
+    ASSERT_TRUE(mstr_concat(&res, &str1, &str2));
+    EXPECT_STREQ(mstr_content(&res), "ab");
+}
+
 TEST(MutableString, AppendOne) {
     MutableString str;
     mstr_init(&str, 1);
