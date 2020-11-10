@@ -27,11 +27,11 @@ bool mstr_init(MutableString *string, size_t initial_size) {
     return true;
 }
 
-char *mstr_content(MutableString *string) {
+char *mstr_content(const MutableString *string) {
     return string->array;
 }
 
-size_t mstr_length(MutableString *string) {
+size_t mstr_length(const MutableString *string) {
     return string->used;
 }
 
