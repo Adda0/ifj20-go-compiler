@@ -57,5 +57,8 @@ bool mstr_append(MutableString *string, char new_element) {
 }
 
 void mstr_free(MutableString *string) {
-    free(string->array);
+    if (string->array != NULL) {
+        free(string->array);
+        string->array = NULL;
+    }
 }
