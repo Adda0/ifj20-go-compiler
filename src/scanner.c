@@ -47,7 +47,128 @@ ScannerResult scanner_get_token(Token *token, EolRule eol_rule) {
                 scanner_result = SCANNER_RESULT_EOF;
             }
         }
+        read_char = resolve_read_char(read_char, line_num, char_num, &automaton_state, &scanner_result, &mutable_string, token, &token_done);
     return scanner_result;
+}
+
+static char resolve_read_char(char read_char, size_t line_num, size_t char_num, AutomatonState *automaton_state, ScannerResult *scanner_result, MutableString *mutable_string, Token *token, bool *token_done) {
+    // every automaton_state in the following switch represents one state in the FA of scanner
+    switch (*automaton_state) {
+        case STATE_EOL_RESOLVED:
+        case STATE_DEFAULT: // getting first char of a new token
+            break;
+        case STATE_ID:
+            break;
+        case STATE_KEYWORD:
+            break;
+        case STATE_ZERO:
+            break;
+        case STATE_BINARY:
+            break;
+        case STATE_BINARY_NUMBER:
+            break;
+        case STATE_BINARY_UNDERSCORE:
+            break;
+        case STATE_OCTAL:
+            break;
+        case STATE_OCTAL_NUMBER:
+            break;
+        case STATE_OCTAL_UNDERSCORE:
+            break;
+        case STATE_HEXADECIMAL:
+            break;
+        case STATE_HEXADECIMAL_NUMBER:
+            break;
+        case STATE_HEXADECIMAL_UNDERSCORE:
+            break;
+        case STATE_INT:
+            break;
+        case STATE_FLOAT:
+            break;
+        case STATE_FLOAT_DOT:
+            break;
+        case STATE_FLOAT_EXP_CHAR:
+            break;
+        case STATE_FLOAT_EXP_SIGN_CHAR:
+            break;
+        case STATE_FLOAT_EXPONENT:
+            break;
+        case STATE_PLUS:
+            break;
+        case STATE_MINUS:
+            break;
+        case STATE_MULTIPLY:
+            break;
+        case STATE_DIVIDE:
+            break;
+        case STATE_PLUS_ASSIGN:
+            break;
+        case STATE_MINUS_ASSIGN:
+            break;
+        case STATE_MULTIPLY_ASSIGN:
+            break;
+        case STATE_DIVIDE_ASSIGN:
+            break;
+        case STATE_DEFINE:
+            break;
+        case STATE_ASSIGN:
+            break;
+        case STATE_EQUAL_TO:
+            break;
+        case STATE_TRUE:
+            break;
+        case STATE_FALSE:
+            break;
+        case STATE_NOT:
+            break;
+        case STATE_NOT_EQUAL_TO:
+            break;
+        case STATE_AMPERSAND:
+            break;
+        case STATE_AND:
+            break;
+        case STATE_VERTICAL_BAR:
+            break;
+        case STATE_OR:
+            break;
+        case STATE_LEFT_BRACKET:
+            break;
+        case STATE_RIGHT_BRACKET:
+            break;
+        case STATE_CURLY_LEFT_BRACKET:
+            break;
+        case STATE_CURLY_RIGHT_BRACKT:
+            break;
+        case STATE_LESS_THAN:
+            break;
+        case STATE_GREATER_THAN:
+            break;
+        case STATE_LESS_OR_EQUAL:
+            break;
+        case STATE_GREATER_OR_EQUAL:
+            break;
+        case STATE_MULTILINE_COMMENT:
+            break;
+        case STATE_ASTERISK_IN_MULTILINE_COMMENT:
+            break;
+        case STATE_ONELINE_COMMENT:
+            break;
+        case STATE_STRING:
+            break;
+        case STATE_ESCAPE_CHARACTER_IN_STRING:
+            break;
+        case STATE_ESCAPE_HEXA_IN_STRING:
+            break;
+        case STATE_ESCAPE_HEXA_ONE_IN_STRING:
+            break;
+        case STATE_COMMA:
+            break;
+        case STATE_COLON:
+            break;
+        case STATE_SEMICOLON:
+            break;
+    }
+    return read_char;
 }
 
 static NextCharResult get_next_char(char *read_char) {
