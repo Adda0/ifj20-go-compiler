@@ -114,6 +114,14 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
 
         // already have read at least one char of a new token
         case STATE_ID:
+            if (isalpha(read_char) || read_char == '_' || isdigit(read_char)) {
+                // new token should be identifier
+                mstr_append(mutable_string, read_char);
+                read_char = EMPTY_CHAR;
+            } else {
+                token->type = TOKEN_ID;
+                *token_done = true;
+            }
             break;
         case STATE_KEYWORD:
             break;
@@ -173,8 +181,11 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
             break;
         case STATE_TRUE:
             break;
+
         case STATE_FALSE:
+            *token_done = true;
             break;
+
         case STATE_NOT:
             break;
         case STATE_NOT_EQUAL_TO:
