@@ -56,7 +56,63 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
     switch (*automaton_state) {
         case STATE_EOL_RESOLVED:
         case STATE_DEFAULT: // getting first char of a new token
+            // get next character in case of whitespace characters
+            if (read_char == '\n' || read_char == '\t' || read_char == ' ') {
+                // skip for the next char
+            } else if (isalpha(read_char) || read_char == '_') {
+                // new token should be an identifier
+                mstr_append(mutable_string, read_char);
+                *automaton_state = STATE_ID;
+            } else if (isdigit(read_char)) {
+                // new token should be a number
+                if (read_char == '0') {
+                    *automaton_state = STATE_ZERO;
+                } else {
+                    *automaton_state = STATE_INT;
+                }
+                mstr_append(mutable_string, read_char);
+            } else if (read_char == '+') {
+                *automaton_state = STATE_PLUS;
+            } else if (read_char == '-') {
+                *automaton_state = STATE_MINUS;
+            } else if (read_char == '*') {
+                *automaton_state = STATE_MULTIPLY;
+            } else if (read_char == '/') {
+                *automaton_state = STATE_DIVIDE;
+            } else if (read_char == ':') {
+                *automaton_state = STATE_COLON;
+            } else if (read_char == '=') {
+                *automaton_state = STATE_ASSIGN;
+            } else if (read_char == '!') {
+                *automaton_state = STATE_NOT;
+            } else if (read_char == '&') {
+                *automaton_state = STATE_AMPERSAND;
+            } else if (read_char == '|') {
+                *automaton_state = STATE_VERTICAL_BAR;
+            } else if (read_char == '(') {
+                *automaton_state = STATE_LEFT_BRACKET;
+            } else if (read_char == ')') {
+                *automaton_state = STATE_RIGHT_BRACKET;
+            } else if (read_char == '{') {
+                *automaton_state = STATE_CURLY_LEFT_BRACKET;
+            } else if (read_char == '}') {
+                *automaton_state = STATE_CURLY_RIGHT_BRACKT;
+            } else if (read_char == '<') {
+                *automaton_state = STATE_LESS_THAN;
+            } else if (read_char == '>')  {
+                *automaton_state = STATE_GREATER_THAN;
+            } else if (read_char == '\"') {
+                *automaton_state = STATE_STRING;
+            } else if (read_char == ',') {
+                *automaton_state = STATE_COMMA;
+            } else if (read_char == ';') {
+                *automaton_state = STATE_SEMICOLON;
+            }
+
+            read_char = EMPTY_CHAR;
             break;
+
+        // already have read at least one char of a new token
         case STATE_ID:
             break;
         case STATE_KEYWORD:
