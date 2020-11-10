@@ -83,6 +83,14 @@ ScannerResult scanner_get_token(Token *token, EolRule eol_rule) {
                 automaton_state = STATE_EOL_RESOLVED;
             }
         }
+
+        if (read_char == '\n') {
+            line_num++;
+            char_num = 0;
+        } else {
+            char_num++;
+        }
+
         read_char = resolve_read_char(read_char, line_num, char_num, &automaton_state, &scanner_result, &mutable_string, token, &token_done);
 
         if (scanner_result != SCANNER_RESULT_SUCCESS) {
