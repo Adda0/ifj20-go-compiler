@@ -120,12 +120,17 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 read_char = EMPTY_CHAR;
             } else {
                 token->type = TOKEN_ID;
+                check_for_keyword(token, mutable_string);
                 check_for_bool_values(token, mutable_string);
                 *token_done = true;
             }
             break;
+
         case STATE_KEYWORD:
+            token->type = TOKEN_KEYWORD;
+            *token_done = true;
             break;
+
         case STATE_ZERO:
             break;
         case STATE_BINARY:
@@ -285,6 +290,40 @@ static NextCharResult get_next_char(char *read_char) {
     return NEXT_CHAR_RESULT_SUCCESS;
 }
 
+
+static void check_for_keyword(Token *token, MutableString *mutable_string) {
+    if (strcmp(mstr_content(mutable_string), "bool") == 0) {
+        token->type = TOKEN_KEYWORD;
+        token->data.keyword_type = KEYWORD_BOOL;
+    } else if (strcmp(mstr_content(mutable_string), "else") == 0) {
+        token->type = TOKEN_KEYWORD;
+        token->data.keyword_type = KEYWORD_ELSE;
+    } else if (strcmp(mstr_content(mutable_string), "float64") == 0) {
+        token->type = TOKEN_KEYWORD;
+        token->data.keyword_type = KEYWORD_FLOAT64;
+    } else if (strcmp(mstr_content(mutable_string), "for") == 0) {
+        token->type = TOKEN_KEYWORD;
+        token->data.keyword_type = KEYWORD_FOR;
+    } else if (strcmp(mstr_content(mutable_string), "func") == 0) {
+        token->type = TOKEN_KEYWORD;
+        token->data.keyword_type = KEYWORD_FUNC;
+    } else if (strcmp(mstr_content(mutable_string), "if") == 0) {
+        token->type = TOKEN_KEYWORD;
+        token->data.keyword_type = KEYWORD_IF;
+    } else if (strcmp(mstr_content(mutable_string), "int") == 0) {
+        token->type = TOKEN_KEYWORD;
+        token->data.keyword_type = KEYWORD_INT;
+    } else if (strcmp(mstr_content(mutable_string), "package") == 0) {
+        token->type = TOKEN_KEYWORD;
+        token->data.keyword_type = KEYWORD_PACKAGE;
+    } else if (strcmp(mstr_content(mutable_string), "return") == 0) {
+        token->type = TOKEN_KEYWORD;
+        token->data.keyword_type = KEYWORD_RETURN;
+    } else if (strcmp(mstr_content(mutable_string), "string") == 0) {
+        token->type = TOKEN_KEYWORD;
+        token->data.keyword_type = KEYWORD_STRING;
+    }
+}
 
 static void check_for_bool_values(Token *token, MutableString *mutable_string) {
     if (strcmp(mstr_content(mutable_string), "false") == 0) {
