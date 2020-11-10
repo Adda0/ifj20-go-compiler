@@ -84,6 +84,16 @@ ScannerResult scanner_get_token(Token *token, EolRule eol_rule) {
             }
         }
         read_char = resolve_read_char(read_char, line_num, char_num, &automaton_state, &scanner_result, &mutable_string, token, &token_done);
+
+        if (scanner_result != SCANNER_RESULT_SUCCESS) {
+            if (scanner_result != SCANNER_RESULT_EXCESS_EOL && scanner_result != SCANNER_RESULT_MISSING_EOL && scanner_result != SCANNER_RESULT_EOF) {
+                mstr_free(&mutable_string);
+                return scanner_result;
+            }
+        } else if (token_done) {
+            // token has been initialized and the following char belongs to another token ('id=' etc.) / ends this token (whitespace etc.)
+            break;
+        }
     }
 
     if (token->type != TOKEN_ID && token->type != TOKEN_STRING) {
