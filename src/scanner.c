@@ -355,16 +355,94 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 *token_done = true;
             }
             break;
+
         case STATE_FLOAT:
+            if (isdigit(read_char)) {
+                mstr_append(mutable_string, read_char);
+                read_char = EMPTY_CHAR;
+            } else if (read_char == 'e' || read_char == 'E') {
+                mstr_append(mutable_string, read_char);
+                *automaton_state = STATE_FLOAT_EXP_CHAR;
+                read_char = EMPTY_CHAR;
+            } else {
+                // get the float number from string and set the token float value
+                char *end_ptr = NULL;
+                double num = strtod(mstr_content(mutable_string), &end_ptr);
+                if (*end_ptr != '\0') {
+                    stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: Lexeme consists of more than just an float number: %s. Did you mean to write a float number? It must consists only of digits and decimal point dividing the whole number part from the fractional.", line_num, char_num, mstr_content(mutable_string));
+                    *scanner_result = SCANNER_RESULT_INVALID_STATE;
+                }
+                if (errno == ERANGE || num > DBL_MAX) { // if given number is bigger that possible
+                    errno = 0;
+                    stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: Float number %s overflows float maximal value. Float cannot hold this value.", line_num, char_num, mstr_content(mutable_string));
+                    *scanner_result = SCANNER_RESULT_NUMBER_OVERFLOW;
+                }
+                token->data.num_float_val = (double) num;
+                mstr_free(mutable_string);
+                token->type = TOKEN_FLOAT;
+                *token_done = true;
+            }
             break;
+
         case STATE_FLOAT_DOT:
+            if (isdigit(read_char)) {
+                mstr_append(mutable_string, read_char);
+                *automaton_state = STATE_FLOAT;
+                read_char = EMPTY_CHAR;
+            } else {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: Float number with no digit after the decimal point: '%s'. There should have been at least one digit after decimal dot. E.g., %s0.", line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
+            }
             break;
+
         case STATE_FLOAT_EXP_CHAR:
+            if (isdigit(read_char)) {
+                mstr_append(mutable_string, read_char);
+                *automaton_state = STATE_FLOAT_EXPONENT;
+                read_char = EMPTY_CHAR;
+            } else if (read_char == '+' || read_char == '-') {
+                mstr_append(mutable_string, read_char);
+                *automaton_state = STATE_FLOAT_EXP_SIGN_CHAR;
+                read_char = EMPTY_CHAR;
+            } else {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: Float number with no digit after the exponent character: '%s'. There should have been at least one digit after the exponent character. E.g., %s0.", line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
+            }
             break;
+
         case STATE_FLOAT_EXP_SIGN_CHAR:
+            if (isdigit(read_char)) {
+                mstr_append(mutable_string, read_char);
+                *automaton_state = STATE_FLOAT_EXPONENT;
+                read_char = EMPTY_CHAR;
+            } else {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: Float number with no digit after an exponent character with a sign: '%s'. There should have been at least one digit after the exponent character with the sign. E.g., %s0.", line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
+            }
             break;
+
         case STATE_FLOAT_EXPONENT:
+            if  (isdigit(read_char)) {
+                mstr_append(mutable_string, read_char);
+                read_char = EMPTY_CHAR;
+            } else { // token is done and is some decimal number with exponent
+                // get the float number from string and set the token float value
+                char *end_ptr = NULL;
+                double num = strtod(mstr_content(mutable_string), &end_ptr);
+                if (*end_ptr != '\0') {
+                     stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: Lexeme consists of more than just an float number with exponent: %s. Did you mean to write a float number with exponent? It must consists only of digits, decimal point dividing the whole number part from the fractional, exponent character and optional sign of the exponent.", line_num, char_num, mstr_content(mutable_string));
+                    *scanner_result = SCANNER_RESULT_INVALID_STATE;
+                }
+                if (errno == ERANGE || num > DBL_MAX) { // if given number is bigger that possible
+                    errno = 0;
+                    stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: Float number %s overflows float maximal value. Float cannot hold this value.", line_num, char_num, mstr_content(mutable_string));
+                    *scanner_result = SCANNER_RESULT_NUMBER_OVERFLOW;
+                }
+                token->data.num_float_val = (double) num;
+                mstr_free(mutable_string);
+                *automaton_state = STATE_FLOAT;
+                token->type = TOKEN_FLOAT;
+                *token_done = true;
+            }
             break;
+
         case STATE_PLUS:
             break;
         case STATE_MINUS:
