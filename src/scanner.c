@@ -132,7 +132,31 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
             break;
 
         case STATE_ZERO:
+            if (read_char == 'b' || read_char == 'B') {
+                mstr_append(mutable_string, read_char);
+                *automaton_state = STATE_BINARY;
+                read_char = EMPTY_CHAR;
+            } else if (read_char == 'o' || read_char == 'O') {
+                mstr_append(mutable_string, read_char);
+                *automaton_state = STATE_OCTAL;
+                read_char = EMPTY_CHAR;
+            } else if (read_char == 'x' || read_char == 'X') {
+                mstr_append(mutable_string, read_char);
+                *automaton_state = STATE_HEXADECIMAL;
+                read_char = EMPTY_CHAR;
+            } else if (read_char == '.') {
+                mstr_append(mutable_string, read_char);
+                *automaton_state = STATE_FLOAT_DOT;
+                read_char = EMPTY_CHAR;
+            } else { // token is only '0'
+                *automaton_state = STATE_INT;
+                token->data.num_int_val = 0;
+                mstr_free(mutable_string);
+                token->type = TOKEN_INT;
+                *token_done = true;
+            }
             break;
+
         case STATE_BINARY:
             break;
         case STATE_BINARY_NUMBER:
