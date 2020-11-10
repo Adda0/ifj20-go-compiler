@@ -34,6 +34,14 @@ ScannerResult scanner_get_token(Token *token, EolRule eol_rule) {
 
     AutomatonState automaton_state = STATE_DEFAULT;
     ScannerResult scanner_result = SCANNER_RESULT_SUCCESS;
+
+    //initialize token mutable string
+    MutableString mutable_string;
+    if (!mstr_init(&mutable_string, DEFAULT_TOKEN_LENGTH)) {
+        stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_INTERNAL, "Initialization of mutable string failed.");
+        return SCANNER_RESULT_INTERNAL_ERROR;
+    }
+
         if (read_char == EMPTY_CHAR) { // get new character from source code
             next_char_result = get_next_char(&read_char);
 
@@ -63,6 +71,12 @@ ScannerResult scanner_get_token(Token *token, EolRule eol_rule) {
             }
         }
         read_char = resolve_read_char(read_char, line_num, char_num, &automaton_state, &scanner_result, &mutable_string, token, &token_done);
+    if (token->type != TOKEN_ID && token->type != TOKEN_STRING) {
+        mstr_free(&mutable_string);
+    } else {
+        token->data.str_val = mutable_string;
+    }
+
     return scanner_result;
 }
 
