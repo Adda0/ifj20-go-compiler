@@ -444,28 +444,93 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
             break;
 
         case STATE_PLUS:
+            if (read_char == '=') {
+                *automaton_state = STATE_PLUS_ASSIGN;
+                read_char = EMPTY_CHAR;
+            } else {
+                token->type = TOKEN_PLUS;
+                *token_done = true;
+            }
             break;
+
         case STATE_MINUS:
+            if (read_char == '=') {
+                *automaton_state = STATE_MINUS_ASSIGN;
+                read_char = EMPTY_CHAR;
+            } else {
+                token->type = TOKEN_MINUS;
+                *token_done = true;
+            }
             break;
+
         case STATE_MULTIPLY:
+            if (read_char == '=') {
+                *automaton_state = STATE_MULTIPLY_ASSIGN;
+                read_char = EMPTY_CHAR;
+            } else {
+                token->type = TOKEN_MULTIPLY;
+                *token_done = true;
+            }
             break;
+
         case STATE_DIVIDE:
+            if (read_char == '/') {
+                *automaton_state = STATE_ONELINE_COMMENT;
+                read_char = EMPTY_CHAR;
+            } else if (read_char == '*') {
+                *automaton_state = STATE_MULTILINE_COMMENT;
+                read_char = EMPTY_CHAR;
+            } else if (read_char == '=') {
+                *automaton_state = STATE_DIVIDE_ASSIGN;
+                read_char = EMPTY_CHAR;
+            } else {
+                token->type = TOKEN_DIVIDE;
+                *token_done = true;
+            }
             break;
+
         case STATE_PLUS_ASSIGN:
+            token->type = TOKEN_PLUS_ASSIGN;
+            *token_done = true;
             break;
+
         case STATE_MINUS_ASSIGN:
+            token->type = TOKEN_MINUS_ASSIGN;
+            *token_done = true;
             break;
+
         case STATE_MULTIPLY_ASSIGN:
+            token->type = TOKEN_MULTIPLY_ASSIGN;
+            *token_done = true;
             break;
+
         case STATE_DIVIDE_ASSIGN:
+            token->type = TOKEN_DIVIDE_ASSIGN;
+            *token_done = true;
             break;
+
         case STATE_DEFINE:
+            token->type = TOKEN_DEFINE;
+            *token_done = true;
             break;
+
         case STATE_ASSIGN:
+            if (read_char == '=') {
+                *automaton_state = STATE_EQUAL_TO;
+                read_char = EMPTY_CHAR;
+            } else {
+                token->type = TOKEN_ASSIGN;
+                *token_done = true;
+            }
             break;
+
         case STATE_EQUAL_TO:
+            token->type = TOKEN_EQUAL_TO;
+            *token_done = true;
             break;
+
         case STATE_TRUE:
+            *token_done = true;
             break;
 
         case STATE_FALSE:
