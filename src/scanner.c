@@ -42,6 +42,19 @@ ScannerResult scanner_get_token(Token *token, EolRule eol_rule) {
         return SCANNER_RESULT_INTERNAL_ERROR;
     }
 
+    while (!token_done) {
+        if (next_char_result == NEXT_CHAR_RESULT_EOF) {
+            mstr_free(&mutable_string);
+
+            // reset static variables to their default values
+            read_char = EMPTY_CHAR;
+            line_num = 0;
+            char_num = 0;
+            next_char_result = NEXT_CHAR_RESULT_SUCCESS;
+
+            return SCANNER_RESULT_EOF;
+        }
+
         if (read_char == EMPTY_CHAR) { // get new character from source code
             next_char_result = get_next_char(&read_char);
 
@@ -71,6 +84,8 @@ ScannerResult scanner_get_token(Token *token, EolRule eol_rule) {
             }
         }
         read_char = resolve_read_char(read_char, line_num, char_num, &automaton_state, &scanner_result, &mutable_string, token, &token_done);
+    }
+
     if (token->type != TOKEN_ID && token->type != TOKEN_STRING) {
         mstr_free(&mutable_string);
     } else {
