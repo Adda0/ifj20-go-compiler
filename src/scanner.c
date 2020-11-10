@@ -158,23 +158,173 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
             break;
 
         case STATE_BINARY:
+            if (read_char >= '0' && read_char <= '1') {
+                mstr_append(mutable_string, read_char);
+                read_char = EMPTY_CHAR;
+                *automaton_state = STATE_BINARY_NUMBER;
+            } else {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: Binary number without any digit after '%s'. Did you mean to write a binary number? To do that, you would have to add a digit after the '%s'.", line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
+                *scanner_result = SCANNER_RESULT_INTERNAL_ERROR;
+            }
             break;
+
         case STATE_BINARY_NUMBER:
+            if (read_char >= '0' && read_char <= '1') {
+                mstr_append(mutable_string, read_char);
+                read_char = EMPTY_CHAR;
+            } else if (read_char == '_') {
+                mstr_append(mutable_string, read_char);
+                *automaton_state = STATE_BINARY_UNDERSCORE;
+                read_char = EMPTY_CHAR;
+            } else {
+                char *number_without_underscores = prepare_number_for_parsing(mutable_string);
+                if (number_without_underscores == NULL) {
+                    *scanner_result = SCANNER_RESULT_INTERNAL_ERROR;
+                    return EMPTY_CHAR;
+                }
+
+                char *end_ptr = NULL;
+                long long num = strtoll(number_without_underscores, &end_ptr, NUMERAL_SYSTEM_BINARY);
+                if (*end_ptr != '\0') {
+                    stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: Lexeme consists of more than just a binary number: %s. Did you mean to write a binary number? It must consists only of digits '0' and '1' and underscores.", line_num, char_num, mstr_content(mutable_string));
+                    *scanner_result = SCANNER_RESULT_INVALID_STATE;
+                }
+                if (errno == ERANGE || num > LLONG_MAX) { // if given number is bigger that possible
+                    errno = 0;
+                    stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: Binary number &s overflows integer maximal value. Integer cannot hold this value.", line_num, char_num, mstr_content(mutable_string));
+                    *scanner_result = SCANNER_RESULT_NUMBER_OVERFLOW;
+                }
+                token->data.num_int_val = (int64_t) num;
+                mstr_free(mutable_string);
+                free(number_without_underscores);
+                token->type = TOKEN_INT;
+                *token_done = true;
+            }
             break;
+
         case STATE_BINARY_UNDERSCORE:
+            if (read_char >= '0' && read_char <= '1') {
+                mstr_append(mutable_string, read_char);
+                read_char = EMPTY_CHAR;
+                *automaton_state = STATE_BINARY_NUMBER;
+            } else {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: Binary number with underscore without any digit after '%s'. Did you mean to write a binary number? To do that, you would have to add a digit after the '%s'.", line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
+                *scanner_result = SCANNER_RESULT_INVALID_STATE;
+            }
             break;
+
         case STATE_OCTAL:
+            if (read_char >= '0' && read_char <= '7') {
+                mstr_append(mutable_string, read_char);
+                read_char = EMPTY_CHAR;
+                *automaton_state = STATE_OCTAL_NUMBER;
+            } else {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: Octal number without any digit after '%s'. Did you mean to write an octal number? To do that, you would have to add a digit after the '%s'.", line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
+                *scanner_result = SCANNER_RESULT_INVALID_STATE;
+            }
             break;
+
         case STATE_OCTAL_NUMBER:
+            if (read_char >= '0' && read_char <= '7') {
+                mstr_append(mutable_string, read_char);
+                read_char = EMPTY_CHAR;
+            } else if (read_char == '_') {
+                mstr_append(mutable_string, read_char);
+                *automaton_state = STATE_OCTAL_UNDERSCORE;
+                read_char = EMPTY_CHAR;
+            } else {
+                char *number_without_underscores = prepare_number_for_parsing(mutable_string);
+                if (number_without_underscores == NULL) {
+                    *scanner_result = SCANNER_RESULT_INTERNAL_ERROR;
+                    return EMPTY_CHAR;
+                }
+
+                char *end_ptr = NULL;
+                long long num = strtoll(number_without_underscores, &end_ptr, NUMERAL_SYSTEM_OCTAL);
+                if (*end_ptr != '\0') {
+                    stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: Lexeme consists of more than just an octal number: %s. Did you mean to write an octal number? It must consists only of digits from '0' to '7' and underscores.", line_num, char_num, mstr_content(mutable_string));
+                    *scanner_result = SCANNER_RESULT_INVALID_STATE;
+                }
+                if (errno == ERANGE || num > LLONG_MAX) { // if given number is bigger that possible
+                    errno = 0;
+                    stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: Octal number %s overflows integer maximal value. Integer cannot hold this value.", line_num, char_num, mstr_content(mutable_string));
+                    *scanner_result = SCANNER_RESULT_NUMBER_OVERFLOW;
+                }
+                token->data.num_int_val = (int64_t) num;
+                mstr_free(mutable_string);
+                free(number_without_underscores);
+                token->type = TOKEN_INT;
+                *token_done = true;
+            }
             break;
+
         case STATE_OCTAL_UNDERSCORE:
+            if (read_char >= '0' && read_char <= '7') {
+                mstr_append(mutable_string, read_char);
+                read_char = EMPTY_CHAR;
+                *automaton_state = STATE_OCTAL_NUMBER;
+            } else {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: Octal number with underscore without any digit after '%s'. Did you mean to write an octal number? To do that, you would have to add a digit after the '%s'.", line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
+                *scanner_result = SCANNER_RESULT_INVALID_STATE;
+            }
             break;
+
         case STATE_HEXADECIMAL:
+            if (isxdigit(read_char)) {
+                mstr_append(mutable_string, read_char);
+                read_char = EMPTY_CHAR;
+                *automaton_state = STATE_HEXADECIMAL_NUMBER;
+            } else {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: Hexadecimal number without any digit after '%s'. Did you mean to write a hexadecimal number? To do that, you would have to add a digit after the '%s'.", line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
+                *scanner_result = SCANNER_RESULT_INVALID_STATE;
+            }
             break;
+
         case STATE_HEXADECIMAL_NUMBER:
+            if (isxdigit(read_char)) {
+                mstr_append(mutable_string, read_char);
+                read_char = EMPTY_CHAR;
+            } else if (read_char == '_') {
+                mstr_append(mutable_string, read_char);
+                *automaton_state = STATE_HEXADECIMAL_UNDERSCORE;
+                read_char = EMPTY_CHAR;
+            } else {
+                char *number_without_underscores = prepare_number_for_parsing(mutable_string);
+                if (number_without_underscores == NULL) {
+                    *scanner_result = SCANNER_RESULT_INTERNAL_ERROR;
+                    return EMPTY_CHAR;
+                }
+
+                char *end_ptr = NULL;
+                long long num = strtoll(number_without_underscores, &end_ptr, NUMERAL_SYSTEM_HEXADECIMAL);
+                if (*end_ptr != '\0') {
+                    stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: Lexeme consists of more than just a hexadecimal number: %s. Did you mean to write a hexadecimal number? It must consists only of digits from '0' to '9', characters from 'a' to 'f', characters from 'A' to 'F' and underscores.", line_num, char_num, mstr_content(mutable_string));
+                    *scanner_result = SCANNER_RESULT_INVALID_STATE;
+                }
+                if (errno == ERANGE || num > LLONG_MAX) { // if given number is bigger that possible
+                    errno = 0;
+                    stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: Hexadecimal number %s overflows integer maximal value. Integer cannot hold this value.", line_num, char_num, mstr_content(mutable_string));
+                    *scanner_result = SCANNER_RESULT_NUMBER_OVERFLOW;
+                }
+                token->data.num_int_val = (int64_t) num;
+                mstr_free(mutable_string);
+                free(number_without_underscores);
+                token->type = TOKEN_INT;
+                *token_done = true;
+            }
             break;
+
         case STATE_HEXADECIMAL_UNDERSCORE:
+            if (isxdigit(read_char)) {
+                mstr_append(mutable_string, read_char);
+                read_char = EMPTY_CHAR;
+                *automaton_state = STATE_HEXADECIMAL_NUMBER;
+            } else {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: Hexadecimal number with underscore without any digit after '%s'. Did you mean to write a hexadecimal number? To do that, you would have to add a digit after the '%s'.", line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
+                *scanner_result = SCANNER_RESULT_INVALID_STATE;
+            }
             break;
+
         case STATE_INT:
             if (isdigit(read_char)) {
                 mstr_append(mutable_string, read_char);
