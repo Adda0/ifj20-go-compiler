@@ -47,6 +47,21 @@ ScannerResult scanner_get_token(Token *token, EolRule eol_rule) {
                 scanner_result = SCANNER_RESULT_EOF;
             }
         }
+
+        if (automaton_state == STATE_DEFAULT) { // for a first character test EOL rule
+            if (read_char != ' ' && read_char != '\t') {
+                eol_rule_result = handle_eol_rule(eol_rule, read_char);
+
+                if (eol_rule_result == EOL_RULE_RESULT_EXCESS_EOL) {
+
+                    scanner_result = SCANNER_RESULT_EXCESS_EOL;
+                } else if (eol_rule_result == EOL_RULE_RESULT_MISSING_EOL) {
+
+                    scanner_result = SCANNER_RESULT_MISSING_EOL;
+                }
+                automaton_state = STATE_EOL_RESOLVED;
+            }
+        }
         read_char = resolve_read_char(read_char, line_num, char_num, &automaton_state, &scanner_result, &mutable_string, token, &token_done);
     return scanner_result;
 }
@@ -783,6 +798,31 @@ static NextCharResult get_next_char(char *read_char) {
     return NEXT_CHAR_RESULT_SUCCESS;
 }
 
+static EolRuleResult handle_eol_rule(EolRule eol_rule, char read_char) {
+    switch (eol_rule) {
+        case EOL_FORBIDDEN:
+            // When EOL is forbidden and scanner reads EOL, no token is send (values pointer
+            // token points to are unchanged) and SCANNER_RESULT_EXCESS_EOL is returned.
+            if (read_char == '\n') {
+                return EOL_RULE_RESULT_EXCESS_EOL;
+            }
+            break;
+        case EOL_REQUIRED:
+            if (read_char != '\n') {
+                return EOL_RULE_RESULT_MISSING_EOL;
+            }
+            break;
+        case EOL_OPTIONAL:
+            if (read_char == '\n') {
+                return EOL_RULE_RESULT_OPTIONAL_EOL;
+            }
+            break;
+        default:
+            return EOL_RULE_RESULT_SUCCESS;
+            break;
+    }
+    return EOL_RULE_RESULT_SUCCESS;
+}
 
 static void check_for_keyword(Token *token, MutableString *mutable_string) {
     if (strcmp(mstr_content(mutable_string), "bool") == 0) {
