@@ -535,3 +535,21 @@ static void check_for_bool_values(Token *token, MutableString *mutable_string) {
     }
 }
 
+static char *prepare_number_for_parsing(MutableString *mutable_string) {
+    char *number_without_underscores = (char *) calloc(mstr_length(mutable_string), sizeof(char));
+    if (number_without_underscores == NULL) {
+        stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_INTERNAL, "Malloc of string for a number in a different numeral system failed.");
+        return NULL;
+    }
+
+    size_t index = 0;
+
+    // omit '0x', '0b', '0o' for strtoll cannot recognize binary and octal format of these and omit '_'
+    for (size_t i = 2; i < mstr_length(mutable_string); i++) {
+        if (mstr_content(mutable_string)[i] != '_') {
+            number_without_underscores[index] = mstr_content(mutable_string)[i];
+            index++;
+        }
+    }
+    return number_without_underscores;
+}
