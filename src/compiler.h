@@ -27,7 +27,5 @@ typedef enum compiler_result {
     COMPILER_RESULT_ERROR_INTERNAL = 99,
 } CompilerResult;
 
-// global variables
-CompilerResult compiler_result = COMPILER_RESULT_SUCCESS;
-
+extern CompilerResult compiler_result;
 #endif // _COMPILER_H

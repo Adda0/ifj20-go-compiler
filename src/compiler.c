@@ -9,6 +9,8 @@
 
 #include "compiler.h"
 
+CompilerResult compiler_result = COMPILER_RESULT_SUCCESS;
+
 int main(int argc, char *argv[]) {
 
 
