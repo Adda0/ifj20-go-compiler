@@ -28,10 +28,10 @@ typedef struct mutable_string {
 bool mstr_init(MutableString *string, size_t initial_size);
 
 /** @brief Returns a pointer to string data. */
-char *mstr_content(MutableString *string);
+char *mstr_content(const MutableString *string);
 
 /** @brief Returns the current length of the string. */
-size_t mstr_length(MutableString *string);
+size_t mstr_length(const MutableString *string);
 
 /** @brief Inserts a new element at the end of the string.
  *
