@@ -152,6 +152,34 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
         case STATE_HEXADECIMAL_UNDERSCORE:
             break;
         case STATE_INT:
+            if (isdigit(read_char)) {
+                mstr_append(mutable_string, read_char);
+                read_char = EMPTY_CHAR;
+            } else if (read_char == 'e' || read_char == 'E') {
+                *automaton_state = STATE_FLOAT_EXP_CHAR;
+                mstr_append(mutable_string, read_char);
+                read_char = EMPTY_CHAR;
+            } else if (read_char == '.') {
+                mstr_append(mutable_string, read_char);
+                *automaton_state = STATE_FLOAT_DOT;
+                read_char = EMPTY_CHAR;
+            } else {
+                char *end_ptr = NULL;
+                long long num = strtoll(mstr_content(mutable_string), &end_ptr, NUMERAL_SYSTEM_DECIMAL);
+                if (*end_ptr != '\0') {
+                    stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: Lexeme consists of more than just an integer number: %s. Did you mean to write an integer number? It must consists only of digits.", line_num, char_num, mstr_content(mutable_string));
+                    *scanner_result = SCANNER_RESULT_INVALID_STATE;
+                }
+                if (errno == ERANGE || num > LLONG_MAX) { // if given number is bigger that possible
+                    errno = 0;
+                    stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: Integer number %s overflows integer maximal value. Integer cannot hold this value.", line_num, char_num, mstr_content(mutable_string));
+                    *scanner_result = SCANNER_RESULT_NUMBER_OVERFLOW;
+                }
+                token->data.num_int_val = (int64_t) num;
+                mstr_free(mutable_string);
+                token->type = TOKEN_INT;
+                *token_done = true;
+            }
             break;
         case STATE_FLOAT:
             break;
