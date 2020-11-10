@@ -120,6 +120,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 read_char = EMPTY_CHAR;
             } else {
                 token->type = TOKEN_ID;
+                check_for_bool_values(token, mutable_string);
                 *token_done = true;
             }
             break;
@@ -249,5 +250,16 @@ static NextCharResult get_next_char(char *read_char) {
     }
 
     return NEXT_CHAR_RESULT_SUCCESS;
+}
+
+
+static void check_for_bool_values(Token *token, MutableString *mutable_string) {
+    if (strcmp(mstr_content(mutable_string), "false") == 0) {
+        token->type = TOKEN_BOOL;
+        token->data.bool_val = false;
+    } else if (strcmp(mstr_content(mutable_string), "true") == 0) {
+        token->type = TOKEN_BOOL;
+        token->data.bool_val = true;
+    }
 }
 
