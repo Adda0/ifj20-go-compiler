@@ -13,12 +13,64 @@
 #include "compiler.h"
 #include "scanner.h"
 #include "mutable_string.h"
+#include "stderr_message.h"
 
 Token token;
 ScannerResult scanner_result;
 
 int body();
 int else_();
+
+char *convert_token_to_text() {
+    switch (token.type) {
+        case TOKEN_DEFAULT: return "undefined";
+        case TOKEN_ID: return "identifier";
+        case TOKEN_INT: return "int value";
+        case TOKEN_FLOAT: return "float value";
+        case TOKEN_KEYWORD:
+            switch (token.data.keyword_type) {
+                case KEYWORD_BOOL: return "keyword bool";
+                case KEYWORD_ELSE: return "keyword else";
+                case KEYWORD_FLOAT64: return "keyword float64";
+                case KEYWORD_FOR: return "keyword for";
+                case KEYWORD_FUNC: return "keyword func";
+                case KEYWORD_IF: return "keyword if";
+                case KEYWORD_INT: return "keyword int";
+                case KEYWORD_PACKAGE: return "keyword package";
+                case KEYWORD_RETURN: return "keyword return";
+                case KEYWORD_STRING: return "keyword string";
+                default: return "";
+            }
+        case TOKEN_PLUS: return "+";
+        case TOKEN_MINUS: return "-";
+        case TOKEN_MULTIPLY: return "*";
+        case TOKEN_DIVIDE: return "/";
+        case TOKEN_PLUS_ASSIGN: return "+=";
+        case TOKEN_MINUS_ASSIGN: return "-=";
+        case TOKEN_MULTIPLY_ASSIGN: return "*=";
+        case TOKEN_DIVIDE_ASSIGN: return "/=";
+        case TOKEN_DEFINE: return ":=";
+        case TOKEN_ASSIGN: return "=";
+        case TOKEN_EQUAL_TO: return "==";
+        case TOKEN_BOOL: return "bool value";
+        case TOKEN_NOT: return "!";
+        case TOKEN_NOT_EQUAL_TO: return "!=";
+        case TOKEN_AND: return "&&";
+        case TOKEN_OR: return "||";
+        case TOKEN_LEFT_BRACKET: return "(";
+        case TOKEN_RIGHT_BRACKET: return ")";
+        case TOKEN_CURLY_LEFT_BRACKET: return "{";
+        case TOKEN_CURLY_RIGHT_BRACKET: return "}";
+        case TOKEN_LESS_THAN: return "<";
+        case TOKEN_GREATER_THAN: return ">";
+        case TOKEN_LESS_OR_EQUAL: return "<=";
+        case TOKEN_GREATER_OR_EQUAL: return ">=";
+        case TOKEN_STRING: return "string value";
+        case TOKEN_COMMA: return ",";
+        case TOKEN_SEMICOLON: return ";";
+        default: return "";
+    }
+}
 
 void clear_token() {
     if (token.type == TOKEN_ID || token.type == TOKEN_STRING) {
@@ -38,12 +90,14 @@ int expression(EolRule eol) {
             check_new_token(eol);
             syntax_ok();
         default:
+            token_error("expected int, float, string or bool value, got %s\n");
             syntax_error();
     }
 }
 
 int type() {
     if (token.type != TOKEN_KEYWORD) {
+        token_error("expected float64, int, string or bool keyword, got %s\n");
         syntax_error();
     }
     switch (token.data.keyword_type) {
@@ -55,6 +109,7 @@ int type() {
             check_new_token(EOL_FORBIDDEN);
             syntax_ok();
         default:
+            token_error("expected float64, int, string or bool keyword, got %s\n");
             syntax_error();
     }
 }
@@ -69,6 +124,7 @@ int params_n() {
             // we've read comma, newline is allowed according to FUNEXP
             check_new_token(EOL_OPTIONAL);
             if (token.type != TOKEN_ID) {
+                token_error("expected identifier, got %s\n");
                 syntax_error();
             }
             clear_token();
@@ -77,6 +133,7 @@ int params_n() {
             check_nonterminal(type());
             return params_n();
         default:
+            token_error("expected ) or , when parsing parameters, got %s\n");
             syntax_error();
     }
 }
@@ -93,6 +150,7 @@ int params() {
             check_nonterminal(type());
             return params_n();
         default:
+            token_error("expected ) or identifier when parsing parameters, got %s\n");
             syntax_error();
     }
 }
@@ -106,6 +164,7 @@ int expression_n() {
                 case KEYWORD_FOR:
                     break;
                 default:
+                    token_error("expected keyword return, if or for, got %s\n");
                     syntax_error();
             }
         case TOKEN_ID:
@@ -122,6 +181,7 @@ int expression_n() {
             check_nonterminal(expression(EOL_OPTIONAL));
             return expression_n();
         default:
+            token_error("expected identifier, ), {, }, semicolon, comma, return, if or for, got %s\n");
             syntax_error();
     }
 }
@@ -141,6 +201,7 @@ int call_params() {
             check_nonterminal(expression(EOL_FORBIDDEN));
             return expression_n();
         default:
+            token_error("expected int, float, string or bool value, got %s\n");
             syntax_error();
     }
 }
@@ -151,6 +212,7 @@ int id_n() {
             // rule <id_n> -> , id <id_n>
             check_new_token(EOL_OPTIONAL);
             if (token.type != TOKEN_ID) {
+                token_error("expected identifier when reading a list of identifiers, got %s\n");
                 syntax_error();
             }
             clear_token();
@@ -161,6 +223,7 @@ int id_n() {
             // rule <id_n> -> eps
             syntax_ok();
         default:
+            token_error("expected comma, = or := when reading a list of identifiers, got %s\n");
             syntax_error();
     }
 }
@@ -180,6 +243,7 @@ int assignment() {
             check_nonterminal(expression(EOL_OPTIONAL));
             return expression_n();
         default:
+            token_error("expected = or := during assignment, got %s\n");
             syntax_error();
     }
 }
@@ -195,6 +259,7 @@ int unary() {
             check_nonterminal(expression(EOL_OPTIONAL));
             syntax_ok();
         default:
+            token_error("expected +=, -=, *= or /= when reading unary assignment, got %s\n");
             syntax_error();
     }
 }
@@ -203,12 +268,10 @@ int id_follow() {
     switch (token.type) {
         case TOKEN_LEFT_BRACKET:
             // rule <id_follow> -> ( <call_params> )
-            if (token.type != TOKEN_LEFT_BRACKET) {
-                syntax_error();
-            }
             check_new_token(EOL_FORBIDDEN);
             check_nonterminal(call_params());
             if (token.type != TOKEN_RIGHT_BRACKET) {
+                token_error("expected ) when parsing function call, got %s\n");
                 syntax_error();
             }
             // Function call on its own line, there needs to be a new line
@@ -230,6 +293,7 @@ int id_follow() {
             check_nonterminal(id_n());
             return assignment();
         default:
+            token_error("expected (, comma, +=, -=, *=, /=, =, := following identifier, got %s\n");
             syntax_error();
     }
 }
@@ -239,11 +303,13 @@ int else_n() {
         case TOKEN_CURLY_LEFT_BRACKET:
             // rule <else_n> -> { <body> }
             if (token.type != TOKEN_CURLY_LEFT_BRACKET) {
+                token_error("expected { after else, got %s\n");
                 syntax_error();
             }
             check_new_token(EOL_REQUIRED);
             check_nonterminal(body());
             if (token.type != TOKEN_CURLY_RIGHT_BRACKET) {
+                token_error("expected } after else body, got %s\n");
                 syntax_error();
             }
             syntax_ok();
@@ -254,19 +320,23 @@ int else_n() {
                 check_new_token(EOL_FORBIDDEN);
                 check_nonterminal(expression(EOL_OPTIONAL));
                 if (token.type != TOKEN_CURLY_LEFT_BRACKET) {
+                    token_error("expected { after else if, got %s\n");
                     syntax_error();
                 }
                 check_new_token(EOL_REQUIRED);
                 check_nonterminal(body());
                 if (token.type != TOKEN_CURLY_RIGHT_BRACKET) {
+                    token_error("expected } after else body, got %s\n");
                     syntax_error();
                 }
                 check_new_token(EOL_FORBIDDEN);
                 return else_();
             } else {
+                token_error("expected if keyword, got %s\n");
                 syntax_error();
             }
         default:
+            token_error("expected if keyword or { after else keyword, got %s\n");
             syntax_error();
     }
 }
@@ -284,6 +354,7 @@ int else_() {
                     check_new_token(EOL_FORBIDDEN);
                     return else_n();
                 default:
+                    token_error("expected return, if, for or else keyword, got %s\n");
                     syntax_error();
             }
         case TOKEN_ID:
@@ -291,6 +362,7 @@ int else_() {
             // rule <else> -> eps
             syntax_ok();
         default:
+            token_error("expected }, identifier or new statement after if body, got %s\n");
             syntax_error();
     }
 }
@@ -306,6 +378,7 @@ int for_definition() {
             check_new_token(EOL_FORBIDDEN);
             check_nonterminal(id_n());
             if (token.type != TOKEN_DEFINE) {
+                token_error("expected := inside for loop definition part, got %s\n");
                 syntax_error();
             }
             // TODO: epxression
@@ -313,6 +386,7 @@ int for_definition() {
             check_nonterminal(expression(EOL_FORBIDDEN));
             return expression_n();
         default:
+            token_error("expected semicolon or identifier at for loop definition, got %s\n");
             syntax_error();
     }
 }
@@ -324,6 +398,7 @@ int for_assignment_follow() {
             // rule <for_assignment_follow> -> <id_n> = expression <expression_n>
             check_nonterminal(id_n());
             if (token.type != TOKEN_ASSIGN) {
+                token_error("expected = after identifier in for assignment, got %s\n");
                 syntax_error();
             }
             // TODO: expression
@@ -337,6 +412,7 @@ int for_assignment_follow() {
             // <for_assignment_follow> -> <unary>
             return unary();
         default:
+            token_error("expected comma, =, +=, -=, *= or /= after identifier in for assignment, got %s\n");
             syntax_error();
     }
 }
@@ -352,6 +428,7 @@ int for_assignment() {
             // rule <for_assignment> -> eps
             syntax_ok();
         default:
+            token_error("expected identifier or { in for assignment, got %s\n");
             syntax_error();
     }
 }
@@ -377,11 +454,13 @@ int statement() {
                     check_new_token(EOL_OPTIONAL);
                     check_nonterminal(expression(EOL_FORBIDDEN));
                     if (token.type != TOKEN_CURLY_LEFT_BRACKET) {
+                        token_error("expected { before if body, got %s\n");
                         syntax_error();
                     }
                     check_new_token(EOL_REQUIRED);
                     check_nonterminal(body());
                     if (token.type != TOKEN_CURLY_RIGHT_BRACKET) {
+                        token_error("expected } after if body, got %s\n");
                         syntax_error();
                     }
                     check_new_token(EOL_REQUIRED);
@@ -391,30 +470,36 @@ int statement() {
                     check_new_token(EOL_OPTIONAL);
                     check_nonterminal(for_definition());
                     if (token.type != TOKEN_SEMICOLON) {
+                        token_error("expected semicolon after for definition, got %s\n");
                         syntax_error();
                     }
                     // TODO: expression
                     check_new_token(EOL_OPTIONAL);
                     check_nonterminal(expression(EOL_FORBIDDEN));
                     if (token.type != TOKEN_SEMICOLON) {
+                        token_error("expected semicolon after for condition, got %s\n");
                         syntax_error();
                     }
                     check_new_token(EOL_FORBIDDEN);
                     check_nonterminal(for_assignment());
                     if (token.type != TOKEN_CURLY_LEFT_BRACKET) {
+                        token_error("expected { before for body, got %s\n");
                         syntax_error();
                     }
                     check_new_token(EOL_REQUIRED);
                     check_nonterminal(body());
                     if (token.type != TOKEN_CURLY_RIGHT_BRACKET) {
+                        token_error("expected } after for body, got %s\n");
                         syntax_error();
                     }
                     check_new_token(EOL_REQUIRED);
                     syntax_ok();
                 default:
+                    token_error("expected identifier, for, if or return at statement start, got %s\n");
                     syntax_error();
             }
         default:
+            token_error("expected identifier, for, if or return at statement start, got %s\n");
             syntax_error();
     }
 }
@@ -437,9 +522,11 @@ int body() {
                     check_nonterminal(statement());
                     return body();
                 default:
+                    token_error("expected }, identifier, for, if or return at function body start, got %s\n");
                     syntax_error();
             }
         default:
+            token_error("expected }, identifier, for, if or return at function body start, got %s\n");
             syntax_error();
     }
 }
@@ -455,6 +542,7 @@ int ret_type_n() {
             check_nonterminal(type());
             return ret_type_n();
         default:
+            token_error("expected comma or ) after type inside return type, got %s\n");
             syntax_error();
     }
 }
@@ -475,9 +563,11 @@ int ret_type_inner() {
                     check_nonterminal(type());
                     return ret_type_n();
                 default:
+                    token_error("col %u: expected float64, int, string or bool keyword, got %s\n");
                     syntax_error();
             }
         default:
+            token_error("expected identifier, ), float64, int, string or bool in return type, got %s\n");
             syntax_error();
     }
 }
@@ -493,6 +583,7 @@ int ret_type() {
                     // rule <ret_type> -> <type>
                     return type();
                 default:
+                    token_error("expected float64, int, string or bool keyword, got %s\n");
                     syntax_error();
             }
         case TOKEN_CURLY_LEFT_BRACKET:
@@ -503,11 +594,13 @@ int ret_type() {
             check_new_token(EOL_FORBIDDEN);
             check_nonterminal(ret_type_inner());
             if (token.type != TOKEN_RIGHT_BRACKET) {
+                token_error("expected ) after multiple function return types, got %s\n");
                 syntax_error();
             }
             check_new_token(EOL_FORBIDDEN);
             syntax_ok();
         default:
+            token_error("expected {, ( or type keyword at the start of return type, got %s\n");
             syntax_error();
     }
 }
@@ -519,17 +612,20 @@ int execution() {
     } else {
         // rule <execution> -> func id ( <params> ) <ret_type> { <body> } <execution>
         if (token.type != TOKEN_KEYWORD || token.data.keyword_type != KEYWORD_FUNC) {
+            token_error("expected func keyword at the start of function definition, got %s\n");
             syntax_error();
         }
 
         check_new_token(EOL_FORBIDDEN);
         if (token.type != TOKEN_ID) {
+            token_error("expected function identifier after func keyword, got %s\n");
             syntax_error();
         }
         clear_token();
 
         check_new_token(EOL_FORBIDDEN);
         if (token.type != TOKEN_LEFT_BRACKET) {
+            token_error("expected ( after function identifier, got %s\n");
             syntax_error();
         }
 
@@ -537,6 +633,7 @@ int execution() {
         check_nonterminal(params());
 
         if (token.type != TOKEN_RIGHT_BRACKET) {
+            token_error("expected ) after function parameters, got %s\n");
             syntax_error();
         }
 
@@ -544,6 +641,7 @@ int execution() {
         check_nonterminal(ret_type());
 
         if (token.type != TOKEN_CURLY_LEFT_BRACKET) {
+            token_error("expected { after function return type, got %s\n");
             syntax_error();
         }
 
@@ -551,6 +649,7 @@ int execution() {
         check_nonterminal(body());
 
         if (token.type != TOKEN_CURLY_RIGHT_BRACKET) {
+            token_error("expected } after function body, got %s\n");
             syntax_error();
         }
 
@@ -564,10 +663,12 @@ int execution() {
 int program() {
     // rule <program> -> package id <execution>
     if (token.type != TOKEN_KEYWORD || token.data.keyword_type != KEYWORD_PACKAGE) {
+        token_error("expected package keyword at the beginning of file, got %s\n");
         syntax_error();
     }
     check_new_token(EOL_FORBIDDEN);
     if (token.type != TOKEN_ID || strcmp("main", mstr_content(&token.data.str_val)) != 0) {
+        token_error("expected main identifier after package keyword, got %s\n");
         syntax_error();
     }
     clear_token();
