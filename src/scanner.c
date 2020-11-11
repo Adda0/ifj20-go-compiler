@@ -832,13 +832,18 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
     return read_char;
 }
 
-static NextCharResult get_next_char(char *read_char) {
-    *read_char = (char) getchar();
+// This is a getchar() abstraction that is needed to make mocking
+// the input in tests possible.
+extern int get_char_internal(int *feof, int *ferror);
 
-    if (ferror(stdin)) {
+static NextCharResult get_next_char(char *read_char) {
+    int feofi = 0, ferrori = 0;
+    *read_char = (char) get_char_internal(&feofi, &ferrori);
+
+    if (ferrori) {
         return NEXT_CHAR_RESULT_ERROR;
     }
-    if (feof(stdin)) {
+    if (feofi) {
         return NEXT_CHAR_RESULT_EOF;
     }
 
