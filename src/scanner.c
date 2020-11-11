@@ -403,10 +403,23 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
             break;
 
         case STATE_COMMA:
+            token->type = TOKEN_COMMA;
+            *token_done = true;
             break;
+
         case STATE_COLON:
+            if (read_char == '=') {
+                *automaton_state = STATE_DEFINE;
+                read_char = EMPTY_CHAR;
+            } else {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: Invalid lexeme: ':$c'. Have you meant ':=' to define a new variable?", line_num, char_num, read_char);
+                *scanner_result = SCANNER_RESULT_INVALID_STATE;
+            }
             break;
+
         case STATE_SEMICOLON:
+            token->type = TOKEN_SEMICOLON;
+            *token_done = true;
             break;
     }
     return read_char;
