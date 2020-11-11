@@ -28,10 +28,10 @@ typedef struct mutable_string {
 bool mstr_init(MutableString *string, size_t initial_size);
 
 /** @brief Returns a pointer to string data. */
-char *mstr_content(MutableString *string);
+char *mstr_content(const MutableString *string);
 
 /** @brief Returns the current length of the string. */
-size_t mstr_length(MutableString *string);
+size_t mstr_length(const MutableString *string);
 
 /** @brief Inserts a new element at the end of the string.
  *
@@ -47,6 +47,21 @@ size_t mstr_length(MutableString *string);
  *         out of space on the heap).
  */
 bool mstr_append(MutableString *string, char new_element);
+
+/** @brief Concatenates 2 mutable strings into one.
+ *
+ * Concatenates left_source and right_source and saves the result to
+ * target MutableString.
+ *
+ * @param left_source First part of the result string.
+ * @param right_source Second part of the result string.
+ * @param target Where the result shall be stored. If it contains any data,
+ *               it will be removed.
+ * @return Whether the concatenation was successful. The operation may fail due
+ *         the need to allocate more memory.
+ */
+bool mstr_concat(MutableString *target, const MutableString *left_source,
+                 const MutableString *right_source);
 
 /** @brief Destroys a mutable string.
  *

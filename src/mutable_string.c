@@ -8,6 +8,7 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 #include <stdbool.h>
 #include "mutable_string.h"
 
@@ -27,11 +28,11 @@ bool mstr_init(MutableString *string, size_t initial_size) {
     return true;
 }
 
-char *mstr_content(MutableString *string) {
+char *mstr_content(const MutableString *string) {
     return string->array;
 }
 
-size_t mstr_length(MutableString *string) {
+size_t mstr_length(const MutableString *string) {
     return string->used;
 }
 
@@ -56,6 +57,22 @@ bool mstr_append(MutableString *string, char new_element) {
     return true;
 }
 
+bool mstr_concat(MutableString *target, const MutableString *left_source,
+                 const MutableString *right_source) {
+    unsigned left_len = left_source->used;
+    unsigned right_len = right_source->used;
+    if (!mstr_init(target, left_len + right_len + 1)) {
+        return false;
+    }
+    target->used = left_len + right_len;
+    memcpy(target->array, left_source->array, left_len);
+    memcpy(target->array + left_len, right_source->array, right_len + 1);
+    return true;
+}
+
 void mstr_free(MutableString *string) {
-    free(string->array);
+    if (string->array != NULL) {
+        free(string->array);
+        string->array = NULL;
+    }
 }
