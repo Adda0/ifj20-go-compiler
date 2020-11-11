@@ -256,14 +256,37 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
             token->type = TOKEN_CURLY_RIGHT_BRACKET;
             *token_done = true;
             break;
+
         case STATE_LESS_THAN:
+            if (read_char == '=') {
+                *automaton_state = STATE_LESS_OR_EQUAL;
+                read_char = EMPTY_CHAR;
+            } else {
+                token->type = TOKEN_LESS_THAN;
+                *token_done = true;
+            }
             break;
+
         case STATE_GREATER_THAN:
+            if (read_char == '=') {
+                *automaton_state = STATE_GREATER_OR_EQUAL;
+                read_char = EMPTY_CHAR;
+            } else {
+                token->type = TOKEN_GREATER_THAN;
+                *token_done = true;
+            }
             break;
+
         case STATE_LESS_OR_EQUAL:
+            token->type = TOKEN_LESS_OR_EQUAL;
+            *token_done = true;
             break;
+
         case STATE_GREATER_OR_EQUAL:
+            token->type = TOKEN_GREATER_OR_EQUAL;
+            *token_done = true;
             break;
+
         case STATE_MULTILINE_COMMENT:
             break;
         case STATE_ASTERISK_IN_MULTILINE_COMMENT:
