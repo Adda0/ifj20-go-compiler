@@ -24,7 +24,7 @@ ScannerResult scanner_get_token(Token *token, EolRule eol_rule) {
     // 'static' solves the problem of reading one more char before returning Token
     static char read_char = EMPTY_CHAR; // the last read character from the source code
     static NextCharResult next_char_result = NEXT_CHAR_RESULT_SUCCESS; // result returned when reading read_char
-    static size_t line_num = 0; // number of current line
+    static size_t line_num = 1; // number of current line
     static size_t char_num = 0; // number of current char in a line
 
     EolRuleResult eol_rule_result = EOL_RULE_RESULT_SUCCESS;
@@ -61,6 +61,13 @@ ScannerResult scanner_get_token(Token *token, EolRule eol_rule) {
         if (read_char == EMPTY_CHAR) { // get new character from source code
             next_char_result = get_next_char(&read_char);
 
+            if (read_char == '\n') {
+                line_num++;
+                char_num = 0;
+            } else {
+                char_num++;
+            }
+
             if (next_char_result == NEXT_CHAR_RESULT_ERROR) {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
                                "Reading a next character from the source code failed.");
@@ -89,13 +96,6 @@ ScannerResult scanner_get_token(Token *token, EolRule eol_rule) {
                 }
                 automaton_state = STATE_EOL_RESOLVED;
             }
-        }
-
-        if (read_char == '\n') {
-            line_num++;
-            char_num = 0;
-        } else {
-            char_num++;
         }
 
         read_char = resolve_read_char(read_char, line_num, char_num, &automaton_state, &scanner_result, &mutable_string,
