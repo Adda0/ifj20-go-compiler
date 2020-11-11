@@ -48,5 +48,14 @@ target_link_libraries(Test_mutable_string gtest gtest_main)
 add_executable(Test_scanner src/scanner.h src/scanner_static.h src/scanner.c src/stderr_message.h src/stderr_message.c src/mutable_string.h src/mutable_string.c src/tests/scanner.cpp)
 target_link_libraries(Test_scanner gtest gtest_main)
 
+add_executable(Test_parser_scanner
+        src/scanner.h src/scanner_static.h src/scanner.c
+        src/stderr_message.h src/stderr_message.c
+        src/mutable_string.h src/mutable_string.c
+        src/parser.h src/parser.c
+        src/tests/parser_scanner.cpp)
+target_link_libraries(Test_parser_scanner gtest gtest_main)
+
 add_test(mutable_string Test_mutable_string)
 add_test(scanner Test_scanner)
+add_test(parser_scanner Test_parser_scanner)
