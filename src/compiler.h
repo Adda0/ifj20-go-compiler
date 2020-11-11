@@ -28,4 +28,5 @@ typedef enum compiler_result {
 } CompilerResult;
 
 extern CompilerResult compiler_result;
+
 #endif // _COMPILER_H
