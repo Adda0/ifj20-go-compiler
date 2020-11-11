@@ -288,11 +288,32 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
             break;
 
         case STATE_MULTILINE_COMMENT:
+            // token is '/*' for sure -> ignore all chars til '*/' is read
+            if (read_char == '*') {
+                *automaton_state = STATE_ASTERISK_IN_MULTILINE_COMMENT;
+            }
+            read_char = EMPTY_CHAR;
             break;
+
         case STATE_ASTERISK_IN_MULTILINE_COMMENT:
+            if (read_char == '\\') {
+                // multiline comment just ended -> back to the default
+                *automaton_state = STATE_DEFAULT;
+            } else {
+                // it was only an asterisk in a comment: /* ... * ... -> back to multiline comment
+                *automaton_state = STATE_MULTILINE_COMMENT;
+            }
+            read_char = EMPTY_CHAR;
             break;
+
         case STATE_ONELINE_COMMENT:
+            // token is '//' for sure -> ignore all chars til EOL is read
+            if (read_char == '\n') {
+                *automaton_state = STATE_DEFAULT;
+            }
+            read_char = EMPTY_CHAR;
             break;
+
         case STATE_STRING:
             break;
         case STATE_ESCAPE_CHARACTER_IN_STRING:
