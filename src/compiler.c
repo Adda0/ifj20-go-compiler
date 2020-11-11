@@ -21,8 +21,7 @@ int get_char_internal(int *feofi, int *ferrori) {
     return res;
 }
 
-int main(int argc, char *argv[]) {
-
+int main() {
     parser_parse();
     return compiler_result;
 }
