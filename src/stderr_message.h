@@ -8,7 +8,7 @@
  */
 
 #ifndef _STDERR_MESSAGE_H
-#define _STDERR_MESSAGE_H
+#define _STDERR_MESSAGE_H 1
 
 #include "compiler.h"
 
