@@ -455,3 +455,95 @@ TEST_F(ParserScannerTest, EOLInFuncDefinitionMissing) {
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
+
+// === Package main missing ===
+
+TEST_F(ParserScannerTest, PackageMainMissing1) {
+    std::string inputStr = \
+        "\n"
+        "func main() {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, PackageMainMissing2) {
+    std::string inputStr = \
+        "func main() {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+// === Function main definition missing ===
+//TODO uncomment when implemented
+/*
+TEST_F(ParserScannerTest, FunctionMainDefinitionMissing1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func not_main() {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
+}*/
+
+TEST_F(ParserScannerTest, FunctionMainDefinitionMissing2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+// === Incomplete function definition ===
+
+TEST_F(ParserScannerTest, IncompleteFunctionDefinition1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        " main() {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, IncompleteFunctionDefinition2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func () {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, IncompleteFunctionDefinition3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, IncompleteFunctionDefinition4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() \n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, IncompleteFunctionDefinition5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
