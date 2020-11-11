@@ -188,17 +188,50 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
             break;
 
         case STATE_NOT:
+            if (read_char == '=') {
+                *automaton_state = STATE_NOT_EQUAL_TO;
+                read_char = EMPTY_CHAR;
+            } else {
+                token->type = TOKEN_NOT;
+                *token_done = true;
+            }
             break;
+
         case STATE_NOT_EQUAL_TO:
+            token->type = TOKEN_NOT_EQUAL_TO;
+            *token_done = true;
             break;
+
         case STATE_AMPERSAND:
+            if (read_char == '&') {
+                *automaton_state = STATE_AND;
+                read_char = EMPTY_CHAR;
+            } else {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: '&' is not a valid operator. Did you mean '&&'?", line_num, char_num);
+                *scanner_result = SCANNER_RESULT_INVALID_STATE;
+            }
             break;
+
         case STATE_AND:
+            token->type = TOKEN_AND;
+            *token_done = true;
             break;
+
         case STATE_VERTICAL_BAR:
+            if (read_char == '|') {
+                *automaton_state = STATE_OR;
+                read_char = EMPTY_CHAR;
+            } else {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: '|' is not a valid operator. Did you mean '||'?", line_num, char_num);
+                *scanner_result = SCANNER_RESULT_INVALID_STATE;
+            }
             break;
+
         case STATE_OR:
+            token->type = TOKEN_OR;
+            *token_done = true;
             break;
+
         case STATE_LEFT_BRACKET:
             break;
         case STATE_RIGHT_BRACKET:
