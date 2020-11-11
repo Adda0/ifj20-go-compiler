@@ -238,12 +238,23 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
             break;
 
         case STATE_LEFT_BRACKET:
+            token->type = TOKEN_LEFT_BRACKET;
+            *token_done = true;
             break;
+
         case STATE_RIGHT_BRACKET:
+            token->type = TOKEN_RIGHT_BRACKET;
+            *token_done = true;
             break;
+
         case STATE_CURLY_LEFT_BRACKET:
+            token->type = TOKEN_CURLY_LEFT_BRACKET;
+            *token_done = true;
             break;
+
         case STATE_CURLY_RIGHT_BRACKT:
+            token->type = TOKEN_CURLY_RIGHT_BRACKET;
+            *token_done = true;
             break;
         case STATE_LESS_THAN:
             break;
