@@ -3,7 +3,7 @@
 # Author: František Nečas  (xnecas27), FIT BUT
 # Author: David Chocholatý (xchoch08), FIT BUT
 
-.PHONY: clean test
+.PHONY: all clean test
 
 CC = gcc
 CFLAGS = -std=c11 -pedantic -Wall -Wextra
@@ -26,4 +26,4 @@ test:
 
 clean:
 	rm -f *.o
-	rm -rf cmake-build/
+	rm -rf ../cmake-build/
