@@ -315,13 +315,93 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
             break;
 
         case STATE_STRING:
+            if (read_char == '\"') {
+                token->data.str_val = *mutable_string;
+                token->type = TOKEN_STRING;
+                *token_done = true;
+            } else if (read_char == '\\') {
+                *automaton_state = STATE_ESCAPE_CHARACTER_IN_STRING;
+            } else {
+                mstr_append(mutable_string, read_char);
+            }
+            read_char = EMPTY_CHAR;
             break;
+
         case STATE_ESCAPE_CHARACTER_IN_STRING:
+            if (read_char == 'x') {
+                *automaton_state = STATE_ESCAPE_HEXA_IN_STRING;
+            } else if (read_char == '\"') {
+                mstr_append(mutable_string, '\"');
+                *automaton_state = STATE_STRING;
+            } else if (read_char == 'n') {
+                mstr_append(mutable_string, '\n');
+                *automaton_state = STATE_STRING;
+            } else if (read_char == 't') {
+                mstr_append(mutable_string, '\t');
+                *automaton_state = STATE_STRING;
+            } else if (read_char == '\\') {
+                mstr_append(mutable_string, '\\');
+                *automaton_state = STATE_STRING;
+            } else {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: Escape character with invalid character following: \\%c. Possible characters following escape character are only: '\", \n, \t, \\.", line_num, char_num, read_char);
+                *scanner_result = SCANNER_RESULT_INVALID_STATE;
+            }
+            read_char = EMPTY_CHAR;
             break;
+
         case STATE_ESCAPE_HEXA_IN_STRING:
+            if (isdigit(read_char) || (read_char >= 'a' && read_char <= 'f') || (read_char >= 'A' && read_char <= 'F')) {
+                mstr_append(mutable_string, read_char);
+                *automaton_state = STATE_ESCAPE_HEXA_ONE_IN_STRING;
+                read_char = EMPTY_CHAR;
+            } else {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: Escape hexadecimal character with invalid characters following: \\%s.", line_num, char_num, mstr_content(mutable_string));
+                *scanner_result = SCANNER_RESULT_INVALID_STATE;
+            }
             break;
+
         case STATE_ESCAPE_HEXA_ONE_IN_STRING:
+            if (isdigit(read_char) || (read_char >= 'a' && read_char <= 'f') || (read_char >= 'A' && read_char <= 'F')) {
+                mstr_append(mutable_string, read_char);
+                read_char = EMPTY_CHAR;
+
+                // get the hexadecimal number from a string and replace it with equivalent char
+                char *hexa_number_string = calloc(sizeof(char), 5);
+                if (hexa_number_string == NULL) {
+                    stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_INTERNAL, "Malloc of string for a hexadecimal escape sequence in a string failed.");
+                    *scanner_result = SCANNER_RESULT_INTERNAL_ERROR;
+                    break;
+                }
+
+                char *hexa_string = mstr_content(mutable_string) + mstr_length(mutable_string) - 2;
+                strcpy(hexa_number_string , "0x");
+                strcpy(hexa_number_string + 2, hexa_string);
+
+                char *end_ptr = NULL;
+                int int_val = strtoul(hexa_number_string, &end_ptr, NUMERAL_SYSTEM_HEXADECIMAL);
+                if (*end_ptr != '\0') {
+                     stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: Hexadecimal number consists of more than just an '0x' and two hexadecimal difits: %s. Hexadecimal values in escape sequence must consist of exactly 2 hexadecimal digits.", line_num, char_num, hexa_number_string);
+                    *scanner_result = SCANNER_RESULT_INVALID_STATE;
+                }
+                if (errno == ERANGE || int_val > INT_MAX) { // if given number is bigger that possible
+                    errno = 0;
+                    stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: Hexadecimal number %s overflows integer maximal value. Integer cannot hold this value.", line_num, char_num, hexa_number_string);
+                    *scanner_result = SCANNER_RESULT_NUMBER_OVERFLOW;
+                }
+
+                char c = (char) int_val;
+                *(mstr_content(mutable_string) + mstr_length(mutable_string) - 2) = c;
+                *(mstr_content(mutable_string) + mstr_length(mutable_string) - 1) = '\0';
+                mutable_string->used--;
+
+                free(hexa_number_string);
+                *automaton_state = STATE_STRING;
+            } else {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL, "%llu:%llu: Escape hexadecimal character with invalid characters following: \\%s.", line_num, char_num, mstr_content(mutable_string));
+                *scanner_result = SCANNER_RESULT_INVALID_STATE;
+            }
             break;
+
         case STATE_COMMA:
             break;
         case STATE_COLON:
