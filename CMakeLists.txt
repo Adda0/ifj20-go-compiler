@@ -3,7 +3,7 @@ project(ifj20_go_compiler CXX C)
 enable_testing()
 
 set(CMAKE_C_STANDARD 11)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 20)
 
 # ------- GoogleTest -------
 # Download and unpack googletest at configure time
@@ -34,9 +34,18 @@ include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 
 # ------- App -------
 include_directories(src)
+add_executable(Compiler
+        src/compiler.h src/compiler.c
+        src/mutable_string.h src/mutable_string.c
+        src/stderr_message.h src/stderr_message.c
+        src/scanner.h src/scanner_static.h src/scanner.c)
 
 # ------- Tests -------
 add_executable(Test_mutable_string src/mutable_string.h src/mutable_string.c src/tests/mutable_string.cpp)
 target_link_libraries(Test_mutable_string gtest gtest_main)
 
+add_executable(Test_scanner src/scanner.h src/scanner_static.h src/scanner.c src/stderr_message.h src/stderr_message.c src/mutable_string.h src/mutable_string.c src/tests/scanner.cpp)
+target_link_libraries(Test_scanner gtest gtest_main)
+
 add_test(mutable_string Test_mutable_string)
+add_test(scanner Test_scanner)
