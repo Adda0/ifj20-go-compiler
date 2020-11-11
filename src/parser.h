@@ -19,18 +19,21 @@
 
 #define recover() do {                                                                          \
     /* Try to recover from the state, find new line and start with <body> from there. */        \
-    while (!token.context.eol_read) {                                                           \
+    while (scanner_result != SCANNER_RESULT_EOF) {                                              \
+        while (!token.context.eol_read) {                                                       \
+            scanner_result = scanner_get_token(&token, EOL_OPTIONAL);                           \
+            if (scanner_result == SCANNER_RESULT_EOF) {                                         \
+                return COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL;                               \
+            } else if (scanner_result == SCANNER_RESULT_INTERNAL_ERROR) {                       \
+                return COMPILER_RESULT_ERROR_INTERNAL;                                          \
+            }                                                                                   \
+            if (!token.context.eol_read) {                                                      \
+                clear_token();                                                                  \
+            }                                                                                   \
+        }                                                                                       \
+        body();                                                                                 \
         scanner_result = scanner_get_token(&token, EOL_OPTIONAL);                               \
-        if (scanner_result == SCANNER_RESULT_EOF) {                                             \
-            return COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL;                                   \
-        } else if (scanner_result == SCANNER_RESULT_INTERNAL_ERROR) {                           \
-            return COMPILER_RESULT_ERROR_INTERNAL;                                              \
-        }                                                                                       \
-        if (!token.context.eol_read) {                                                          \
-            clear_token();                                                                      \
-        }                                                                                       \
     }                                                                                           \
-    body();                                                                                     \
 } while(0)
 
 #define check_new_token(eol_rule) do {                                                          \
