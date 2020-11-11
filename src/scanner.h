@@ -126,11 +126,21 @@ typedef union token_data {
 } TokenData;
 
 /**
+ * @brief Data type containing additional context info about token - used by parser, filled by scanner.
+ */
+typedef struct token_context {
+    size_t line_num;
+    size_t char_num;
+    bool eol_read;
+} TokenContext;
+
+/**
  * @brief Data type containing all the necessary data for token given to parser by scanner.
  */
 typedef struct token {
     TokenType type;
     TokenData data;
+    TokenContext context;
 } Token;
 
 /**

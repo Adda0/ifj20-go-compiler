@@ -30,6 +30,9 @@ ScannerResult scanner_get_token(Token *token, EolRule eol_rule) {
     EolRuleResult eol_rule_result = EOL_RULE_RESULT_SUCCESS;
 
     token->type = TOKEN_DEFAULT;
+    token->context.eol_read = false;
+    token->context.line_num = line_num;
+    token->context.char_num = char_num;
     bool token_done = false; // Whether the token is ready to be send to parser. Simulates accept state in FA.
 
     AutomatonState automaton_state = STATE_DEFAULT;
@@ -73,6 +76,9 @@ ScannerResult scanner_get_token(Token *token, EolRule eol_rule) {
         if (automaton_state == STATE_DEFAULT) { // for a first character test EOL rule
             if (read_char != ' ' && read_char != '\t') {
                 eol_rule_result = handle_eol_rule(eol_rule, read_char);
+                if (read_char == '\n') {
+                    token->context.eol_read = true;
+                }
 
                 if (eol_rule_result == EOL_RULE_RESULT_EXCESS_EOL) {
 
@@ -177,6 +183,8 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
             }
 
             read_char = EMPTY_CHAR;
+            token->context.line_num = line_num;
+            token->context.char_num = char_num;
             break;
 
             // already have read at least one char of a new token
