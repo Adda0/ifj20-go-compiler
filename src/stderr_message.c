@@ -15,7 +15,8 @@
 #include "stderr_message.h"
 #include "compiler.h"
 
-void stderr_message(const char *module, MessageType message_type, CompilerResult compiler_result_arg, const char *fmt, ...) {
+void stderr_message(const char *module, MessageType message_type, CompilerResult compiler_result_arg,
+                    const char *fmt, ...) {
     set_compiler_result(compiler_result_arg);
 
     fprintf(stderr, "%s: ", module);

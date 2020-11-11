@@ -26,7 +26,8 @@ typedef enum message_type {
  * @param fmt Formatted output message.
  * @param ... Additional arguments if necessary.
  */
-void stderr_message(const char *module, MessageType message_type, CompilerResult compiler_result_arg, const char *fmt, ...);
+void stderr_message(const char *module, MessageType message_type, CompilerResult compiler_result_arg,
+                    const char *fmt, ...);
 
 /**
  * @brief Set the compiler result value.

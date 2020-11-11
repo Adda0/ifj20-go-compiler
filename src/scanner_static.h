@@ -144,7 +144,9 @@ static EolRuleResult handle_eol_rule(EolRule eol_rule, char read_char);
  * @param token_done Shows whether the token is finished and ready to be returned by scanner.
  * @return char EMPTY_CHAR if the token requires reading another character from the source code, leaves the char unchanged otherwise.
  */
-static char resolve_read_char(char read_char, size_t line_num, size_t char_num, AutomatonState *automaton_state, ScannerResult *scanner_result, MutableString *mutable_string, Token *token, bool *token_done);
+static char resolve_read_char(char read_char, size_t line_num, size_t char_num, AutomatonState *automaton_state,
+                              ScannerResult *scanner_result, MutableString *mutable_string, Token *token,
+                              bool *token_done);
 
 /**
  * @brief Checks whether found identifier is a keyword or true/false value and sets the appropriate token options.
