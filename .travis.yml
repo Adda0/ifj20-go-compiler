@@ -7,6 +7,17 @@ os: linux
 dist: xenial
 compiler: gcc
 
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - gcc-9
+      - g++-9
+
+env:
+  - CXX=g++-9
+
 script:
   - cd src && CTESTFLAGS="-V" make test
 
