@@ -17,6 +17,11 @@
                    "Line %u, col %u: " message, token.context.line_num,                         \
                    token.context.char_num, convert_token_to_text())
 
+#define eol_error(message)                                                                      \
+    stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL,                  \
+                   "Line %u, col %u: " message, token.context.line_num,                         \
+                   token.context.char_num)
+
 #define recover() do {                                                                          \
     /* Try to recover from the state, find new line and start with <body> from there. */        \
     while (scanner_result != SCANNER_RESULT_EOF) {                                              \
