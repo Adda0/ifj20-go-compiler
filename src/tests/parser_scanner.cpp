@@ -12,7 +12,7 @@
 // 1 – info about processed tokens
 // 2 – all info excluding character reads and buffer clearing
 // 3 – all info
-#define VERBOSE 2
+#define VERBOSE 1
 
 #include <iostream>
 #include <array>
@@ -152,10 +152,20 @@ TEST_F(ParserScannerTest, PackageTypo) {
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
-TEST_F(ParserScannerTest, EOLMissingError1) {
+TEST_F(ParserScannerTest, EOLMissingMainFunc) {
     std::string inputStr = \
         "package main"
-        "\n"
+        "func main() {\n"
+        "    if a {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, EOLMissingError1) {
+    std::string inputStr = \
+        "package main "
         "func main() {\n"
         "    if a {\n"
         "    }\n"
