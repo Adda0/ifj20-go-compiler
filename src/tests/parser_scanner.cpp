@@ -582,7 +582,7 @@ TEST_F(ParserScannerTest, AssignEOLForbidden1) {
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
-TEST_F(ParserScannerTest, AssignEOLForbidden2) {
+TEST_F(ParserScannerTest, AssignEOL2) {
     std::string inputStr = \
         "package main\n"
         "\n"
@@ -590,10 +590,10 @@ TEST_F(ParserScannerTest, AssignEOLForbidden2) {
         "    a,\n b = 1, 2\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
-TEST_F(ParserScannerTest, AssignEOLForbidden3) {
+TEST_F(ParserScannerTest, AssignEOL3) {
     std::string inputStr = \
         "package main\n"
         "\n"
@@ -604,7 +604,7 @@ TEST_F(ParserScannerTest, AssignEOLForbidden3) {
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
-TEST_F(ParserScannerTest, AssignEOLForbidden4) {
+TEST_F(ParserScannerTest, AssignEOL4) {
     std::string inputStr = \
         "package main\n"
         "\n"
@@ -612,10 +612,10 @@ TEST_F(ParserScannerTest, AssignEOLForbidden4) {
         "    a, b =\n 1, 2\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
-TEST_F(ParserScannerTest, AssignEOLForbidden5) {
+TEST_F(ParserScannerTest, AssignEOL5) {
     std::string inputStr = \
         "package main\n"
         "\n"
@@ -626,7 +626,7 @@ TEST_F(ParserScannerTest, AssignEOLForbidden5) {
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
-TEST_F(ParserScannerTest, AssignEOLForbidden6) {
+TEST_F(ParserScannerTest, AssignEOL6) {
     std::string inputStr = \
         "package main\n"
         "\n"
@@ -634,7 +634,7 @@ TEST_F(ParserScannerTest, AssignEOLForbidden6) {
         "    a, b = 1,\n 2\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
 // === Test EOL in commands ===
@@ -658,7 +658,7 @@ TEST_F(ParserScannerTest, TestEOLInDefinitionOfVariable2) {
         "    a :=\n 12\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
 TEST_F(ParserScannerTest, TestEOLInDefinitionOfVariable3) {
@@ -691,7 +691,7 @@ TEST_F(ParserScannerTest, TestEOLInDefinitionOfVariable5) {
         "    a, b := 1,\n 2\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
 TEST_F(ParserScannerTest, TestEOLInDefinitionOfVariable6) {
@@ -745,7 +745,7 @@ TEST_F(ParserScannerTest, TestEOLInIfElseIfElseConstrcuction2) {
         "    }\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
 TEST_F(ParserScannerTest, TestEOLInIfElseIfElseConstrcuction3) {
@@ -790,7 +790,7 @@ TEST_F(ParserScannerTest, TestEOLInIfElseIfElseConstrcuction5) {
         "    }\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
 TEST_F(ParserScannerTest, TestEOLInIfElseIfElseConstrcuction6) {
