@@ -20,7 +20,7 @@
 #define recover() do {                                                                          \
     /* Try to recover from the state, find new line and start with <body> from there. */        \
     while (scanner_result != SCANNER_RESULT_EOF) {                                              \
-        while (!token.context.eol_read) {                                                       \
+        do {                                                                                    \
             scanner_result = scanner_get_token(&token, EOL_OPTIONAL);                           \
             if (scanner_result == SCANNER_RESULT_EOF) {                                         \
                 return COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL;                               \
@@ -30,9 +30,8 @@
             if (!token.context.eol_read) {                                                      \
                 clear_token();                                                                  \
             }                                                                                   \
-        }                                                                                       \
+        } while(!token.context.eol_read);                                                       \
         body();                                                                                 \
-        scanner_result = scanner_get_token(&token, EOL_OPTIONAL);                               \
     }                                                                                           \
 } while(0)
 
