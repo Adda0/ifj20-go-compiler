@@ -155,7 +155,7 @@ int params() {
     }
 }
 
-int expression_n() {
+int expression_n(EolRule eol_after) {
     switch (token.type) {
         case TOKEN_KEYWORD:
             switch (token.data.keyword_type) {
@@ -173,13 +173,22 @@ int expression_n() {
         case TOKEN_CURLY_RIGHT_BRACKET:
         case TOKEN_SEMICOLON:
             // rule <expression_n> -> eps
+            // We have to check EOLs according to the current code context. There can't be EOL
+            // after for definition but there must be EOL after assignment.
+            if (eol_after == EOL_REQUIRED && !token.context.eol_read) {
+                eol_error("unexpected EOL after expressions\n");
+                syntax_error();
+            } else if (eol_after == EOL_FORBIDDEN && token.context.eol_read) {
+                eol_error("forbidden EOL after expressions\n");
+                syntax_error();
+            }
             syntax_ok();
         case TOKEN_COMMA:
             // rule <expression_n> -> , expression <expression_n>
             //TODO: expression
             check_new_token(EOL_OPTIONAL);
             check_nonterminal(expression(EOL_OPTIONAL));
-            return expression_n();
+            return expression_n(eol_after);
         default:
             token_error("expected identifier, ), {, }, semicolon, comma, return, if or for, got %s\n");
             syntax_error();
@@ -199,7 +208,7 @@ int call_params() {
             // rule <call_params> -> expression <expression_n>
             // TODO: expression
             check_nonterminal(expression(EOL_FORBIDDEN));
-            return expression_n();
+            return expression_n(EOL_FORBIDDEN);
         default:
             token_error("expected int, float, string or bool value, got %s\n");
             syntax_error();
@@ -235,13 +244,13 @@ int assignment() {
             // TODO: expression
             check_new_token(EOL_OPTIONAL);
             check_nonterminal(expression(EOL_OPTIONAL));
-            return expression_n();
+            return expression_n(EOL_REQUIRED);
         case TOKEN_DEFINE:
             // rule <assignment> -> := expression <expression_n>
             // TODO: expression
             check_new_token(EOL_OPTIONAL);
             check_nonterminal(expression(EOL_OPTIONAL));
-            return expression_n();
+            return expression_n(EOL_REQUIRED);
         default:
             token_error("expected = or := during assignment, got %s\n");
             syntax_error();
@@ -384,7 +393,7 @@ int for_definition() {
             // TODO: epxression
             check_new_token(EOL_FORBIDDEN);
             check_nonterminal(expression(EOL_FORBIDDEN));
-            return expression_n();
+            return expression_n(EOL_FORBIDDEN);
         default:
             token_error("expected semicolon or identifier at for loop definition, got %s\n");
             syntax_error();
@@ -404,7 +413,7 @@ int for_assignment_follow() {
             // TODO: expression
             check_new_token(EOL_OPTIONAL);
             check_nonterminal(expression(EOL_FORBIDDEN));
-            return expression_n();
+            return expression_n(EOL_FORBIDDEN);
         case TOKEN_PLUS_ASSIGN:
         case TOKEN_MINUS_ASSIGN:
         case TOKEN_MULTIPLY_ASSIGN:
@@ -463,12 +472,11 @@ int return_follow() {
         case TOKEN_STRING:
             // rule <return_follow> -> expression <expression_n>
             if (token.context.eol_read) {
-                stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL, "Line %u, col %u: ",
-                               "unexpected EOL after return\n");
+                eol_error("unexpected EOL after return\n");
                 syntax_error();
             }
             check_nonterminal(expression(EOL_FORBIDDEN));
-            return expression_n();
+            return expression_n(EOL_REQUIRED);
         default:
             token_error("expected identifier, return, if, for, }, int, float or string value after return, "
                         "got %s\n");
@@ -713,7 +721,7 @@ int program() {
         syntax_error();
     }
     clear_token();
-    check_new_token(EOL_OPTIONAL);
+    check_new_token(EOL_REQUIRED);
     return execution();
 }
 
