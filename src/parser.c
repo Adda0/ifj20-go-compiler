@@ -164,7 +164,8 @@ int expression_n(EolRule eol_after) {
                 case KEYWORD_FOR:
                     break;
                 default:
-                    token_error("expected keyword return, if or for, got %s\n");
+                    token_error("expected identifier, ), {, }, semicolon, comma or keyword "
+                                "return, if or for inside expression list, got %s\n");
                     syntax_error();
             }
         case TOKEN_ID:
@@ -186,6 +187,10 @@ int expression_n(EolRule eol_after) {
         case TOKEN_COMMA:
             // rule <expression_n> -> , expression <expression_n>
             //TODO: expression
+            if (token.context.eol_read) {
+                eol_error("forbidden EOL after expressions\n");
+                syntax_error();
+            }
             check_new_token(EOL_OPTIONAL);
             check_nonterminal(expression(EOL_OPTIONAL));
             return expression_n(eol_after);
@@ -321,6 +326,7 @@ int else_n() {
                 token_error("expected } after else body, got %s\n");
                 syntax_error();
             }
+            check_new_token(EOL_REQUIRED);
             syntax_ok();
         case TOKEN_KEYWORD:
             if (token.data.keyword_type == KEYWORD_IF) {
@@ -360,7 +366,11 @@ int else_() {
                     break;
                 case KEYWORD_ELSE:
                     // rule <else> -> else <else_n>
-                    check_new_token(EOL_FORBIDDEN);
+                    if (token.context.eol_read) {
+                        eol_error("unexpected EOL after if block\n");
+                        syntax_error();
+                    }
+                    check_new_token(EOL_OPTIONAL);
                     return else_n();
                 default:
                     token_error("expected return, if, for or else keyword, got %s\n");
@@ -369,6 +379,11 @@ int else_() {
         case TOKEN_ID:
         case TOKEN_CURLY_RIGHT_BRACKET:
             // rule <else> -> eps
+            // New statement, there must have been EOL
+            if (!token.context.eol_read) {
+                token_error("expected EOL after if block before next statement\n");
+                syntax_error();
+            }
             syntax_ok();
         default:
             token_error("expected }, identifier or new statement after if body, got %s\n");
@@ -451,8 +466,8 @@ int return_follow() {
             } else {
                 // rule <return_follow> -> expression <expression_n>
                 // TODO: expression
-                check_nonterminal(expression(EOL_FORBIDDEN));
-                return expression_n();
+                check_nonterminal(expression(EOL_OPTIONAL));
+                return expression_n(EOL_OPTIONAL);
             }
         case TOKEN_KEYWORD:
             switch (token.data.keyword_type) {
@@ -475,7 +490,7 @@ int return_follow() {
                 eol_error("unexpected EOL after return\n");
                 syntax_error();
             }
-            check_nonterminal(expression(EOL_FORBIDDEN));
+            check_nonterminal(expression(EOL_OPTIONAL));
             return expression_n(EOL_REQUIRED);
         default:
             token_error("expected identifier, return, if, for, }, int, float or string value after return, "
@@ -512,7 +527,7 @@ int statement() {
                         token_error("expected } after if body, got %s\n");
                         syntax_error();
                     }
-                    check_new_token(EOL_REQUIRED);
+                    check_new_token(EOL_OPTIONAL);
                     return else_();
                 case KEYWORD_FOR:
                     // rule <statement> -> for <for_definition> ; expression ; <for_assignment> { <body> }
