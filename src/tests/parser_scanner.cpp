@@ -957,8 +957,166 @@ TEST_F(ParserScannerTest, TestEOLInFunctionCall10) {
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
+// === Test return command format ===
+
+TEST_F(ParserScannerTest, ReturnFormat1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    return\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
 
 
+TEST_F(ParserScannerTest, ReturnFormat2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    return"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ReturnFormat3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() int {\n"
+        "    return a\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ReturnFormat4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    return a\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ReturnFormat5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    return \n a\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ReturnFormat6) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() (int, float) {\n"
+        "    return a, b\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ReturnFormat7) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() (int, string, float) {\n"
+        "    return a, b, c\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ReturnFormat8) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() (int, string, float) {\n"
+        "    return a, b\n, c\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ReturnFormat9) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "\n"
+        "func foo() (int) {\n"
+        "    return 5\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ReturnFormat10) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "\n"
+        "func foo() (\nint) {\n"
+        "    return 5\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ReturnFormat11) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "\n"
+        "func foo() (int) {\n"
+        "    return 5\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ReturnFormat12) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "\n"
+        "func foo() (int, string) {\n"
+        "    return 5, \"returned \\0xaf string\"\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ReturnFormat13) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "\n"
+        "func foo() (int, string) {\n"
+        "    return 5, \"returned \n \\0xaf string\"\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
 
 
 
@@ -1042,3 +1200,4 @@ TEST_F(ParserScannerTest, AddComments4) {
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
+
