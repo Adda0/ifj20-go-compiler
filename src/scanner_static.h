@@ -102,6 +102,7 @@ typedef enum automaton_state {
 
     STATE_MULTILINE_COMMENT, // /*
     STATE_ASTERISK_IN_MULTILINE_COMMENT, // /* ... *
+    STATE_END_OF_MULTILINE_COMMENT, // == TOKEN_DEFAULT, but with eol checks again
     STATE_ONELINE_COMMENT, // //
 
     STATE_STRING, // "
