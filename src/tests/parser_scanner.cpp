@@ -12,7 +12,7 @@
 // 1 – info about processed tokens
 // 2 – all info excluding character reads and buffer clearing
 // 3 – all info
-#define VERBOSE 3
+#define VERBOSE 2
 
 #include <iostream>
 #include <array>
@@ -298,36 +298,36 @@ TEST_F(ParserScannerTest, EmptyLineEOLInFrontOfPackageForbidden) {
 }
 
 
-TEST_F(ParserScannerTest, EOLInForLoopMissing1) {
+TEST_F(ParserScannerTest, EOLInForLoop1) {
     std::string inputStr = \
         "package main\n"
         "\n"
         "func main() {\n"
-        "    for a; b; c {"
+        "    for a := 5; b; c {"
         "    }\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
-TEST_F(ParserScannerTest, EOLInForLoopMissing2) {
+TEST_F(ParserScannerTest, EOLInForLoop2) {
     std::string inputStr = \
         "package main\n"
         "\n"
         "func main() {\n"
-        "    for a; b; c {\n"
+        "    for a := 5; b; c {\n"
         "    }"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
-TEST_F(ParserScannerTest, EOLInForLoopMissing3) {
+TEST_F(ParserScannerTest, EOLInForLoop3) {
     std::string inputStr = \
         "package main\n"
         "\n"
         "func main() {\n"
-        "    for a;\n b; c {\n"
+        "    for a := 5;\n b; c {\n"
         "    }\n"
         "}\n";
 
@@ -363,7 +363,7 @@ TEST_F(ParserScannerTest, EOLInForLoopForbidden3) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    for a; b\n; c {\n"
+        "    for a := 5; b\n; c {\n"
         "    }\n"
         "}\n";
 
@@ -375,7 +375,7 @@ TEST_F(ParserScannerTest, EOLInForLoopForbidden4) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    for a; b;\n c {\n"
+        "    for a := 5; b;\n c {\n"
         "    }\n"
         "}\n";
 
@@ -387,7 +387,7 @@ TEST_F(ParserScannerTest, EOLInForLoopForbidden5) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    for a; b; c\n {\n"
+        "    for a := 5; b; c\n {\n"
         "    }\n"
         "}\n";
 
@@ -399,7 +399,7 @@ TEST_F(ParserScannerTest, EOLInForLoopForbidden6) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    for a; b; c {\n"
+        "    for a := 5; b; c {\n"
         "    }\n"
         "}\n";
 
@@ -546,4 +546,499 @@ TEST_F(ParserScannerTest, IncompleteFunctionDefinition5) {
         "\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+// === Assing commmand EOLs tests ===
+
+TEST_F(ParserScannerTest, AssignEOLMissing) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, b = 1, 2"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, AssignEOLForbidden1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a\n, b = 1, 2\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, AssignEOLForbidden2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a,\n b = 1, 2\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, AssignEOLForbidden3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, b\n = 1, 2\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, AssignEOLForbidden4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, b =\n 1, 2\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, AssignEOLForbidden5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, b = 1\n, 2\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, AssignEOLForbidden6) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, b = 1,\n 2\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+// === Test EOL in commands ===
+
+TEST_F(ParserScannerTest, TestEOLInDefinitionOfVariable1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a\n := 2\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, TestEOLInDefinitionOfVariable2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a :=\n 12\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, TestEOLInDefinitionOfVariable3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, b \n := 1, 2\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, TestEOLInDefinitionOfVariable4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, b := 1\n, 2\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, TestEOLInDefinitionOfVariable5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, b := 1,\n 2\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, TestEOLInDefinitionOfVariable6) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, _ := 1, 2\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, TestEOLInDefinitionOfVariable7) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    _\n, a  := 1, 2\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+// === Test EOL in if-else if-else costruction ===
+
+TEST_F(ParserScannerTest, TestEOLInIfElseIfElseConstrcuction1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a {\n"
+        "        foo = 42\n"
+        "    } else {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, TestEOLInIfElseIfElseConstrcuction2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if \na {\n"
+        "        foo = 42\n"
+        "    } else {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, TestEOLInIfElseIfElseConstrcuction3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a \n{\n"
+        "        foo = 42\n"
+        "    } else {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, TestEOLInIfElseIfElseConstrcuction4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a {\n"
+        "        foo = 42\n"
+        "    } \n else {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, TestEOLInIfElseIfElseConstrcuction5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if na {\n"
+        "        foo = 42\n"
+        "    } else \n {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, TestEOLInIfElseIfElseConstrcuction6) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a {\n"
+        "        foo = 42\n"
+        "    \n\n\n\n"
+        "} else {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, TestEOLInIfElseIfElseConstrcuction7) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a {\n"
+        "    \n\n\n\n"
+        "        foo = 42\n"
+        "} else {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, TestEOLInIfElseIfElseConstrcuction8) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a {"
+        "        foo = 42\n"
+        "} else {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, TestEOLInIfElseIfElseConstrcuction9) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a {\n"
+        "        foo = 42\n"
+        "} else {"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+// === Test EOL in function call ===
+
+TEST_F(ParserScannerTest, TestEOLInFunctionCall1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(a int, c string)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, TestEOLInFunctionCall2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo\n(a int, c string)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, TestEOLInFunctionCall3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(a \nint, c string)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, TestEOLInFunctionCall4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(\na int, c string)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, TestEOLInFunctionCall5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(a \nint, c string)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, TestEOLInFunctionCall6) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(a int\n, c string)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, TestEOLInFunctionCall7) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(a int, \nc string)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, TestEOLInFunctionCall8) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(a int, c\n string)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, TestEOLInFunctionCall9) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(a int, c string\n)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, TestEOLInFunctionCall10) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(a int, c string)"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// === Insert more whitespaces ===
+
+TEST_F(ParserScannerTest, InsertMoreWhitespaces1) {
+    std::string inputStr = \
+        "package     main\n"
+        "  \n"
+        "func main(   )    {\n"
+        "    a    , b        = 1,     2\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, InsertMoreTabs) {
+    std::string inputStr = \
+        "package\tmain\n"
+        "\t\n"
+        "func main(\t) {\n"
+        "a\t, b = 1,\t\t\t2\n"
+        "\t\t\t}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, AddComments1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n /* comment to be skipped */"
+        "func main() {\n"
+        "    a, b = 1, 2\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, AddComments2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() { // one-line comment \n"
+        "    a, b = 1, 2\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, AddComments3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() { /* multi-line comment \n \n about stuff */ \n"
+        "    a, b = 1, 2\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, AddComments4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, b = /* little in-command comment */ 1, 2\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
