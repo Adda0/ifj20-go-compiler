@@ -12,11 +12,15 @@ CTESTFLAGS ?= ""
 
 all: compiler
 
+compiler: scanner.o mutable_string.o stderr_message.o compiler.o \
+		  parser.o
 
-scanner.o: scanner.c scanner.h scanner_static.h stderr_message.h
+scanner.o: scanner.c scanner.h mutable_string.h compiler.h \
+		   scanner_static.h stderr_message.h
 mutable_string.o: mutable_string.c mutable_string.h
-stderr_message.o: stderr_message.c stderr_message.h
-compiler.o: compiler.c compiler.h
+stderr_message.o: stderr_message.c stderr_message.h  compiler.h
+compiler.o: compiler.c compiler.h parser.h
+parser.o: parser.c parser.h compiler.h scanner.h mutable_string.h
 
 
 test:
@@ -27,6 +31,7 @@ test:
 clean:
 	rm -f *.o
 	rm -rf ../cmake-build/
+	rm compiler
 
 pack:
 	mkdir pack
