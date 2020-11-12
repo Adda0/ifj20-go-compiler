@@ -287,16 +287,16 @@ TEST_F(ParserScannerTest, LastEOLIsNotRequired) {
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
-TEST_F(ParserScannerTest, EmptyLineEOLAfterPackageMissing) {
+TEST_F(ParserScannerTest, EmptyLineEOLAfterPackageMissingAllowed) {
     std::string inputStr = \
         "package main\n"
         "func main() {\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
-TEST_F(ParserScannerTest, EmptyLineEOLInFrontOfPackageForbidden) {
+TEST_F(ParserScannerTest, EmptyLineEOLInFrontOfPackageAllowed) {
     std::string inputStr = \
         "\n"
         "package main\n"
@@ -304,7 +304,7 @@ TEST_F(ParserScannerTest, EmptyLineEOLInFrontOfPackageForbidden) {
         "func main() {\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
 
@@ -496,15 +496,15 @@ TEST_F(ParserScannerTest, FunctionMainDefinitionMissing1) {
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
-}*/
+}
 
 TEST_F(ParserScannerTest, FunctionMainDefinitionMissing2) {
     std::string inputStr = \
         "package main\n"
         "\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
-}
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL);
+}*/
 
 // === Incomplete function definition ===
 
