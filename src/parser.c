@@ -433,6 +433,49 @@ int for_assignment() {
     }
 }
 
+int return_follow() {
+    switch (token.type) {
+        case TOKEN_ID:
+            if (token.context.eol_read) {
+                // rule <return_follow> -> eps
+                syntax_ok();
+            } else {
+                // rule <return_follow> -> expression <expression_n>
+                // TODO: expression
+                check_nonterminal(expression(EOL_FORBIDDEN));
+                return expression_n();
+            }
+        case TOKEN_KEYWORD:
+            switch (token.data.keyword_type) {
+                case KEYWORD_RETURN:
+                case KEYWORD_IF:
+                case KEYWORD_FOR:
+                    break;
+                default:
+                    token_error("expected return, if or for keyword after return, got %s\n");
+                    syntax_error();
+            }
+        case TOKEN_CURLY_RIGHT_BRACKET:
+            // rule <return_follow> -> eps
+            syntax_ok();
+        case TOKEN_INT:
+        case TOKEN_FLOAT:
+        case TOKEN_STRING:
+            // rule <return_follow> -> expression <expression_n>
+            if (token.context.eol_read) {
+                stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL, "Line %u, col %u: ",
+                               "unexpected EOL after return\n");
+                syntax_error();
+            }
+            check_nonterminal(expression(EOL_FORBIDDEN));
+            return expression_n();
+        default:
+            token_error("expected identifier, return, if, for, }, int, float or string value after return, "
+                        "got %s\n");
+            syntax_error();
+    }
+}
+
 int statement() {
     switch (token.type) {
         case TOKEN_ID:
@@ -443,11 +486,9 @@ int statement() {
         case TOKEN_KEYWORD:
             switch (token.data.keyword_type) {
                 case KEYWORD_RETURN:
-                    // rule <statement> -> return expression <expression_n>
-                    // TODO: expression
-                    check_new_token(EOL_FORBIDDEN);
-                    check_nonterminal(expression(EOL_OPTIONAL));
-                    return expression_n();
+                    // rule <statement> -> return <return_follow>
+                    check_new_token(EOL_OPTIONAL);
+                    return return_follow();
                 case KEYWORD_IF:
                     // rule <statement> -> if expression { <body> } <else>
                     // TODO: expression
