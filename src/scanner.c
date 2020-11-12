@@ -80,21 +80,40 @@ ScannerResult scanner_get_token(Token *token, EolRule eol_rule) {
             }
         }
 
-        if (automaton_state == STATE_DEFAULT) { // for a first character test EOL rule
+        if (automaton_state == STATE_DEFAULT ||
+            automaton_state == STATE_ONELINE_COMMENT ||
+            automaton_state == STATE_END_OF_MULTILINE_COMMENT) {
+            // for a first character test EOL rule
             if (read_char != ' ' && read_char != '\t') {
                 eol_rule_result = handle_eol_rule(eol_rule, read_char);
+
                 if (read_char == '\n') {
                     token->context.eol_read = true;
                 }
 
                 if (eol_rule_result == EOL_RULE_RESULT_EXCESS_EOL) {
-
                     scanner_result = SCANNER_RESULT_EXCESS_EOL;
                 } else if (eol_rule_result == EOL_RULE_RESULT_MISSING_EOL) {
-
                     scanner_result = SCANNER_RESULT_MISSING_EOL;
+                } else if (automaton_state == STATE_ONELINE_COMMENT) {
+                    if (read_char == '\n' && eol_rule_result == EOL_RULE_RESULT_SUCCESS) {
+                        scanner_result = SCANNER_RESULT_SUCCESS;
+                    }
+                } else if (automaton_state == STATE_END_OF_MULTILINE_COMMENT &&
+                           eol_rule_result == EOL_RULE_RESULT_SUCCESS &&
+                           scanner_result == SCANNER_RESULT_MISSING_EOL) {
+                    scanner_result = SCANNER_RESULT_SUCCESS;
                 }
-                automaton_state = STATE_EOL_RESOLVED;
+
+                if (automaton_state == STATE_END_OF_MULTILINE_COMMENT &&
+                    token->context.eol_read &&
+                    eol_rule_result == EOL_RULE_RESULT_MISSING_EOL) {
+                    scanner_result = SCANNER_RESULT_SUCCESS;
+                }
+
+                if (automaton_state != STATE_ONELINE_COMMENT) {
+                    automaton_state = STATE_EOL_RESOLVED;
+                }
             }
         }
 
@@ -128,6 +147,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
     // every automaton_state in the following switch represents one state in the FA of scanner
     switch (*automaton_state) {
         case STATE_EOL_RESOLVED:
+        case STATE_END_OF_MULTILINE_COMMENT:
         case STATE_DEFAULT: // getting first char of a new token
             // get next character in case of whitespace characters
             if (read_char == '\n' || read_char == '\t' || read_char == ' ') {
@@ -760,9 +780,9 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
             break;
 
         case STATE_ASTERISK_IN_MULTILINE_COMMENT:
-            if (read_char == '\\') {
+            if (read_char == '/') {
                 // multiline comment just ended -> back to the default
-                *automaton_state = STATE_DEFAULT;
+                *automaton_state = STATE_END_OF_MULTILINE_COMMENT;
             } else {
                 // it was only an asterisk in a comment: /* ... * ... -> back to multiline comment
                 *automaton_state = STATE_MULTILINE_COMMENT;
@@ -773,7 +793,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
         case STATE_ONELINE_COMMENT:
             // token is '//' for sure -> ignore all chars til EOL is read
             if (read_char == '\n') {
-                *automaton_state = STATE_DEFAULT;
+                *automaton_state = STATE_EOL_RESOLVED;
             }
             read_char = EMPTY_CHAR;
             break;
