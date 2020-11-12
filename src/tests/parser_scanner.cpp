@@ -1316,3 +1316,20 @@ TEST_F(ParserScannerTest, FunctionDefinition8) {
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
+
+// === Test combining token because of missing EOL ===
+
+TEST_F(ParserScannerTest, CombiningTokensMissingEOL1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "\n"
+        "func foo() (i int, s strng) {\n"
+        "    a := foo"
+        "    bar = 4\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
