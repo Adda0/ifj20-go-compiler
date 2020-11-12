@@ -862,7 +862,7 @@ TEST_F(ParserScannerTest, TestEOLInFunctionCall1) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foo(a int, c string)\n"
+        "    foo(a, c)\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -873,7 +873,7 @@ TEST_F(ParserScannerTest, TestEOLInFunctionCall2) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foo\n(a int, c string)\n"
+        "    foo\n(a, c)\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
@@ -884,7 +884,7 @@ TEST_F(ParserScannerTest, TestEOLInFunctionCall3) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foo(a \nint, c string)\n"
+        "    foo(a \n, c)\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
@@ -895,21 +895,22 @@ TEST_F(ParserScannerTest, TestEOLInFunctionCall4) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foo(\na int, c string)\n"
+        "    foo(\na, c)\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
+
 
 TEST_F(ParserScannerTest, TestEOLInFunctionCall5) {
     std::string inputStr = \
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foo(a \nint, c string)\n"
+        "    foo(a, \nc )\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
 TEST_F(ParserScannerTest, TestEOLInFunctionCall6) {
@@ -917,7 +918,7 @@ TEST_F(ParserScannerTest, TestEOLInFunctionCall6) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foo(a int\n, c string)\n"
+        "    foo(a, c\n )\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
@@ -928,7 +929,7 @@ TEST_F(ParserScannerTest, TestEOLInFunctionCall7) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foo(a int, \nc string)\n"
+        "    foo(a int, c)\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
@@ -939,24 +940,13 @@ TEST_F(ParserScannerTest, TestEOLInFunctionCall8) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foo(a int, c\n string)\n"
+        "    foo(a, c string)\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
 TEST_F(ParserScannerTest, TestEOLInFunctionCall9) {
-    std::string inputStr = \
-        "package main\n"
-        "\n"
-        "func main() {\n"
-        "    foo(a int, c string\n)\n"
-        "}\n";
-
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
-}
-
-TEST_F(ParserScannerTest, TestEOLInFunctionCall10) {
     std::string inputStr = \
         "package main\n"
         "\n"
