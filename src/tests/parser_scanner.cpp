@@ -1120,21 +1120,6 @@ TEST_F(ParserScannerTest, ReturnFormat13) {
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // === Insert more whitespaces ===
 
 TEST_F(ParserScannerTest, InsertMoreWhitespaces1) {
@@ -1407,5 +1392,52 @@ TEST_F(ParserScannerTest, ComplexFunctions3) {
         "    }\n"
         "}\n";
 
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+// === Test on long idetifiers ===
+
+TEST_F(ParserScannerTest, LongIdentifiers) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "\n"
+        "func foo() (i int, s string) {\n"
+        "    a := LongIndetifier_djlajdlawjdlajwdjawdklawjdlawjkldawjdjawdjawkljdklawjdkljawkldjawdjawdjawkldjawdlajdawkldawkldjawdlawkldawjdawjdawjdklawjdaw\n"
+        "    LongIndetifier_ahdwjlahwdjawhldahwdawhdawlhdawlkhdklawhdioawiodhaiowdhahdwhawiodhiawhdhawidhawiodhahwdiohawiodhiawdhioawhdawhiodawhidhawdohawihdiawdawd = 4\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+// === Others ===
+
+TEST_F(ParserScannerTest, EmptyMainFunction1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n";
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, EmptyMainFunction2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {}\n";
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, EmptyRandomFunction) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n";
+        "func foo() {\n"
+        "}\n";
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
