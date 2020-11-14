@@ -429,26 +429,6 @@ TEST_F(ParserScannerTest, PackageMainMissing2) {
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
-// === Function main definition missing ===
-
-TEST_F(ParserScannerTest, FunctionMainDefinitionMissing1) {
-    std::string inputStr = \
-        "package main\n"
-        "\n"
-        "func not_main() {\n"
-        "}\n";
-
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
-}
-
-TEST_F(ParserScannerTest, FunctionMainDefinitionMissing2) {
-    std::string inputStr = \
-        "package main\n"
-        "\n";
-
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL);
-}
-
 // === Incomplete function definition ===
 
 TEST_F(ParserScannerTest, IncompleteFunctionDefinition1) {
@@ -941,24 +921,13 @@ TEST_F(ParserScannerTest, ReturnFormat4) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    return a\n"
-        "}\n";
-
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL);
-}
-
-TEST_F(ParserScannerTest, ReturnFormat5) {
-    std::string inputStr = \
-        "package main\n"
-        "\n"
-        "func main() {\n"
         "    return \n a\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
-TEST_F(ParserScannerTest, ReturnFormat6) {
+TEST_F(ParserScannerTest, ReturnFormat5) {
     std::string inputStr = \
         "package main\n"
         "\n"
@@ -969,7 +938,7 @@ TEST_F(ParserScannerTest, ReturnFormat6) {
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
-TEST_F(ParserScannerTest, ReturnFormat7) {
+TEST_F(ParserScannerTest, ReturnFormat6) {
     std::string inputStr = \
         "package main\n"
         "\n"
@@ -980,7 +949,7 @@ TEST_F(ParserScannerTest, ReturnFormat7) {
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
-TEST_F(ParserScannerTest, ReturnFormat8) {
+TEST_F(ParserScannerTest, ReturnFormat7) {
     std::string inputStr = \
         "package main\n"
         "\n"
@@ -991,7 +960,7 @@ TEST_F(ParserScannerTest, ReturnFormat8) {
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
-TEST_F(ParserScannerTest, ReturnFormat9) {
+TEST_F(ParserScannerTest, ReturnFormat8) {
     std::string inputStr = \
         "package main\n"
         "\n"
@@ -1005,7 +974,7 @@ TEST_F(ParserScannerTest, ReturnFormat9) {
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
-TEST_F(ParserScannerTest, ReturnFormat10) {
+TEST_F(ParserScannerTest, ReturnFormat9) {
     std::string inputStr = \
         "package main\n"
         "\n"
@@ -1019,7 +988,7 @@ TEST_F(ParserScannerTest, ReturnFormat10) {
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
-TEST_F(ParserScannerTest, ReturnFormat11) {
+TEST_F(ParserScannerTest, ReturnFormat10) {
     std::string inputStr = \
         "package main\n"
         "\n"
@@ -1033,7 +1002,7 @@ TEST_F(ParserScannerTest, ReturnFormat11) {
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
-TEST_F(ParserScannerTest, ReturnFormat12) {
+TEST_F(ParserScannerTest, ReturnFormat11) {
     std::string inputStr = \
         "package main\n"
         "\n"
@@ -1047,7 +1016,7 @@ TEST_F(ParserScannerTest, ReturnFormat12) {
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
-TEST_F(ParserScannerTest, ReturnFormat13) {
+TEST_F(ParserScannerTest, ReturnFormat12) {
     std::string inputStr = \
         "package main\n"
         "\n"
