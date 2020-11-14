@@ -979,7 +979,7 @@ TEST_F(ParserScannerTest, ReturnFormat2) {
         "    return"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
 TEST_F(ParserScannerTest, ReturnFormat3) {
@@ -1324,4 +1324,88 @@ TEST_F(ParserScannerTest, CombiningTokensMissingEOL1) {
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+// === Complex functions tests ===
+
+TEST_F(ParserScannerTest, ComplexFunctions1) {
+    std::string inputStr = \
+        "// Program 1: Vypocet faktorialu (iterativne)\n"
+        "package main\n"
+        "func main() {\n"
+        "    print(\"Zadejte cislo pro vypocet faktorialu: \")\n"
+        "    a := 0\n"
+        "    a, _ = 45\n"
+        "    if 0 {\n"
+        "        print(\"Faktorial nejde spocitat!\\n\")\n"
+        "    } else {\n"
+        "        vysl := 1\n"
+        "        for bdav := 1 ; 0; a = 1 {\n"
+        "            vysl = vysl\n"
+        "        }\n"
+        "        print(\"Vysledek je \", vysl, \"\\n\")\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ComplexFunctions2) {
+    std::string inputStr = \
+        "// Program 3: Prace s retezci a vestavenymi funkcemi\n"
+        "package main\n"
+        "func main() {\n"
+        "    s1 := \"Toto je nejaky text\"\n"
+        "    s2 := a\n"
+        "    print(s1, \"\\n\", s2)\n"
+        "    s1len := 0\n"
+        "    s1len = a\n"
+        "    s1len = b\n"
+        "    s1, _ = 5, 4\n"
+        "    s1len = 4\n"
+        "    print(\"4 znaky od\", s1len, \". znaku v \\\"\", s2, \"\\\":\", s1, \"\\n\")\n"
+        "    print(\"Zadejte serazenou posloupnost vsech malych pismen a-h, \")\n"
+        "    print(\"pricemz se pismena nesmeji v posloupnosti opakovat: \")\n"
+        "    err := 0\n"
+        "    s1, err = w\n"
+        "    if 1 {\n"
+        "        for ; a; {\n"
+        "            print(\"\\n\", \"Spatne zadana posloupnost, zkuste znovu: \")\n"
+        "            s1, _ = 4, 4\n"
+        "        }\n"
+        "    } else {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ComplexFunctions3) {
+    std::string inputStr = \
+        "// Program 3: Prace s retezci a vestavenymi funkcemi\n"
+        "package main\n"
+        "func main() {\n"
+        "    s1 := \"Toto je nejaky text\"\n"
+        "    s2 := a\n"
+        "    print(s1, \"\\n\", s2)\n"
+        "    s1len := 0\n"
+        "    s1len = a\n"
+        "    s1len = b\n"
+        "    s1, _ = 5, 4\n"
+        "    s1len = 4\n"
+        "    print(\"4 znaky od\", s1len, \". znaku v \\\"\", s2, \"\\\":\", s1, \"\\n\")\n"
+        "    print(\"Zadejte serazenou posloupnost vsech malych pismen a-h, \")\n"
+        "    print(\"pricemz se pismena nesmeji v posloupnosti opakovat: \")\n"
+        "    err := 0\n"
+        "    s1, err = w\n"
+        "    if 1 {\n"
+        "        for ; a; {\n"
+        "            print(\"\\n\", \"Spatne zadana posloupnost, zkuste znovu: \")\n"
+        "            s1, _ = 4, 4\n"
+        "        }\n"
+        "    } else {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
