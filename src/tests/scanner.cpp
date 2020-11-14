@@ -12,37 +12,18 @@
 // 1 – info about processed tokens
 // 2 – all info excluding character reads and buffer clearing
 // 3 – all info
-#define VERBOSE 3
+#define VERBOSE 2
 
 #include <iostream>
 #include <list>
 #include <array>
 #include "gtest/gtest.h"
+#include "stdin_mock_test.h"
 
 extern "C" {
 #include "scanner.h"
 #include "mutable_string.h"
-
-CompilerResult compiler_result = COMPILER_RESULT_SUCCESS;
-
-int get_char_internal(int *feof, int *ferror) {
-    int c = std::cin.get();
-
-    if (c == EOF) {
-        *feof = 1;
-#if VERBOSE > 2
-        std::cout << "[READ EOF]\n";
-#endif
-        return EOF;
-    }
-
-#if VERBOSE > 2
-    std::cout << "[READ] " << (char) c << '\n';
-    std::cout.flush();
-#endif
-
-    return c;
-}
+#include "tests_common.h"
 }
 
 union ExpData {
@@ -102,40 +83,8 @@ const std::array<std::string, 32> tokenTypeNames = {"Default", "Identifier", "Ke
                                                     ":=", "=", "==", "!", "!=", "&&", "||", "(", ")", "{", "}", "<",
                                                     ">", "<=", ">=", ",", ";"};
 
-class ScannerTest : public ::testing::Test {
+class ScannerTest : public StdinMockingScannerTest {
 protected:
-    std::streambuf *cinBackup;
-    std::stringbuf *buffer;
-
-    void SetUp() override {
-#if VERBOSE > 1
-        std::cout << "[TEST SetUp]\n";
-#endif
-        cinBackup = std::cin.rdbuf();
-
-        buffer = new std::stringbuf();
-        std::cin.rdbuf(buffer);
-    }
-
-    void TearDown() override {
-#if VERBOSE > 1
-        std::cout << "[TEST TearDown]\n";
-#endif
-        int toClear = buffer->in_avail();
-        buffer->pubseekoff(toClear, std::ios_base::cur, std::ios_base::out);
-
-        Token tmp;
-        for (int i = 0; i < 4; i++) {
-#if VERBOSE > 2
-            std::cout << "[CLEARING] " << i << '\n';
-#endif
-            scanner_get_token(&tmp, EOL_OPTIONAL);
-        }
-
-        std::cin.rdbuf(cinBackup);
-        delete buffer;
-    }
-
     void ComplexTest(std::string &inputStr, std::list<ExpectedToken> &expected);
 };
 

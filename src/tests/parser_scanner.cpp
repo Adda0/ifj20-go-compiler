@@ -17,70 +17,17 @@
 #include <iostream>
 #include <array>
 #include "gtest/gtest.h"
+#include "stdin_mock_test.h"
 
 extern "C" {
 #include "scanner.h"
 #include "parser.h"
 #include "mutable_string.h"
-
-CompilerResult compiler_result = COMPILER_RESULT_SUCCESS;
-
-int get_char_internal(int *feof, int *ferror) {
-    int c = std::cin.get();
-
-    if (c == EOF) {
-        *feof = 1;
-#if VERBOSE > 2
-        std::cout << "[READ EOF]\n";
-#endif
-        return EOF;
-    }
-
-#if VERBOSE > 2
-    std::cout << "[READ] " << (char) c << '\n';
-    std::cout.flush();
-#endif
-
-    return c;
-}
+#include "tests_common.h"
 }
 
-
-
-class ParserScannerTest : public ::testing::Test {
+class ParserScannerTest : public StdinMockingScannerTest {
 protected:
-    std::streambuf *cinBackup;
-    std::stringbuf *buffer;
-
-    void SetUp() override {
-#if VERBOSE > 1
-        std::cout << "[TEST SetUp]\n";
-#endif
-        cinBackup = std::cin.rdbuf();
-
-        buffer = new std::stringbuf();
-        std::cin.rdbuf(buffer);
-    }
-
-    void TearDown() override {
-#if VERBOSE > 1
-        std::cout << "[TEST TearDown]\n";
-#endif
-        int toClear = buffer->in_avail();
-        buffer->pubseekoff(toClear, std::ios_base::cur, std::ios_base::out);
-
-        Token tmp;
-        for (int i = 0; i < 4; i++) {
-#if VERBOSE > 2
-            std::cout << "[CLEARING] " << i << '\n';
-#endif
-            scanner_get_token(&tmp, EOL_OPTIONAL);
-        }
-
-        std::cin.rdbuf(cinBackup);
-        delete buffer;
-    }
-
     void ComplexTest(std::string &inputStr, CompilerResult expected_compiler_result);
 };
 
@@ -93,9 +40,6 @@ void ParserScannerTest::ComplexTest(std::string &inputStr, CompilerResult expect
 
     ASSERT_EQ(parser_parse(), expected_compiler_result);
 }
-
-
-
 
 TEST_F(ParserScannerTest, BasicCode) {
     std::string inputStr = \
@@ -486,8 +430,7 @@ TEST_F(ParserScannerTest, PackageMainMissing2) {
 }
 
 // === Function main definition missing ===
-//TODO uncomment when implemented
-/*
+
 TEST_F(ParserScannerTest, FunctionMainDefinitionMissing1) {
     std::string inputStr = \
         "package main\n"
@@ -504,7 +447,7 @@ TEST_F(ParserScannerTest, FunctionMainDefinitionMissing2) {
         "\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL);
-}*/
+}
 
 // === Incomplete function definition ===
 
@@ -993,8 +936,6 @@ TEST_F(ParserScannerTest, ReturnFormat3) {
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
-//TODO semantic analyze error
-/*
 TEST_F(ParserScannerTest, ReturnFormat4) {
     std::string inputStr = \
         "package main\n"
@@ -1004,7 +945,7 @@ TEST_F(ParserScannerTest, ReturnFormat4) {
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL);
-}*/
+}
 
 TEST_F(ParserScannerTest, ReturnFormat5) {
     std::string inputStr = \
@@ -1437,7 +1378,7 @@ TEST_F(ParserScannerTest, EmptyRandomFunction) {
         "\n"
         "func main() {\n"
         "}\n";
-        "func foo() {\n"
-        "}\n";
+    "func foo() {\n"
+    "}\n";
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
