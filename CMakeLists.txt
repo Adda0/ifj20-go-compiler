@@ -10,16 +10,16 @@ set(CMAKE_CXX_STANDARD 20)
 configure_file(CMakeLists.txt.in googletest-download/CMakeLists.txt)
 execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
         RESULT_VARIABLE result
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest-download )
-if(result)
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest-download)
+if (result)
     message(FATAL_ERROR "CMake step for googletest failed: ${result}")
-endif()
+endif ()
 execute_process(COMMAND ${CMAKE_COMMAND} --build .
         RESULT_VARIABLE result
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest-download )
-if(result)
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest-download)
+if (result)
     message(FATAL_ERROR "Build step for googletest failed: ${result}")
-endif()
+endif ()
 
 # Prevent overriding the parent project's compiler/linker
 # settings on Windows
@@ -45,8 +45,23 @@ add_executable(Compiler
 add_executable(Test_mutable_string src/mutable_string.h src/mutable_string.c src/tests/mutable_string.cpp)
 target_link_libraries(Test_mutable_string gtest gtest_main)
 
-add_executable(Test_scanner src/scanner.h src/scanner_static.h src/scanner.c src/stderr_message.h src/stderr_message.c src/mutable_string.h src/mutable_string.c src/tests/scanner.cpp)
+add_executable(Test_scanner
+        src/scanner.h src/scanner_static.h src/scanner.c
+        src/stderr_message.h
+        src/mutable_string.h src/mutable_string.c
+        src/tests/tests_common.h src/tests/stdin_mock_test.h
+        src/tests/scanner.cpp)
 target_link_libraries(Test_scanner gtest gtest_main)
+
+add_executable(Test_parser_scanner
+        src/scanner.h src/scanner_static.h src/scanner.c
+        src/stderr_message.h
+        src/mutable_string.h src/mutable_string.c
+        src/parser.h src/parser.c
+        src/tests/tests_common.h src/tests/stdin_mock_test.h
+        src/tests/parser_scanner.cpp)
+target_link_libraries(Test_parser_scanner gtest gtest_main)
 
 add_test(mutable_string Test_mutable_string)
 add_test(scanner Test_scanner)
+add_test(parser_scanner Test_parser_scanner)
