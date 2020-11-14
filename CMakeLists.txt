@@ -38,7 +38,8 @@ add_executable(Compiler
         src/compiler.h src/compiler.c
         src/mutable_string.h src/mutable_string.c
         src/stderr_message.h src/stderr_message.c
-        src/scanner.h src/scanner_static.h src/scanner.c)
+        src/scanner.h src/scanner_static.h src/scanner.c
+        src/parser.h src/parser.c)
 
 # ------- Tests -------
 add_executable(Test_mutable_string src/mutable_string.h src/mutable_string.c src/tests/mutable_string.cpp)

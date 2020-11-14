@@ -9,6 +9,7 @@
 
 #include <stdio.h>
 #include "compiler.h"
+#include "parser.h"
 
 CompilerResult compiler_result = COMPILER_RESULT_SUCCESS;
 
@@ -20,8 +21,7 @@ int get_char_internal(int *feofi, int *ferrori) {
     return res;
 }
 
-int main(int argc, char *argv[]) {
-
-
+int main() {
+    parser_parse();
     return compiler_result;
 }
