@@ -1409,3 +1409,19 @@ TEST_F(ScannerTest, Comment_LineEOLPreceedsBlock) {
 
     ComplexTest(inputStr, expectedResult);
 }
+
+TEST_F(ScannerTest, CompilerResultValue1) {
+    LEX("09", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+
+}
+
+TEST_F(ScannerTest, CompilerResultValue2) {
+    LEX("\"foo\\sbar\"", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, CompilerResultValue3) {
+    LEX("\"returned \\x49 string\"", EOL_OPTIONAL, SCANNER_RESULT_SUCCESS, TOKEN_STRING);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_SUCCESS);
+}
