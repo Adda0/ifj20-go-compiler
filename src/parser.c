@@ -332,8 +332,8 @@ int else_n() {
             if (token.data.keyword_type == KEYWORD_IF) {
                 // rule <else_n> -> if expression { <body> } <else>
                 // TODO: expression
-                check_new_token(EOL_FORBIDDEN);
-                check_nonterminal(expression(EOL_OPTIONAL));
+                check_new_token(EOL_OPTIONAL);
+                check_nonterminal(expression(EOL_FORBIDDEN));
                 if (token.type != TOKEN_CURLY_LEFT_BRACKET) {
                     token_error("expected { after else if, got %s\n");
                     syntax_error();
@@ -344,7 +344,7 @@ int else_n() {
                     token_error("expected } after else body, got %s\n");
                     syntax_error();
                 }
-                check_new_token(EOL_FORBIDDEN);
+                check_new_token(EOL_OPTIONAL);
                 return else_();
             } else {
                 token_error("expected if keyword, got %s\n");
