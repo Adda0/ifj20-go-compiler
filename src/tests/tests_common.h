@@ -53,4 +53,6 @@ void stderr_message(const char *module, MessageType message_type, CompilerResult
     va_start(arguments, fmt);
     std::vprintf(fmt, arguments);
     va_end(arguments);
+
+    std::cout << '\n';
 }

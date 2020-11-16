@@ -12,7 +12,7 @@
 // 1 – info about processed tokens
 // 2 – all info excluding character reads and buffer clearing
 // 3 – all info
-#define VERBOSE 2
+#define VERBOSE 3
 
 #include <iostream>
 #include <list>
@@ -78,10 +78,38 @@ const std::array<std::string, 7> stateNames =
          "NumberOverflow",
          "InternalError"};
 
-const std::array<std::string, 32> tokenTypeNames = {"Default", "Identifier", "Keyword", "IntVal", "FloatVal",
-                                                    "StringVal", "BoolVal", "+", "-", "*", "/", "+=", "-=", "*=", "/=",
-                                                    ":=", "=", "==", "!", "!=", "&&", "||", "(", ")", "{", "}", "<",
-                                                    ">", "<=", ">=", ",", ";"};
+const std::map<TokenType, std::string> tokenTypeNames = {{TOKEN_DEFAULT,             "Default"},
+                                                         {TOKEN_ID,                  "Identifier"},
+                                                         {TOKEN_KEYWORD,             "Keyword"},
+                                                         {TOKEN_INT,                 "IntVal"},
+                                                         {TOKEN_FLOAT,               "FloatVal"},
+                                                         {TOKEN_BOOL,                "BoolVal"},
+                                                         {TOKEN_STRING,              "StringVal"},
+                                                         {TOKEN_PLUS,                "+"},
+                                                         {TOKEN_MINUS,               "-"},
+                                                         {TOKEN_MULTIPLY,            "*"},
+                                                         {TOKEN_DIVIDE,              "/"},
+                                                         {TOKEN_PLUS_ASSIGN,         "+="},
+                                                         {TOKEN_MINUS_ASSIGN,        "-="},
+                                                         {TOKEN_MULTIPLY_ASSIGN,     "*="},
+                                                         {TOKEN_DEFINE,              ":="},
+                                                         {TOKEN_DIVIDE_ASSIGN,       "/="},
+                                                         {TOKEN_ASSIGN,              "="},
+                                                         {TOKEN_EQUAL_TO,            "=="},
+                                                         {TOKEN_NOT,                 "!"},
+                                                         {TOKEN_NOT_EQUAL_TO,        "!="},
+                                                         {TOKEN_AND,                 "&&"},
+                                                         {TOKEN_OR,                  "||"},
+                                                         {TOKEN_LEFT_BRACKET,        "("},
+                                                         {TOKEN_RIGHT_BRACKET,       ")"},
+                                                         {TOKEN_CURLY_LEFT_BRACKET,  "{"},
+                                                         {TOKEN_CURLY_RIGHT_BRACKET, "}"},
+                                                         {TOKEN_LESS_THAN,           "<"},
+                                                         {TOKEN_GREATER_THAN,        ">"},
+                                                         {TOKEN_LESS_OR_EQUAL,       "<="},
+                                                         {TOKEN_GREATER_OR_EQUAL,    ">="},
+                                                         {TOKEN_COMMA,               ","},
+                                                         {TOKEN_SEMICOLON,           ";"}};
 
 class ScannerTest : public StdinMockingScannerTest {
 protected:
@@ -94,7 +122,7 @@ ScannerResult scanner_get_token_wrapper(Token *token, EolRule eolRule, ScannerRe
     std::cout << "[SCANNER] Token. Result: '" << stateNames[res] << "' (exp. '"
               << stateNames[expRes]
               << "'). Type: ["
-              << tokenTypeNames[token->type] << "] (exp. [" << tokenTypeNames[expType] << "]).\n";
+              << tokenTypeNames.find(token->type)->second << "] (exp. [" << tokenTypeNames.find(expType)->second << "]).\n";
 #endif
     return res;
 }
@@ -142,7 +170,7 @@ void ScannerTest::ComplexTest(std::string &inputStr, std::list<ExpectedToken> &e
         std::cout << "[SCANNER] Token. Result: '" << stateNames[res] << "' (exp. '"
                   << stateNames[expectedToken.expectedResult]
                   << "'). Type: ["
-                  << tokenTypeNames[resultToken.type] << "] (exp. [" << tokenTypeNames[expectedToken.type] << "]).\n";
+                  << tokenTypeNames.find(resultToken.type)->second << "] (exp. [" << tokenTypeNames.find(expectedToken.type)->second << "]).\n";
 #endif
         ASSERT_EQ(res, expectedToken.expectedResult);
         ASSERT_EQ(resultToken.type, expectedToken.type);
@@ -904,6 +932,22 @@ TEST_F(ScannerTest, StringComplex) {
     LEX_SUCCESS("\"\\t\\\"Prilis zlutoucky \\x6Bun upel da\\x62elske \\x6fdy!\\\"\" ",
                 TOKEN_STRING);
     ASSERT_STREQ(mstr_content(&resultToken.data.str_val), "\t\"Prilis zlutoucky kun upel dabelske ody!\"");
+}
+
+TEST_F(ScannerTest, StringUnexpectedEol) {
+    LEX("\"A str\ning\" ", EOL_OPTIONAL, SCANNER_RESULT_EXCESS_EOL, TOKEN_STRING);
+}
+
+TEST_F(ScannerTest, StringUnexpectedHexa1) {
+    LEX("\"\\x9g\" ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING);
+}
+
+TEST_F(ScannerTest, StringUnexpectedHexa2) {
+    LEX("\"\\xg9\" ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING);
+}
+
+TEST_F(ScannerTest, StringUnexpectedHexaEol) {
+    LEX("\"\\xa\n9\" ", EOL_OPTIONAL, SCANNER_RESULT_EXCESS_EOL, TOKEN_STRING);
 }
 
 TEST_F(ScannerTest, KeywordBool) {
