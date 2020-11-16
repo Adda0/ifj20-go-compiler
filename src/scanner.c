@@ -235,6 +235,9 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 mstr_append(mutable_string, read_char);
                 *automaton_state = STATE_OCTAL;
                 read_char = EMPTY_CHAR;
+            } else if (read_char >= '0' && read_char <= '7') {
+                mstr_append(mutable_string, 'o');
+                *automaton_state = STATE_OCTAL;
             } else if (read_char == 'x' || read_char == 'X') {
                 mstr_append(mutable_string, read_char);
                 *automaton_state = STATE_HEXADECIMAL;
@@ -243,12 +246,38 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 mstr_append(mutable_string, read_char);
                 *automaton_state = STATE_FLOAT_DOT;
                 read_char = EMPTY_CHAR;
-            } else { // token is only '0'
-                *automaton_state = STATE_INT;
-                token->data.num_int_val = 0;
-                mstr_free(mutable_string);
-                token->type = TOKEN_INT;
-                *token_done = true;
+            } else if (read_char == '_') {
+                mstr_append(mutable_string, read_char);
+                *automaton_state = STATE_ZERO_UNDERSCORE;
+                read_char = EMPTY_CHAR;
+            } else if (read_char == '8' || read_char == '9') {
+                mstr_append(mutable_string, read_char);
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
+                               "%llu:%llu: This is not a valid octal number notation in IFJ20. Did you mean to write an octal number? To do that, you would have to add use digits from 0 to 7.",
+                               line_num, char_num);
+                *scanner_result = SCANNER_RESULT_INVALID_STATE;
+            } else {
+                *automaton_state = STATE_ZERO_NUM;
+                read_char = EMPTY_CHAR;
+            }
+            break;
+
+        case STATE_ZERO_NUM:
+            *automaton_state = STATE_INT;
+            token->data.num_int_val = 0;
+            mstr_free(mutable_string);
+            token->type = TOKEN_INT;
+            *token_done = true;
+            break;
+
+        case STATE_ZERO_UNDERSCORE:
+            if (read_char == '_') {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
+                               "%llu:%llu: '_' must must separate successive digits. Did you mean to write a number? To do that, you would have to add a digit after the '%s_'.",
+                               line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
+                *scanner_result = SCANNER_RESULT_INVALID_STATE;
+            } else {
+                *automaton_state = STATE_ZERO;
             }
             break;
 
@@ -257,11 +286,14 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 mstr_append(mutable_string, read_char);
                 read_char = EMPTY_CHAR;
                 *automaton_state = STATE_BINARY_NUMBER;
+            } else if (read_char == '_') {
+                *automaton_state = STATE_BINARY_UNDERSCORE;
+                read_char = EMPTY_CHAR;
             } else {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
                                "%llu:%llu: Binary number without any digit after '%s'. Did you mean to write a binary number? To do that, you would have to add a digit after the '%s'.",
                                line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
-                *scanner_result = SCANNER_RESULT_INTERNAL_ERROR;
+                *scanner_result = SCANNER_RESULT_INVALID_STATE;
             }
             break;
 
@@ -270,7 +302,6 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 mstr_append(mutable_string, read_char);
                 read_char = EMPTY_CHAR;
             } else if (read_char == '_') {
-                mstr_append(mutable_string, read_char);
                 *automaton_state = STATE_BINARY_UNDERSCORE;
                 read_char = EMPTY_CHAR;
             } else {
@@ -305,12 +336,10 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
 
         case STATE_BINARY_UNDERSCORE:
             if (read_char >= '0' && read_char <= '1') {
-                mstr_append(mutable_string, read_char);
-                read_char = EMPTY_CHAR;
                 *automaton_state = STATE_BINARY_NUMBER;
             } else {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "%llu:%llu: Binary number with underscore without any digit after '%s'. Did you mean to write a binary number? To do that, you would have to add a digit after the '%s'.",
+                               "%llu:%llu: Binary number with underscore without any digit after '%s_'. Did you mean to write a binary number? To do that, you would have to add a digit after the '%s_'.",
                                line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
             }
@@ -321,6 +350,9 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 mstr_append(mutable_string, read_char);
                 read_char = EMPTY_CHAR;
                 *automaton_state = STATE_OCTAL_NUMBER;
+            } else if (read_char == '_') {
+                *automaton_state = STATE_OCTAL_UNDERSCORE;
+                read_char = EMPTY_CHAR;
             } else {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
                                "%llu:%llu: Octal number without any digit after '%s'. Did you mean to write an octal number? To do that, you would have to add a digit after the '%s'.",
@@ -334,7 +366,6 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 mstr_append(mutable_string, read_char);
                 read_char = EMPTY_CHAR;
             } else if (read_char == '_') {
-                mstr_append(mutable_string, read_char);
                 *automaton_state = STATE_OCTAL_UNDERSCORE;
                 read_char = EMPTY_CHAR;
             } else {
@@ -369,12 +400,10 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
 
         case STATE_OCTAL_UNDERSCORE:
             if (read_char >= '0' && read_char <= '7') {
-                mstr_append(mutable_string, read_char);
-                read_char = EMPTY_CHAR;
                 *automaton_state = STATE_OCTAL_NUMBER;
             } else {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "%llu:%llu: Octal number with underscore without any digit after '%s'. Did you mean to write an octal number? To do that, you would have to add a digit after the '%s'.",
+                               "%llu:%llu: Octal number with underscore without any digit after '%s_'. Did you mean to write an octal number? To do that, you would have to add a digit after the '%s_'.",
                                line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
             }
@@ -385,6 +414,9 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 mstr_append(mutable_string, read_char);
                 read_char = EMPTY_CHAR;
                 *automaton_state = STATE_HEXADECIMAL_NUMBER;
+            } else if (read_char == '_') {
+                *automaton_state = STATE_HEXADECIMAL_UNDERSCORE;
+                read_char = EMPTY_CHAR;
             } else {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
                                "%llu:%llu: Hexadecimal number without any digit after '%s'. Did you mean to write a hexadecimal number? To do that, you would have to add a digit after the '%s'.",
@@ -398,7 +430,6 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 mstr_append(mutable_string, read_char);
                 read_char = EMPTY_CHAR;
             } else if (read_char == '_') {
-                mstr_append(mutable_string, read_char);
                 *automaton_state = STATE_HEXADECIMAL_UNDERSCORE;
                 read_char = EMPTY_CHAR;
             } else {
@@ -432,15 +463,13 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
             break;
 
         case STATE_HEXADECIMAL_UNDERSCORE:
-            if (isxdigit(read_char)) {
-                mstr_append(mutable_string, read_char);
-                read_char = EMPTY_CHAR;
-                *automaton_state = STATE_HEXADECIMAL_NUMBER;
-            } else {
+            if (read_char == '_') {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "%llu:%llu: Hexadecimal number with underscore without any digit after '%s'. Did you mean to write a hexadecimal number? To do that, you would have to add a digit after the '%s'.",
+                               "%llu:%llu: Hexadecimal number with underscore without any digit after '%s_'. Did you mean to write a hexadecimal number? To do that, you would have to add a digit after the '%s_'.",
                                line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
+            } else {
+                *automaton_state = STATE_HEXADECIMAL_NUMBER;
             }
             break;
 
@@ -455,6 +484,9 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
             } else if (read_char == '.') {
                 mstr_append(mutable_string, read_char);
                 *automaton_state = STATE_FLOAT_DOT;
+                read_char = EMPTY_CHAR;
+            } else if (read_char == '_') {
+                *automaton_state = STATE_INT_UNDERSCORE;
                 read_char = EMPTY_CHAR;
             } else {
                 char *end_ptr = NULL;
@@ -479,6 +511,17 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
             }
             break;
 
+        case STATE_INT_UNDERSCORE:
+            if (read_char == '_') {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
+                               "%llu:%llu: '_' must must separate successive digits. Did you mean to write a number? To do that, you would have to add a digit after the '%s_'.",
+                               line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
+                *scanner_result = SCANNER_RESULT_INVALID_STATE;
+            } else {
+                *automaton_state = STATE_INT;
+            }
+            break;
+
         case STATE_FLOAT:
             if (isdigit(read_char)) {
                 mstr_append(mutable_string, read_char);
@@ -486,6 +529,9 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
             } else if (read_char == 'e' || read_char == 'E') {
                 mstr_append(mutable_string, read_char);
                 *automaton_state = STATE_FLOAT_EXP_CHAR;
+                read_char = EMPTY_CHAR;
+            } else if (read_char == '_') {
+                *automaton_state = STATE_FLOAT_UNDERSCORE;
                 read_char = EMPTY_CHAR;
             } else {
                 // get the float number from string and set the token float value
@@ -508,6 +554,17 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 mstr_free(mutable_string);
                 token->type = TOKEN_FLOAT;
                 *token_done = true;
+            }
+            break;
+
+        case STATE_FLOAT_UNDERSCORE:
+            if (read_char == '_') {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
+                               "%llu:%llu: '_' must must separate successive digits. Did you mean to write a number? To do that, you would have to add a digit after the '%s_'.",
+                               line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
+                *scanner_result = SCANNER_RESULT_INVALID_STATE;
+            } else {
+                *automaton_state = STATE_FLOAT;
             }
             break;
 
@@ -555,6 +612,9 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
             if (isdigit(read_char)) {
                 mstr_append(mutable_string, read_char);
                 read_char = EMPTY_CHAR;
+            } else if (read_char == '_') {
+                *automaton_state = STATE_FLOAT_EXPONENT_UNDERSCORE;
+                read_char = EMPTY_CHAR;
             } else { // token is done and is some decimal number with exponent
                 // get the float number from string and set the token float value
                 char *end_ptr = NULL;
@@ -577,6 +637,17 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 *automaton_state = STATE_FLOAT;
                 token->type = TOKEN_FLOAT;
                 *token_done = true;
+            }
+            break;
+
+        case STATE_FLOAT_EXPONENT_UNDERSCORE:
+            if (read_char == '_') {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
+                               "%llu:%llu: '_' must must separate successive digits.",
+                               line_num, char_num);
+                *scanner_result = SCANNER_RESULT_INVALID_STATE;
+            } else {
+                *automaton_state = STATE_FLOAT_EXPONENT;
             }
             break;
 
@@ -805,6 +876,10 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 *token_done = true;
             } else if (read_char == '\\') {
                 *automaton_state = STATE_ESCAPE_CHARACTER_IN_STRING;
+            } else if (read_char == '\n') {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
+                               "%llu:%llu: newline character in string. Newline character is not allowed in string.", line_num, char_num);
+                *scanner_result = SCANNER_RESULT_EXCESS_EOL;
             } else {
                 mstr_append(mutable_string, read_char);
             }
