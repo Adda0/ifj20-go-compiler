@@ -361,6 +361,67 @@ TEST_F(ScannerTest, Int) {
     ASSERT_EQ(resultToken.data.num_int_val, 1);
 }
 
+TEST_F(ScannerTest, IntStartingWithZero1) {
+    // Go interprets this as an octal number, same as C
+    LEX_SUCCESS("05 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 5);
+}
+
+TEST_F(ScannerTest, IntStartingWithZero2) {
+    // Go interprets this as an octal number, same as C
+    // So this should yield an error
+    LEX("09 ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT);
+}
+
+TEST_F(ScannerTest, IntStartingWithMultipleZeroes1) {
+    // Go interprets this as an octal number, same as C
+    LEX_SUCCESS("00005 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 5);
+}
+
+TEST_F(ScannerTest, IntStartingWithMultipleZeroes2) {
+    // Go interprets this as an octal number, same as C
+    // So this should yield an error
+    LEX_SUCCESS("00105 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 69);
+}
+
+TEST_F(ScannerTest, IntMultiple) {
+    LEX_SUCCESS("123456 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 123456);
+}
+
+TEST_F(ScannerTest, IntMultipleWithZero) {
+    LEX_SUCCESS("103456 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 103456);
+}
+
+TEST_F(ScannerTest, IntUnderscore) {
+    LEX_SUCCESS("123_456 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 123456);
+}
+
+TEST_F(ScannerTest, IntUnderscoreInvalid) {
+    LEX("1__456 ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT);
+}
+
+TEST_F(ScannerTest, IntUnderscoreWithZero) {
+    LEX_SUCCESS("52_103_456 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 52103456);
+}
+
+TEST_F(ScannerTest, IntUnderscoreStartingWithZero) {
+    // Go interprets this as an octal number, same as C
+    LEX_SUCCESS("052_103_456 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 052103456);
+}
+
+TEST_F(ScannerTest, IntUnderscoreStartingWithMultipleZeroes) {
+    // Go interprets this as an octal number, same as C
+    LEX_SUCCESS("0052_103_456 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 052103456);
+}
+
 TEST_F(ScannerTest, IntZero) {
     LEX_SUCCESS("0 ", TOKEN_INT);
     ASSERT_EQ(resultToken.data.num_int_val, 0);
@@ -391,6 +452,37 @@ TEST_F(ScannerTest, IntBinaryUpperCase) {
     ASSERT_EQ(resultToken.data.num_int_val, 2);
 }
 
+TEST_F(ScannerTest, IntBinaryUnderscore) {
+    // This is valid in Go
+    LEX_SUCCESS("0b_1 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 33);
+}
+
+TEST_F(ScannerTest, IntBinaryUpperCaseUnderscore1) {
+    LEX_SUCCESS("0B1_1 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 3);
+}
+
+TEST_F(ScannerTest, IntBinaryUpperCaseUnderscore2) {
+    LEX_SUCCESS("0B_1 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 1);
+}
+
+TEST_F(ScannerTest, IntBinaryUnderscoreMultipleZeroes) {
+    LEX_SUCCESS("0b_001 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 33);
+}
+
+TEST_F(ScannerTest, IntBinaryUnderscoreMultiple1) {
+    LEX_SUCCESS("0b100_001 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 33);
+}
+
+TEST_F(ScannerTest, IntBinaryUnderscoreMultiple2) {
+    LEX_SUCCESS("0b010_100_001 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 0b10100001);
+}
+
 TEST_F(ScannerTest, IntOctal) {
     LEX_SUCCESS("0o1 ", TOKEN_INT);
     ASSERT_EQ(resultToken.data.num_int_val, 1);
@@ -414,6 +506,37 @@ TEST_F(ScannerTest, IntOctalMultiple) {
 TEST_F(ScannerTest, IntOctalUpperCase) {
     LEX_SUCCESS("0O10 ", TOKEN_INT);
     ASSERT_EQ(resultToken.data.num_int_val, 8);
+}
+
+TEST_F(ScannerTest, IntOctalUpperCaseUnderscore1) {
+    LEX_SUCCESS("0O10_7 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 0107);
+}
+
+TEST_F(ScannerTest, IntOctalUpperCaseUnderscore2) {
+    LEX_SUCCESS("0O_7 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 7);
+}
+
+TEST_F(ScannerTest, IntOctalUnderscore) {
+    // This is valid in Go
+    LEX_SUCCESS("0o_7 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 7);
+}
+
+TEST_F(ScannerTest, IntOctalUnderscoreMultipleZeroes) {
+    LEX_SUCCESS("0o_006 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 6);
+}
+
+TEST_F(ScannerTest, IntOctalUnderscoreMultiple1) {
+    LEX_SUCCESS("0o1_001 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 513);
+}
+
+TEST_F(ScannerTest, IntOctalUnderscoreMultiple2) {
+    LEX_SUCCESS("0o1_123_001 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 01123001);
 }
 
 TEST_F(ScannerTest, IntHexa) {
@@ -456,19 +579,54 @@ TEST_F(ScannerTest, IntHexaUpperCase) {
     ASSERT_EQ(resultToken.data.num_int_val, 16);
 }
 
-TEST_F(ScannerTest, IntMultiple) {
-    LEX_SUCCESS("123456 ", TOKEN_INT);
-    ASSERT_EQ(resultToken.data.num_int_val, 123456);
+TEST_F(ScannerTest, IntHexaUpperCaseUnderscore1) {
+    LEX_SUCCESS("0X10_A ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 266);
+}
+
+TEST_F(ScannerTest, IntHexaUpperCaseUnderscore2) {
+    LEX_SUCCESS("0X_A ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 10);
+}
+
+TEST_F(ScannerTest, IntHexaUnderscore) {
+    LEX_SUCCESS("0x_b ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 11);
+}
+
+TEST_F(ScannerTest, IntHexaUnderscoreMultipleZeroes) {
+    LEX_SUCCESS("0x_00b ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 11);
+}
+
+TEST_F(ScannerTest, IntHexaUnderscoreMultiple1) {
+    LEX_SUCCESS("0x1_001 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 0x1001);
+}
+
+TEST_F(ScannerTest, IntHexaUnderscoreMultiple2) {
+    LEX_SUCCESS("0x1_123_001 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 0x1123001);
+}
+
+TEST_F(ScannerTest, IntHexaUnderscoreMultiple3) {
+    LEX_SUCCESS("0x1_1A3_0CD ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 0x11A30CD);
+}
+
+TEST_F(ScannerTest, IntHexaUnderscoreMultiple4) {
+    LEX_SUCCESS("0x1_1a3_0cd ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 0x11A30CD);
+}
+
+TEST_F(ScannerTest, IntHexaUnderscoreMultiple5) {
+    LEX_SUCCESS("0xb_1A3_0cD ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 0xb1A30cD);
 }
 
 TEST_F(ScannerTest, IntTooBig) {
     LEX("9223372036854775809 ", EOL_OPTIONAL,
         SCANNER_RESULT_NUMBER_OVERFLOW, TOKEN_INT);
-}
-
-TEST_F(ScannerTest, IntMultipleWithZero) {
-    LEX_SUCCESS("103456 ", TOKEN_INT);
-    ASSERT_EQ(resultToken.data.num_int_val, 103456);
 }
 
 TEST_F(ScannerTest, IntExp) {
