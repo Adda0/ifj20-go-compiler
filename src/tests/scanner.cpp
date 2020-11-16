@@ -439,13 +439,11 @@ TEST_F(ScannerTest, IntUnderscoreWithZero) {
 }
 
 TEST_F(ScannerTest, IntUnderscoreStartingWithZero) {
-    // Go interprets this as an octal number, same as C
     LEX_SUCCESS("052_103_456 ", TOKEN_INT);
     ASSERT_EQ(resultToken.data.num_int_val, 052103456);
 }
 
 TEST_F(ScannerTest, IntUnderscoreStartingWithMultipleZeroes) {
-    // Go interprets this as an octal number, same as C
     LEX_SUCCESS("0052_103_456 ", TOKEN_INT);
     ASSERT_EQ(resultToken.data.num_int_val, 052103456);
 }
@@ -483,7 +481,7 @@ TEST_F(ScannerTest, IntBinaryUpperCase) {
 TEST_F(ScannerTest, IntBinaryUnderscore) {
     // This is valid in Go
     LEX_SUCCESS("0b_1 ", TOKEN_INT);
-    ASSERT_EQ(resultToken.data.num_int_val, 33);
+    ASSERT_EQ(resultToken.data.num_int_val, 1);
 }
 
 TEST_F(ScannerTest, IntBinaryUpperCaseUnderscore1) {
@@ -498,7 +496,7 @@ TEST_F(ScannerTest, IntBinaryUpperCaseUnderscore2) {
 
 TEST_F(ScannerTest, IntBinaryUnderscoreMultipleZeroes) {
     LEX_SUCCESS("0b_001 ", TOKEN_INT);
-    ASSERT_EQ(resultToken.data.num_int_val, 33);
+    ASSERT_EQ(resultToken.data.num_int_val, 1);
 }
 
 TEST_F(ScannerTest, IntBinaryUnderscoreMultiple1) {
@@ -849,12 +847,12 @@ TEST_F(ScannerTest, FloatExpMinusSignMultipleZero) {
 
 TEST_F(ScannerTest, FloatUnderscore) {
     // This is valid in Go
-    LEX_SUCCESS("0.93_75", TOKEN_INT);
+    LEX_SUCCESS("0.93_75", TOKEN_FLOAT);
     ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 0.9375);
 }
 
 TEST_F(ScannerTest, FloatUnderscoreBothParts) {
-    LEX_SUCCESS("123_456.93_75", TOKEN_INT);
+    LEX_SUCCESS("123_456.93_75", TOKEN_FLOAT);
     ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 123456.9375);
 }
 
@@ -935,7 +933,7 @@ TEST_F(ScannerTest, StringComplex) {
 }
 
 TEST_F(ScannerTest, StringUnexpectedEol) {
-    LEX("\"A str\ning\" ", EOL_OPTIONAL, SCANNER_RESULT_EXCESS_EOL, TOKEN_STRING);
+    LEX("\"A str\ning\" ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING);
 }
 
 TEST_F(ScannerTest, StringUnexpectedHexa1) {
@@ -947,7 +945,7 @@ TEST_F(ScannerTest, StringUnexpectedHexa2) {
 }
 
 TEST_F(ScannerTest, StringUnexpectedHexaEol) {
-    LEX("\"\\xa\n9\" ", EOL_OPTIONAL, SCANNER_RESULT_EXCESS_EOL, TOKEN_STRING);
+    LEX("\"\\xa\n9\" ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING);
 }
 
 TEST_F(ScannerTest, KeywordBool) {
