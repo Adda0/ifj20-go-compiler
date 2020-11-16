@@ -729,9 +729,39 @@ TEST_F(ScannerTest, FloatExp) {
     ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 1.0e1);
 }
 
+TEST_F(ScannerTest, FloatExpWithUnderscore) {
+    LEX_SUCCESS("1.0e1_2 ", TOKEN_FLOAT);
+    ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 1.0e12);
+}
+
 TEST_F(ScannerTest, FloatExpUpperCase) {
     LEX_SUCCESS("1.0E1 ", TOKEN_FLOAT);
     ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 1.0e1);
+}
+
+TEST_F(ScannerTest, FloatExpUpperCaseWithUnderscore) {
+    LEX_SUCCESS("1.0E1_2 ", TOKEN_FLOAT);
+    ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 1.0e12);
+}
+
+TEST_F(ScannerTest, FloatExpUnderscoreIntegerPart) {
+    LEX_SUCCESS("150_302.0E12 ", TOKEN_FLOAT);
+    ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 150302.0e12);
+}
+
+TEST_F(ScannerTest, FloatExpUnderscoreFractionPart) {
+    LEX_SUCCESS("150302.2_5E12 ", TOKEN_FLOAT);
+    ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 150302.25e12);
+}
+
+TEST_F(ScannerTest, FloatExpUnderscoreBothParts) {
+    LEX_SUCCESS("150_302.2_5E12 ", TOKEN_FLOAT);
+    ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 150302.25e12);
+}
+
+TEST_F(ScannerTest, FloatExpUnderscoreEverywhere) {
+    LEX_SUCCESS("150_302.2_5E1_2 ", TOKEN_FLOAT);
+    ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 150302.25e12);
 }
 
 TEST_F(ScannerTest, FloatExpZero) {
@@ -787,6 +817,17 @@ TEST_F(ScannerTest, FloatExpMinusSignMultiple) {
 TEST_F(ScannerTest, FloatExpMinusSignMultipleZero) {
     LEX_SUCCESS("1600000.0e-010 ", TOKEN_FLOAT);
     ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 1600000.0e-10);
+}
+
+TEST_F(ScannerTest, FloatUnderscore) {
+    // This is valid in Go
+    LEX_SUCCESS("0.93_75", TOKEN_INT);
+    ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 0.9375);
+}
+
+TEST_F(ScannerTest, FloatUnderscoreBothParts) {
+    LEX_SUCCESS("123_456.93_75", TOKEN_INT);
+    ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 123456.9375);
 }
 
 TEST_F(ScannerTest, StringEmpty) {
