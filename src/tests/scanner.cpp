@@ -12,7 +12,7 @@
 // 1 – info about processed tokens
 // 2 – all info excluding character reads and buffer clearing
 // 3 – all info
-#define VERBOSE 3
+#define VERBOSE 2
 
 #include <iostream>
 #include <list>
@@ -38,6 +38,20 @@ struct ExpectedToken {
     ExpData data;
     EolRule nextEolRule;
     ScannerResult expectedResult;
+
+    ExpectedToken(ScannerResult expResult) {
+        type = TOKEN_DEFAULT;
+        data = {.intVal = 0};
+        nextEolRule = EOL_OPTIONAL;
+        expectedResult = expResult;
+    }
+
+    ExpectedToken(ScannerResult expResult, TokenType expType) {
+        type = expType;
+        data = {.intVal = 0};
+        nextEolRule = EOL_OPTIONAL;
+        expectedResult = expResult;
+    }
 
     ExpectedToken(TokenType expType) {
         type = expType;
@@ -121,7 +135,8 @@ ScannerResult scanner_get_token_wrapper(Token *token, EolRule eolRule, ScannerRe
     std::cout << "[SCANNER] Token. Result: '" << stateNames[res] << "' (exp. '"
               << stateNames[expRes]
               << "'). Type: ["
-              << tokenTypeNames.find(token->type)->second << "] (exp. [" << tokenTypeNames.find(expType)->second << "]).\n";
+              << tokenTypeNames.find(token->type)->second << "] (exp. [" << tokenTypeNames.find(expType)->second
+              << "]).\n";
 #endif
     return res;
 }
@@ -169,7 +184,30 @@ void ScannerTest::ComplexTest(std::string &inputStr, std::list<ExpectedToken> &e
         std::cout << "[SCANNER] Token. Result: '" << stateNames[res] << "' (exp. '"
                   << stateNames[expectedToken.expectedResult]
                   << "'). Type: ["
-                  << tokenTypeNames.find(resultToken.type)->second << "] (exp. [" << tokenTypeNames.find(expectedToken.type)->second << "]).\n";
+                  << tokenTypeNames.find(resultToken.type)->second << "] (exp. ["
+                  << tokenTypeNames.find(expectedToken.type)->second << "]).";
+
+        switch (resultToken.type) {
+            case TOKEN_ID:
+                std::cout << " Value: '" << mstr_content(&resultToken.data.str_val) << "'\n";
+                break;
+            case TOKEN_KEYWORD:
+                // TODO
+                std::cout << '\n';
+                break;
+            case TOKEN_INT:
+                std::cout << " Value: " << resultToken.data.num_int_val << '\n';
+                break;
+            case TOKEN_FLOAT:
+                std::cout << " Value: " << resultToken.data.num_float_val << '\n';
+                break;
+            case TOKEN_BOOL:
+                std::cout << " Value: " << resultToken.data.bool_val << '\n';
+                break;
+            default:
+                std::cout << '\n';
+                break;
+        }
 #endif
         ASSERT_EQ(res, expectedToken.expectedResult);
         ASSERT_EQ(resultToken.type, expectedToken.type);
@@ -1107,3 +1145,267 @@ TEST_F(ScannerTest, TokenSemicolon) {
     LEX_SUCCESS("; a", TOKEN_SEMICOLON);
 }
 
+TEST_F(ScannerTest, InvalidInput_Amp) {
+    std::string inputStr = "// compiler\n//\npackage main\n\nfunc main() {\n\t&\n}\n ";
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_PACKAGE}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, InvalidInput_BracketInIdentifier) {
+    std::string inputStr = "// compiler\n//\npackage m]ain\n\nfunc main() {\n}\n ";
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_PACKAGE}),
+            ExpectedToken(TOKEN_ID, {.strVal = "m"}),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE),
+            ExpectedToken(TOKEN_ID, {.strVal = "ain"}),
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, InvalidInput_DollarSign) {
+    std::string inputStr = "package main\n\nfunc main() {\n}\n$\n ";
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_PACKAGE}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, InvalidInput_UnexpectedDot) {
+    std::string inputStr = "package main\n\nfunc main(.) {\n}\n ";
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_PACKAGE}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, InvalidInput_QuestionMark) {
+    std::string inputStr = "package main\n\nfunc main?() {\n}\n ";
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_PACKAGE}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_REQUIRED)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+
+TEST_F(ScannerTest, InvalidInput_Hash) {
+    std::string inputStr = "package main\n\nfunc # main() {\n}\n ";
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_PACKAGE}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_REQUIRED)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, Comments_LineInBlock) {
+    std::string inputStr = "func main() {\n /* A nested // comment */\n}\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_REQUIRED)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, Comments_BlockInLine) {
+    std::string inputStr = "func main() {\n // A /* nested */ comment\n}\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_REQUIRED)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, Comments_LineInLine) {
+    std::string inputStr = "func main() {\n // A // nested comment\n}\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_REQUIRED)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, Comments_Multiline) {
+    std::string inputStr = "func main() {\n \t/* a\nmultiline\t\t \ncomment */\n}\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_REQUIRED)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, Comment_NeverendingBlock) {
+    std::string inputStr = "func main() {\n \t/* a comment with no ending\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, Comment_BlockIsWhitespace1) {
+    std::string inputStr = "func/*block comment*/main() ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, Comment_BlockIsWhitespace2) {
+    std::string inputStr = "func/**/main() ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, Comment_BlockIsWhitespace3) {
+    std::string inputStr = "func main(/**/) ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET, EOL_FORBIDDEN),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, Comment_BlockIsWhitespaceConsumingEOL) {
+    std::string inputStr = "func main(/*\n\n\n*/) ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET, EOL_FORBIDDEN),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, Comment_LineIsEOL) {
+    std::string inputStr = "func main() {// line comment\n}\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET, EOL_FORBIDDEN),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, Comment_LineEOLPreceedsBlock) {
+    std::string inputStr = "func main() {// nested /* pseudo\n block comment*/}\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET, EOL_FORBIDDEN),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_ID, {.strVal = "block"}),
+            ExpectedToken(TOKEN_ID, {.strVal = "comment"}),
+            ExpectedToken(TOKEN_MULTIPLY),
+            ExpectedToken(TOKEN_DIVIDE),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
