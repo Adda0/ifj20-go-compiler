@@ -1521,7 +1521,7 @@ TEST_F(ParserScannerTest, EmptyRandomFunction) {
 
 // === Test function headers ===
 
-TEST_F(ParserScannerTest, FuncitionHeader1) {
+TEST_F(ParserScannerTest, FunctionHeader1) {
     std::string inputStr = \
         "package main\n"
         "\n"
@@ -1533,7 +1533,7 @@ TEST_F(ParserScannerTest, FuncitionHeader1) {
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
-TEST_F(ParserScannerTest, FuncitionHeader2) {
+TEST_F(ParserScannerTest, FunctionHeader2) {
     std::string inputStr = \
         "package main\n"
         "\n"
@@ -1545,7 +1545,7 @@ TEST_F(ParserScannerTest, FuncitionHeader2) {
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
-TEST_F(ParserScannerTest, FuncitionHeader3) {
+TEST_F(ParserScannerTest, FunctionHeader3) {
     std::string inputStr = \
         "package main\n"
         "\n"
@@ -1557,7 +1557,7 @@ TEST_F(ParserScannerTest, FuncitionHeader3) {
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
-TEST_F(ParserScannerTest, FuncitionHeader4) {
+TEST_F(ParserScannerTest, FunctionHeader4) {
     std::string inputStr = \
         "package main\n"
         "\n"
@@ -1569,7 +1569,7 @@ TEST_F(ParserScannerTest, FuncitionHeader4) {
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
-TEST_F(ParserScannerTest, FuncitionHeader5) {
+TEST_F(ParserScannerTest, FunctionHeader5) {
     std::string inputStr = \
         "package main\n"
         "\n"
@@ -1581,7 +1581,7 @@ TEST_F(ParserScannerTest, FuncitionHeader5) {
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
-TEST_F(ParserScannerTest, FuncitionHeader6) {
+TEST_F(ParserScannerTest, FunctionHeader6) {
     std::string inputStr = \
         "package main\n"
         "\n"
@@ -1593,7 +1593,7 @@ TEST_F(ParserScannerTest, FuncitionHeader6) {
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
-TEST_F(ParserScannerTest, FuncitionHeader6) {
+TEST_F(ParserScannerTest, FunctionHeader7) {
     std::string inputStr = \
         "package main\n"
         "\n"
@@ -1605,7 +1605,7 @@ TEST_F(ParserScannerTest, FuncitionHeader6) {
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
-TEST_F(ParserScannerTest, FuncitionHeader7) {
+TEST_F(ParserScannerTest, FunctionHeader8) {
     std::string inputStr = \
         "package main\n"
         "\n"
@@ -1615,6 +1615,62 @@ TEST_F(ParserScannerTest, FuncitionHeader7) {
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+// === Test compiler result lexical error ===
+
+TEST_F(ParserScannerTest, LexicalErrorCompilerResult1) {
+    std::string inputStr = \
+        ">package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n";
+
+   ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, LexicalErrorCompilerResult2) {
+    std::string inputStr = \
+        "^package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n";
+
+   ComplexTest(inputStr, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ParserScannerTest, LexicalErrorCompilerResult3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := \"foo\\sbar\" \n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ParserScannerTest, LexicalErrorCompilerResult4) {
+    std::string inputStr = \
+        "pa]ckage main\n"
+        "\n"
+        "func main() {\n"
+        " a := \"foo\\sbar\" \n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, LexicalErrorCompilerResult5) {
+    std::string inputStr = \
+        "]package main\n"
+        "\n"
+        "func main() {\n"
+        " a := \"foo\\sbar\" \n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_LEXICAL);
 }
 
 // === Test function call ===
