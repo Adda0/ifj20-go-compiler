@@ -41,7 +41,7 @@ ScannerResult scanner_get_token(Token *token, EolRule eol_rule) {
     //initialize token mutable string
     MutableString mutable_string;
     if (!mstr_init(&mutable_string, DEFAULT_TOKEN_LENGTH)) {
-        stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_INTERNAL, "Initialization of mutable string failed.");
+        stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_INTERNAL, "Initialization of mutable string failed.\n");
         return SCANNER_RESULT_INTERNAL_ERROR;
     }
 
@@ -70,7 +70,7 @@ ScannerResult scanner_get_token(Token *token, EolRule eol_rule) {
 
             if (next_char_result == NEXT_CHAR_RESULT_ERROR) {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "Reading a next character from the source code failed.");
+                               "Reading a next character from the source code failed.\n");
                 mstr_free(&mutable_string);
                 return SCANNER_RESULT_INTERNAL_ERROR;
             }
@@ -156,7 +156,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
         case STATE_END_OF_MULTILINE_COMMENT:
         case STATE_DEFAULT: // getting first char of a new token
             // get next character in case of whitespace characters
-            if (read_char == '\n' || read_char == '\t' || read_char == ' ') {
+            if (read_char == '\n' || read_char == '\t' || read_char == ' ' || read_char == EOF || read_char == '\0') {
                 // skip for the next char
             } else if (isalpha(read_char) || read_char == '_') {
                 // new token should be an identifier
@@ -206,6 +206,11 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 *automaton_state = STATE_COMMA;
             } else if (read_char == ';') {
                 *automaton_state = STATE_SEMICOLON;
+            } else {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
+                               "Line %llu, col %llu: No token can start with '%c'.\n",
+                               line_num, char_num, read_char);
+                *scanner_result = SCANNER_RESULT_INVALID_STATE;
             }
 
             read_char = EMPTY_CHAR;
@@ -258,7 +263,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
             } else if (read_char == '8' || read_char == '9') {
                 mstr_append(mutable_string, read_char);
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "%llu:%llu: This is not a valid octal number notation in IFJ20. Did you mean to write an octal number? To do that, you would have to add use digits from 0 to 7.",
+                               "Line %llu, col %llu: This is not a valid octal number notation in IFJ20. Did you mean to write an octal number? To do that, you would have to add use digits from 0 to 7.\n",
                                line_num, char_num);
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
             } else {
@@ -278,7 +283,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
         case STATE_ZERO_UNDERSCORE:
             if (read_char == '_') {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "%llu:%llu: '_' must must separate successive digits. Did you mean to write a number? To do that, you would have to add a digit after the '%s_'.",
+                               "Line %llu, col %llu: '_' must must separate successive digits. Did you mean to write a number? To do that, you would have to add a digit after the '%s_'.\n",
                                line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
             } else {
@@ -296,7 +301,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 read_char = EMPTY_CHAR;
             } else {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "%llu:%llu: Binary number without any digit after '%s'. Did you mean to write a binary number? To do that, you would have to add a digit after the '%s'.",
+                               "Line %llu, col %llu: Binary number without any digit after '%s'. Did you mean to write a binary number? To do that, you would have to add a digit after the '%s'.\n",
                                line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
             }
@@ -320,14 +325,14 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 long long num = strtoll(number_without_underscores, &end_ptr, NUMERAL_SYSTEM_BINARY);
                 if (*end_ptr != '\0') {
                     stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                                   "%llu:%llu: Lexeme consists of more than just a binary number: %s. Did you mean to write a binary number? It must consists only of digits '0' and '1' and underscores.",
+                                   "Line %llu, col %llu: Lexeme consists of more than just a binary number: %s. Did you mean to write a binary number? It must consists only of digits '0' and '1' and underscores.\n",
                                    line_num, char_num, mstr_content(mutable_string));
                     *scanner_result = SCANNER_RESULT_INVALID_STATE;
                 }
                 if (errno == ERANGE || num > LLONG_MAX) { // if given number is bigger that possible
                     errno = 0;
                     stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                                   "%llu:%llu: Binary number &s overflows integer maximal value. Integer cannot hold this value.",
+                                   "Line %llu, col %llu: Binary number &s overflows integer maximal value. Integer cannot hold this value.\n",
                                    line_num, char_num, mstr_content(mutable_string));
                     *scanner_result = SCANNER_RESULT_NUMBER_OVERFLOW;
                 }
@@ -344,7 +349,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 *automaton_state = STATE_BINARY_NUMBER;
             } else {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "%llu:%llu: Binary number with underscore without any digit after '%s_'. Did you mean to write a binary number? To do that, you would have to add a digit after the '%s_'.",
+                               "Line %llu, col %llu: Binary number with underscore without any digit after '%s_'. Did you mean to write a binary number? To do that, you would have to add a digit after the '%s_'.\n",
                                line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
             }
@@ -360,7 +365,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 read_char = EMPTY_CHAR;
             } else {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "%llu:%llu: Octal number without any digit after '%s'. Did you mean to write an octal number? To do that, you would have to add a digit after the '%s'.",
+                               "Line %llu, col %llu: Octal number without any digit after '%s'. Did you mean to write an octal number? To do that, you would have to add a digit after the '%s'.\n",
                                line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
             }
@@ -384,14 +389,14 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 long long num = strtoll(number_without_underscores, &end_ptr, NUMERAL_SYSTEM_OCTAL);
                 if (*end_ptr != '\0') {
                     stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                                   "%llu:%llu: Lexeme consists of more than just an octal number: %s. Did you mean to write an octal number? It must consists only of digits from '0' to '7' and underscores.",
+                                   "Line %llu, col %llu: Lexeme consists of more than just an octal number: %s. Did you mean to write an octal number? It must consists only of digits from '0' to '7' and underscores.\n",
                                    line_num, char_num, mstr_content(mutable_string));
                     *scanner_result = SCANNER_RESULT_INVALID_STATE;
                 }
                 if (errno == ERANGE || num > LLONG_MAX) { // if given number is bigger that possible
                     errno = 0;
                     stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                                   "%llu:%llu: Octal number %s overflows integer maximal value. Integer cannot hold this value.",
+                                   "Line %llu, col %llu: Octal number %s overflows integer maximal value. Integer cannot hold this value.\n",
                                    line_num, char_num, mstr_content(mutable_string));
                     *scanner_result = SCANNER_RESULT_NUMBER_OVERFLOW;
                 }
@@ -408,7 +413,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 *automaton_state = STATE_OCTAL_NUMBER;
             } else {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "%llu:%llu: Octal number with underscore without any digit after '%s_'. Did you mean to write an octal number? To do that, you would have to add a digit after the '%s_'.",
+                               "Line %llu, col %llu: Octal number with underscore without any digit after '%s_'. Did you mean to write an octal number? To do that, you would have to add a digit after the '%s_'.\n",
                                line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
             }
@@ -424,7 +429,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 read_char = EMPTY_CHAR;
             } else {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "%llu:%llu: Hexadecimal number without any digit after '%s'. Did you mean to write a hexadecimal number? To do that, you would have to add a digit after the '%s'.",
+                               "Line %llu, col %llu: Hexadecimal number without any digit after '%s'. Did you mean to write a hexadecimal number? To do that, you would have to add a digit after the '%s'.\n",
                                line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
             }
@@ -448,14 +453,14 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 long long num = strtoll(number_without_underscores, &end_ptr, NUMERAL_SYSTEM_HEXADECIMAL);
                 if (*end_ptr != '\0') {
                     stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                                   "%llu:%llu: Lexeme consists of more than just a hexadecimal number: %s. Did you mean to write a hexadecimal number? It must consists only of digits from '0' to '9', characters from 'a' to 'f', characters from 'A' to 'F' and underscores.",
+                                   "Line %llu, col %llu: Lexeme consists of more than just a hexadecimal number: %s. Did you mean to write a hexadecimal number? It must consists only of digits from '0' to '9', characters from 'a' to 'f', characters from 'A' to 'F' and underscores.\n",
                                    line_num, char_num, mstr_content(mutable_string));
                     *scanner_result = SCANNER_RESULT_INVALID_STATE;
                 }
                 if (errno == ERANGE || num > LLONG_MAX) { // if given number is bigger that possible
                     errno = 0;
                     stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                                   "%llu:%llu: Hexadecimal number %s overflows integer maximal value. Integer cannot hold this value.",
+                                   "Line %llu, col %llu: Hexadecimal number %s overflows integer maximal value. Integer cannot hold this value.\n",
                                    line_num, char_num, mstr_content(mutable_string));
                     *scanner_result = SCANNER_RESULT_NUMBER_OVERFLOW;
                 }
@@ -470,7 +475,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
         case STATE_HEXADECIMAL_UNDERSCORE:
             if (read_char == '_') {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "%llu:%llu: Hexadecimal number with underscore without any digit after '%s_'. Did you mean to write a hexadecimal number? To do that, you would have to add a digit after the '%s_'.",
+                               "Line %llu, col %llu: Hexadecimal number with underscore without any digit after '%s_'. Did you mean to write a hexadecimal number? To do that, you would have to add a digit after the '%s_'.\n",
                                line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
             } else {
@@ -498,14 +503,14 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 long long num = strtoll(mstr_content(mutable_string), &end_ptr, NUMERAL_SYSTEM_DECIMAL);
                 if (*end_ptr != '\0') {
                     stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                                   "%llu:%llu: Lexeme consists of more than just an integer number: %s. Did you mean to write an integer number? It must consists only of digits.",
+                                   "Line %llu, col %llu: Lexeme consists of more than just an integer number: %s. Did you mean to write an integer number? It must consists only of digits.\n",
                                    line_num, char_num, mstr_content(mutable_string));
                     *scanner_result = SCANNER_RESULT_INVALID_STATE;
                 }
                 if (errno == ERANGE || num > LLONG_MAX) { // if given number is bigger that possible
                     errno = 0;
                     stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                                   "%llu:%llu: Integer number %s overflows integer maximal value. Integer cannot hold this value.",
+                                   "Line %llu, col %llu: Integer number %s overflows integer maximal value. Integer cannot hold this value.\n",
                                    line_num, char_num, mstr_content(mutable_string));
                     *scanner_result = SCANNER_RESULT_NUMBER_OVERFLOW;
                 }
@@ -519,7 +524,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
         case STATE_INT_UNDERSCORE:
             if (read_char == '_') {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "%llu:%llu: '_' must must separate successive digits. Did you mean to write a number? To do that, you would have to add a digit after the '%s_'.",
+                               "Line %llu, col %llu: '_' must must separate successive digits. Did you mean to write a number? To do that, you would have to add a digit after the '%s_'.\n",
                                line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
             } else {
@@ -544,14 +549,14 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 double num = strtod(mstr_content(mutable_string), &end_ptr);
                 if (*end_ptr != '\0') {
                     stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                                   "%llu:%llu: Lexeme consists of more than just an float number: %s. Did you mean to write a float number? It must consists only of digits and decimal point dividing the whole number part from the fractional.",
+                                   "Line %llu, col %llu: Lexeme consists of more than just an float number: %s. Did you mean to write a float number? It must consists only of digits and decimal point dividing the whole number part from the fractional.\n",
                                    line_num, char_num, mstr_content(mutable_string));
                     *scanner_result = SCANNER_RESULT_INVALID_STATE;
                 }
                 if (errno == ERANGE || num > DBL_MAX) { // if given number is bigger that possible
                     errno = 0;
                     stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                                   "%llu:%llu: Float number %s overflows float maximal value. Float cannot hold this value.",
+                                   "Line %llu, col %llu: Float number %s overflows float maximal value. Float cannot hold this value.\n",
                                    line_num, char_num, mstr_content(mutable_string));
                     *scanner_result = SCANNER_RESULT_NUMBER_OVERFLOW;
                 }
@@ -565,7 +570,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
         case STATE_FLOAT_UNDERSCORE:
             if (read_char == '_') {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "%llu:%llu: '_' must must separate successive digits. Did you mean to write a number? To do that, you would have to add a digit after the '%s_'.",
+                               "Line %llu, col %llu: '_' must must separate successive digits. Did you mean to write a number? To do that, you would have to add a digit after the '%s_'.\n",
                                line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
             } else {
@@ -580,7 +585,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 read_char = EMPTY_CHAR;
             } else {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "%llu:%llu: Float number with no digit after the decimal point: '%s'. There should have been at least one digit after decimal dot. E.g., %s0.",
+                               "Line %llu, col %llu: Float number with no digit after the decimal point: '%s'. There should have been at least one digit after decimal dot. E.g., %s0.\n",
                                line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
             }
             break;
@@ -596,7 +601,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 read_char = EMPTY_CHAR;
             } else {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "%llu:%llu: Float number with no digit after the exponent character: '%s'. There should have been at least one digit after the exponent character. E.g., %s0.",
+                               "Line %llu, col %llu: Float number with no digit after the exponent character: '%s'. There should have been at least one digit after the exponent character. E.g., %s0.\n",
                                line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
             }
             break;
@@ -608,7 +613,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 read_char = EMPTY_CHAR;
             } else {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "%llu:%llu: Float number with no digit after an exponent character with a sign: '%s'. There should have been at least one digit after the exponent character with the sign. E.g., %s0.",
+                               "Line %llu, col %llu: Float number with no digit after an exponent character with a sign: '%s'. There should have been at least one digit after the exponent character with the sign. E.g., %s0.\n",
                                line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
             }
             break;
@@ -626,14 +631,14 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 double num = strtod(mstr_content(mutable_string), &end_ptr);
                 if (*end_ptr != '\0') {
                     stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                                   "%llu:%llu: Lexeme consists of more than just an float number with exponent: %s. Did you mean to write a float number with exponent? It must consists only of digits, decimal point dividing the whole number part from the fractional, exponent character and optional sign of the exponent.",
+                                   "Line %llu, col %llu: Lexeme consists of more than just an float number with exponent: %s. Did you mean to write a float number with exponent? It must consists only of digits, decimal point dividing the whole number part from the fractional, exponent character and optional sign of the exponent.\n",
                                    line_num, char_num, mstr_content(mutable_string));
                     *scanner_result = SCANNER_RESULT_INVALID_STATE;
                 }
                 if (errno == ERANGE || num > DBL_MAX) { // if given number is bigger that possible
                     errno = 0;
                     stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                                   "%llu:%llu: Float number %s overflows float maximal value. Float cannot hold this value.",
+                                   "Line %llu, col %llu: Float number %s overflows float maximal value. Float cannot hold this value.\n",
                                    line_num, char_num, mstr_content(mutable_string));
                     *scanner_result = SCANNER_RESULT_NUMBER_OVERFLOW;
                 }
@@ -648,7 +653,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
         case STATE_FLOAT_EXPONENT_UNDERSCORE:
             if (read_char == '_') {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "%llu:%llu: '_' must must separate successive digits.",
+                               "Line %llu, col %llu: '_' must must separate successive digits.\n",
                                line_num, char_num);
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
             } else {
@@ -771,7 +776,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 read_char = EMPTY_CHAR;
             } else {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "%llu:%llu: '&' is not a valid operator. Did you mean '&&'?", line_num, char_num);
+                               "Line %llu, col %llu: '&' is not a valid operator. Did you mean '&&'?\n", line_num, char_num);
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
             }
             break;
@@ -787,7 +792,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 read_char = EMPTY_CHAR;
             } else {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "%llu:%llu: '|' is not a valid operator. Did you mean '||'?", line_num, char_num);
+                               "Line %llu, col %llu: '|' is not a valid operator. Did you mean '||'?\n", line_num, char_num);
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
             }
             break;
@@ -883,7 +888,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 *automaton_state = STATE_ESCAPE_CHARACTER_IN_STRING;
             } else if (read_char == '\n') {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "%llu:%llu: newline character in string. Newline character is not allowed in string.", line_num, char_num);
+                               "Line %llu, col %llu: newline character in string. Newline character is not allowed in string.\n", line_num, char_num);
                 *automaton_state = STATE_STRING_INVALID;
             } else {
                 mstr_append(mutable_string, read_char);
@@ -908,7 +913,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 *automaton_state = STATE_STRING;
             } else {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "%llu:%llu: Escape character with invalid character following: \\%c. Possible characters following escape character are only: \", \n, \t, \\.",
+                               "Line %llu, col %llu: Escape character in string with invalid character following: \\%c. Possible characters following escape character are only: \", n, t, \\.\n",
                                line_num, char_num, read_char);
                 *automaton_state = STATE_STRING_INVALID;
             }
@@ -934,7 +939,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 read_char = EMPTY_CHAR;
             } else {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "%llu:%llu: Escape hexadecimal character with invalid characters following: \\%s.",
+                               "Line %llu, col %llu: Escape hexadecimal character in string with invalid characters following: \\%s.\n",
                                line_num, char_num, mstr_content(mutable_string));
                 *automaton_state = STATE_STRING_INVALID;
             }
@@ -950,7 +955,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 char *hexa_number_string = calloc(sizeof(char), 5);
                 if (hexa_number_string == NULL) {
                     stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
-                                   "Malloc of string for a hexadecimal escape sequence in a string failed.");
+                                   "Malloc of string for a hexadecimal escape sequence in a string failed.\n");
                     *scanner_result = SCANNER_RESULT_INTERNAL_ERROR;
                     break;
                 }
@@ -963,14 +968,14 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 int int_val = strtoul(hexa_number_string, &end_ptr, NUMERAL_SYSTEM_HEXADECIMAL);
                 if (*end_ptr != '\0') {
                     stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                                   "%llu:%llu: Hexadecimal number consists of more than just an '0x' and two hexadecimal difits: %s. Hexadecimal values in escape sequence must consist of exactly 2 hexadecimal digits.",
+                                   "Line %llu, col %llu: Hexadecimal number consists of more than just an '0x' and two hexadecimal difits: %s. Hexadecimal values in escape sequence must consist of exactly 2 hexadecimal digits.\n",
                                    line_num, char_num, hexa_number_string);
                     *scanner_result = SCANNER_RESULT_INVALID_STATE;
                 }
                 if (errno == ERANGE || int_val > INT_MAX) { // if given number is bigger that possible
                     errno = 0;
                     stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                                   "%llu:%llu: Hexadecimal number %s overflows integer maximal value. Integer cannot hold this value.",
+                                   "Line %llu, col %llu: Hexadecimal number %s overflows integer maximal value. Integer cannot hold this value.\n",
                                    line_num, char_num, hexa_number_string);
                     *scanner_result = SCANNER_RESULT_NUMBER_OVERFLOW;
                 }
@@ -984,7 +989,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 *automaton_state = STATE_STRING;
             } else {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "%llu:%llu: Escape hexadecimal character with invalid characters following: \\%s.",
+                               "Line %llu, col %llu: Escape hexadecimal character in string with invalid characters following: \\%s.\n",
                                line_num, char_num, mstr_content(mutable_string));
                 *automaton_state = STATE_STRING_INVALID;
             }
@@ -1001,7 +1006,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 read_char = EMPTY_CHAR;
             } else {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "%llu:%llu: Invalid lexeme: ':$c'. Have you meant ':=' to define a new variable?",
+                               "Line %llu, col %llu: Invalid lexeme: ':$c'. Have you meant ':=' to define a new variable?\n",
                                line_num, char_num, read_char);
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
             }
@@ -1107,7 +1112,7 @@ static char *prepare_number_for_parsing(MutableString *mutable_string) {
     char *number_without_underscores = (char *) calloc(mstr_length(mutable_string), sizeof(char));
     if (number_without_underscores == NULL) {
         stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
-                       "Malloc of string for a number in a different numeral system failed.");
+                       "Malloc of string for a number in a different numeral system failed.\n");
         return NULL;
     }
 
