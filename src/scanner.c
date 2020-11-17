@@ -123,8 +123,14 @@ ScannerResult scanner_get_token(Token *token, EolRule eol_rule) {
         if (scanner_result != SCANNER_RESULT_SUCCESS) {
             if (scanner_result != SCANNER_RESULT_EXCESS_EOL && scanner_result != SCANNER_RESULT_MISSING_EOL &&
                 scanner_result != SCANNER_RESULT_EOF) {
-                mstr_free(&mutable_string);
-                return scanner_result;
+                if (automaton_state == STATE_STRING_INVALID) {
+                    if (token_done) {
+                        break;
+                    }
+                } else {
+                    mstr_free(&mutable_string);
+                    return scanner_result;
+                }
             }
         } else if (token_done) {
             // token has been initialized and the following char belongs to another token ('id=' etc.) / ends this token (whitespace etc.)
@@ -247,7 +253,6 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 *automaton_state = STATE_FLOAT_DOT;
                 read_char = EMPTY_CHAR;
             } else if (read_char == '_') {
-                mstr_append(mutable_string, read_char);
                 *automaton_state = STATE_ZERO_UNDERSCORE;
                 read_char = EMPTY_CHAR;
             } else if (read_char == '8' || read_char == '9') {
@@ -879,7 +884,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
             } else if (read_char == '\n') {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
                                "%llu:%llu: newline character in string. Newline character is not allowed in string.", line_num, char_num);
-                *scanner_result = SCANNER_RESULT_EXCESS_EOL;
+                *automaton_state = STATE_STRING_INVALID;
             } else {
                 mstr_append(mutable_string, read_char);
             }
@@ -903,11 +908,22 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 *automaton_state = STATE_STRING;
             } else {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "%llu:%llu: Escape character with invalid character following: \\%c. Possible characters following escape character are only: '\", \n, \t, \\.",
+                               "%llu:%llu: Escape character with invalid character following: \\%c. Possible characters following escape character are only: \", \n, \t, \\.",
                                line_num, char_num, read_char);
-                *scanner_result = SCANNER_RESULT_INVALID_STATE;
+                *automaton_state = STATE_STRING_INVALID;
             }
             read_char = EMPTY_CHAR;
+            break;
+
+        case STATE_STRING_INVALID:
+            if (read_char == '\"') {
+                token->type = TOKEN_STRING;
+                *token_done = true;
+                *scanner_result = SCANNER_RESULT_INVALID_STATE;
+                read_char = EMPTY_CHAR;
+            } else {
+                read_char = EMPTY_CHAR;
+            }
             break;
 
         case STATE_ESCAPE_HEXA_IN_STRING:
@@ -920,7 +936,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
                                "%llu:%llu: Escape hexadecimal character with invalid characters following: \\%s.",
                                line_num, char_num, mstr_content(mutable_string));
-                *scanner_result = SCANNER_RESULT_INVALID_STATE;
+                *automaton_state = STATE_STRING_INVALID;
             }
             break;
 
@@ -970,7 +986,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
                                "%llu:%llu: Escape hexadecimal character with invalid characters following: \\%s.",
                                line_num, char_num, mstr_content(mutable_string));
-                *scanner_result = SCANNER_RESULT_INVALID_STATE;
+                *automaton_state = STATE_STRING_INVALID;
             }
             break;
 
