@@ -23,7 +23,6 @@
 extern "C" {
 #include "scanner.h"
 #include "mutable_string.h"
-#include "tests_common.h"
 }
 
 union ExpData {

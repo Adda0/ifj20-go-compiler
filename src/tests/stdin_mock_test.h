@@ -12,6 +12,7 @@
 
 extern "C" {
 #include "scanner.h"
+#include "tests_common.h"
 }
 
 #ifndef _STDINMOCKINGTEST_H
@@ -26,6 +27,7 @@ protected:
 #if VERBOSE > 1
         std::cout << "[TEST SetUp]\n";
 #endif
+        compiler_result = COMPILER_RESULT_SUCCESS;
         cinBackup = std::cin.rdbuf();
 
         buffer = new std::stringbuf();
