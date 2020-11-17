@@ -36,7 +36,7 @@ protected:
 
     void TearDown() override {
 #if VERBOSE > 1
-        std::cout << "[TEST TearDown]\n";
+        std::cout << "[TEST TearDown] Final compiler result: " << compiler_result << '\n';
 #endif
         int toClear = buffer->in_avail();
         buffer->pubseekoff(toClear, std::ios_base::cur, std::ios_base::out);
