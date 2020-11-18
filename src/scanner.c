@@ -856,6 +856,10 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
             // token is '/*' for sure -> ignore all chars til '*/' is read
             if (read_char == '*') {
                 *automaton_state = STATE_ASTERISK_IN_MULTILINE_COMMENT;
+            } else if (read_char == EOF) {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
+                               "Line %llu, col %llu: Multiline comment has never been ended. End it with '*/'.\n", line_num, char_num);
+                *automaton_state = STATE_END_OF_MULTILINE_COMMENT;
             }
             read_char = EMPTY_CHAR;
             break;
