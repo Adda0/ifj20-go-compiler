@@ -7,19 +7,67 @@
  * @author František Nečas (xnecas27), FIT BUT
  */
 
-#include <stdio.h>
 #include <string.h>
 #include "parser.h"
 #include "compiler.h"
 #include "scanner.h"
 #include "mutable_string.h"
 #include "stderr_message.h"
+#include "precedence_parser.h"
 
-Token token;
+Token token, prev_token;
 ScannerResult scanner_result;
 
-int body();
 int else_();
+
+ScannerResult result_if_eol_ok(ScannerResult peeked_result) {
+    if (peeked_result != SCANNER_RESULT_EXCESS_EOL && peeked_result != SCANNER_RESULT_MISSING_EOL) {
+        return peeked_result;
+    } else {
+        return SCANNER_RESULT_SUCCESS;
+    }
+}
+
+ScannerResult calculate_new_scanner_result(ScannerResult peeked_result, EolRule eol, bool eol_read) {
+    if (eol == EOL_FORBIDDEN) {
+        if (eol_read) {
+            return SCANNER_RESULT_EXCESS_EOL;
+        } else {
+            return result_if_eol_ok(peeked_result);
+        }
+    } else if (eol == EOL_REQUIRED) {
+        if (eol_read) {
+            return result_if_eol_ok(peeked_result);
+        } else {
+            return SCANNER_RESULT_MISSING_EOL;
+        }
+    } else {
+        return result_if_eol_ok(peeked_result);
+    }
+}
+
+int get_token(Token *token, EolRule eol, bool peek_only) {
+    static ScannerResult peeked_result;
+    static Token peeked_token;
+    static bool peeked = false;
+    if (peeked) {
+        if (!peek_only) {
+            peeked = false;
+        }
+        *token = peeked_token;
+        // We have to return based on the new eol rule
+        return calculate_new_scanner_result(peeked_result, eol, peeked_token.context.eol_read);
+    } else {
+        if (peek_only) {
+            peeked_result = scanner_get_token(&peeked_token, eol);
+            *token = peeked_token;
+            peeked = true;
+            return peeked_result;
+        } else {
+            return scanner_get_token(token, eol);
+        }
+    }
+}
 
 char *convert_token_to_text() {
     switch (token.type) {
