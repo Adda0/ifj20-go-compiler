@@ -260,6 +260,69 @@ bool reduce(PrecedenceStack *stack, PrecedenceNode *start) {
     return false;
 }
 
+bool matches_assign_rule(AssignRule assign_rule, int definitions, int assignments, int function_calls) {
+    switch (assign_rule) {
+        case VALID_STATEMENT:
+            // A statement can only contain one definition or assignment (and the rest is irrelevant)
+            // or only a single function call which isn't assigned anywhere.
+            if (definitions + assignments == 1 || function_calls == 1 && (definitions + assignments) == 0) {
+                return true;
+            } else {
+                stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL,
+                               "Line %u: not a valid statement (must be a function call, assignment or definition)\n",
+                               token.context.line_num);
+                return false;
+            }
+        case ASSIGN_REQUIRED:
+            if (assignments == 1 && definitions == 0) {
+                return true;
+            } else {
+                stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL,
+                               "Line %u: expected assignment inside expression\n", token.context.line_num);
+                return false;
+            }
+        case DEFINE_REQUIRED:
+            if (definitions == 1 && assignments == 0) {
+                return true;
+            } else {
+                stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL,
+                               "Line %u: expected definition inside expression\n", token.context.line_num);
+                return false;
+            }
+        case PURE_EXPRESSION:
+            if (definitions == 0 && assignments == 0) {
+                return true;
+            } else {
+                stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL,
+                               "Line %u: expected pure expression (no definitions or assignments)\n",
+                               token.context.line_num);
+                return false;
+            }
+        default:
+            return false;
+    }
+}
+
+void update_assignment_counters(int type, int *definitions, int *assignments, int *function_calls) {
+    switch (type) {
+        case TOKEN_DEFINE:
+            (*definitions)++;
+            return;
+        case TOKEN_ASSIGN:
+        case TOKEN_PLUS_ASSIGN:
+        case TOKEN_MINUS_ASSIGN:
+        case TOKEN_MULTIPLY_ASSIGN:
+        case TOKEN_DIVIDE_ASSIGN:
+            (*assignments)++;
+            return;
+        case SYMB_FUNCTION:
+            (*function_calls)++;
+            return;
+        default:
+            return;
+    }
+}
+
 int parse_expression(AssignRule assign_rule, bool eol_before_allowed) {
     // Check if there is any expression to read
     if (get_table_index(token.type, eol_before_allowed, token.context.eol_read) == INDEX_END) {
@@ -277,6 +340,10 @@ int parse_expression(AssignRule assign_rule, bool eol_before_allowed) {
         return COMPILER_RESULT_ERROR_INTERNAL;
     }
 
+    // Keep track of counts of various symbols to be able to check whether assign rule was satisfied
+    int definitions = 0;
+    int assignments = 0;
+    int function_calls = 0;
     bool eol_allowed = true;
     bool done = false;
     while (!done) {
@@ -305,6 +372,7 @@ int parse_expression(AssignRule assign_rule, bool eol_before_allowed) {
                                    "no memory when pushing onto stack\n");
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
+                update_assignment_counters(token.type, &definitions, &assignments, &function_calls);
                 check_new_token(EOL_OPTIONAL);
                 eol_allowed = eol_allowed_after(prev_token.type);
                 break;
@@ -319,6 +387,7 @@ int parse_expression(AssignRule assign_rule, bool eol_before_allowed) {
                                    "no memory when pushing onto stack\n");
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
+                update_assignment_counters(token.type, &definitions, &assignments, &function_calls);
                 check_new_token(EOL_OPTIONAL);
                 eol_allowed = eol_allowed_after(prev_token.type);
                 break;
@@ -345,6 +414,10 @@ int parse_expression(AssignRule assign_rule, bool eol_before_allowed) {
                                token.context.line_num, token.context.char_num);
                 syntax_error();
         }
+    }
+
+    if (!matches_assign_rule(assign_rule, definitions, assignments, function_calls)) {
+        syntax_error();
     }
     precedence_stack_dispose(&stack);
     syntax_ok();
