@@ -11,6 +11,7 @@
 #define _PARSER_H 1
 
 #include "compiler.h"
+#include "scanner.h"
 
 #define token_error(message)                                                                    \
     stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL,                  \
@@ -26,7 +27,7 @@
     /* Try to recover from the state, find new line and start with <body> from there. */        \
     while (scanner_result != SCANNER_RESULT_EOF) {                                              \
         do {                                                                                    \
-            scanner_result = scanner_get_token(&token, EOL_OPTIONAL);                           \
+            scanner_result = get_token(&token, EOL_OPTIONAL, false);                            \
             if (scanner_result == SCANNER_RESULT_EOF) {                                         \
                 return COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL;                               \
             } else if (scanner_result == SCANNER_RESULT_INTERNAL_ERROR) {                       \
@@ -41,7 +42,8 @@
 } while(0)
 
 #define check_new_token(eol_rule) do {                                                          \
-    if ((scanner_result = scanner_get_token(&token, eol_rule)) == SCANNER_RESULT_MISSING_EOL) { \
+    prev_token = token;                                                                         \
+    if ((scanner_result = get_token(&token, eol_rule, false)) == SCANNER_RESULT_MISSING_EOL) {  \
         stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL,              \
                        "Line %u, col %u: expected newline\n", token.context.line_num,           \
                        token.context.char_num);                                                 \
@@ -77,8 +79,14 @@
 
 #define syntax_ok() return COMPILER_RESULT_SUCCESS
 
+extern Token token;
+extern Token prev_token;
+extern ScannerResult scanner_result;
 
-
+int body();
+void clear_token();
+int get_token(Token *token, EolRule eol, bool peek_only);
+char *convert_token_to_text();
 CompilerResult parser_parse();
 
 #endif

@@ -126,23 +126,6 @@ void clear_token() {
     }
 }
 
-int expression(EolRule eol) {
-    // TODO: temporary solution to allow simple terms instead of precedence expression parsing. Dirty hack
-    switch (token.type) {
-        case TOKEN_BOOL:
-        case TOKEN_INT:
-        case TOKEN_FLOAT:
-        case TOKEN_STRING:
-        case TOKEN_ID:
-            clear_token();
-            check_new_token(eol);
-            syntax_ok();
-        default:
-            token_error("expected int, float, string or bool value, got %s\n");
-            syntax_error();
-    }
-}
-
 int type() {
     if (token.type != TOKEN_KEYWORD) {
         token_error("expected float64, int, string or bool keyword, got %s\n");
@@ -222,9 +205,12 @@ int else_n() {
         case TOKEN_KEYWORD:
             if (token.data.keyword_type == KEYWORD_IF) {
                 // rule <else_n> -> if expression { <body> } <else>
-                // TODO: expression
                 check_new_token(EOL_OPTIONAL);
-                check_nonterminal(expression(EOL_FORBIDDEN));
+                check_nonterminal(parse_expression(PURE_EXPRESSION, true));
+                if (token.context.eol_read) {
+                    eol_error("unexpected EOL after if expression\n");
+                    syntax_error();
+                }
                 if (token.type != TOKEN_CURLY_LEFT_BRACKET) {
                     token_error("expected { after else if, got %s\n");
                     syntax_error();
@@ -285,8 +271,12 @@ int for_definition() {
             syntax_ok();
         case TOKEN_ID:
             // rule <for_definition> -> expression
-            // TODO: expression
-            return expression(EOL_FORBIDDEN);
+            check_nonterminal(parse_expression(DEFINE_REQUIRED, false));
+            if (token.context.eol_read) {
+                eol_error("unexpected EOL after for definition\n");
+                syntax_error();
+            }
+            syntax_ok();
         default:
             token_error("expected id or semicolon after for, got %s\n");
             syntax_error();
@@ -300,8 +290,12 @@ int for_assignment() {
             syntax_ok();
         case TOKEN_ID:
             // rule <for_assignment> -> expression
-            // TODO: expression
-            return expression(EOL_FORBIDDEN);
+            check_nonterminal(parse_expression(ASSIGN_REQUIRED, false));
+            if (token.context.eol_read) {
+                eol_error("unexpected EOL after for assignment\n");
+                syntax_error();
+            }
+            syntax_ok();
         default:
             token_error("expected identifier or { in for assignment, got %s\n");
             syntax_error();
@@ -332,8 +326,12 @@ int return_follow() {
                 syntax_ok();
             }
             // rule <return_follow> -> expression
-            // TODO: expression
-            return expression(EOL_REQUIRED);
+            check_nonterminal(parse_expression(PURE_EXPRESSION, true));
+            if (!token.context.eol_read) {
+                eol_error("expected EOL after return \n");
+                syntax_error();
+            }
+            syntax_ok();
     }
 }
 
@@ -347,9 +345,12 @@ int statement() {
                     return return_follow();
                 case KEYWORD_IF:
                     // rule <statement> -> if expression { <body> } <else>
-                    // TODO: expression
                     check_new_token(EOL_OPTIONAL);
-                    check_nonterminal(expression(EOL_FORBIDDEN));
+                    check_nonterminal(parse_expression(PURE_EXPRESSION, true));
+                    if (token.context.eol_read) {
+                        eol_error("unexpected EOL after if expression\n");
+                        syntax_error();
+                    }
                     if (token.type != TOKEN_CURLY_LEFT_BRACKET) {
                         token_error("expected { before if body, got %s\n");
                         syntax_error();
@@ -370,9 +371,12 @@ int statement() {
                         token_error("expected semicolon after for definition, got %s\n");
                         syntax_error();
                     }
-                    // TODO: expression
                     check_new_token(EOL_OPTIONAL);
-                    check_nonterminal(expression(EOL_FORBIDDEN));
+                    check_nonterminal(parse_expression(PURE_EXPRESSION, false));
+                    if (token.context.eol_read) {
+                        eol_error("unexpected EOL after for expression\n");
+                        syntax_error();
+                    }
                     if (token.type != TOKEN_SEMICOLON) {
                         token_error("expected semicolon after for condition, got %s\n");
                         syntax_error();
@@ -397,8 +401,12 @@ int statement() {
             }
         case TOKEN_ID:
             // rule <statement> -> expression
-            // TODO: expression
-            return expression(EOL_REQUIRED);
+            check_nonterminal(parse_expression(VALID_STATEMENT, true));
+            if (!token.context.eol_read) {
+                eol_error("expected EOL after expression\n");
+                syntax_error();
+            }
+            syntax_ok();
         default:
             token_error("expected identifier, for, if or return at statement start, got %s\n");
             syntax_error();
