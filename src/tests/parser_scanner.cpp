@@ -2288,6 +2288,159 @@ TEST_F(ParserScannerTest, UnaryOperators13) {
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
+// === Test expressions in for loops ===
+
+TEST_F(ParserScannerTest, ForLoops1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for i := 0; i < 10; i += 1 {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ForLoops2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for i, y := 0, 1; i < 10 && y < 11; i += 1 {\n"
+        "        y += 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ForLoops3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for i < 0; i < 10; i += 1 {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ForLoops4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for i := 0; i := 10; i += 1 {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ForLoops5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for i := 0; i < 10; i < 1 {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ForLoops6) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for i < 0; ; i += 1 {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ForLoops7) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for i := true; i != false; i = !i {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ForLoops8) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for i := true; i := 2; i = !i {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ForLoops9) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for ; i != false; i = !i {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ForLoops10) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for i := true; i != false; {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ForLoops11) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for i := true; i != false; {\n"
+        "        for i := true; i != false; {\n"
+        "            for i := true; i != false; {\n"
+        "            }\n"
+        "        }\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ForLoops12) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for i := true; i != false; {\n"
+        "        for a := 4; a < 5; ; a += 3 {\n"
+        "        }\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
 // === Test expressions in if-else if-else statements ===
 
 TEST_F(ParserScannerTest, ExpressionInIfStatements1) {
