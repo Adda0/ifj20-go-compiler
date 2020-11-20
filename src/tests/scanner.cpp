@@ -1318,10 +1318,10 @@ TEST_F(ScannerTest, Comment_NeverendingBlock) {
             ExpectedToken(TOKEN_LEFT_BRACKET),
             ExpectedToken(TOKEN_RIGHT_BRACKET),
             ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
-            ExpectedToken(SCANNER_RESULT_INVALID_STATE)
     };
 
     ComplexTest(inputStr, expectedResult);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
 }
 
 TEST_F(ScannerTest, Comment_BlockIsWhitespace1) {
