@@ -51,7 +51,7 @@ TEST_F(ParserScannerTest, BasicCode) {
         "    if 0 < 1 {\n"
         "        print(\"Will always be printed.\\n\")\n"
         "    } else {\n"
-        "        print(\"Will never be seen.\n\")\n"
+        "        print(\"Will never be seen.\\n\")\n"
         "    }\n"
         "    \n"
         "    return\n"
@@ -1187,7 +1187,7 @@ TEST_F(ParserScannerTest, ReturnFormat12) {
         "}\n"
         "\n"
         "func foo() (int, string) {\n"
-        "    return 5, \"returned \n \\xaf string\"\n"
+        "    return 5, \"returned \\n \\xaf string\"\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
