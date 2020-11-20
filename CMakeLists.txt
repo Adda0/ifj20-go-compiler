@@ -39,7 +39,9 @@ add_executable(Compiler
         src/mutable_string.h src/mutable_string.c
         src/stderr_message.h src/stderr_message.c
         src/scanner.h src/scanner_static.h src/scanner.c
-        src/parser.h src/parser.c)
+        src/parser.h src/parser.c
+        src/precedence_parser.h src/precedence_parser.c
+        src/stacks.h src/stacks.c)
 
 # ------- Tests -------
 add_executable(Test_mutable_string src/mutable_string.h src/mutable_string.c src/tests/mutable_string.cpp)
@@ -59,7 +61,9 @@ add_executable(Test_parser_scanner
         src/mutable_string.h src/mutable_string.c
         src/parser.h src/parser.c
         src/tests/tests_common.h src/tests/stdin_mock_test.h
-        src/tests/parser_scanner.cpp)
+        src/tests/parser_scanner.cpp
+        src/precedence_parser.h src/precedence_parser.c
+        src/stacks.h src/stacks.c)
 target_link_libraries(Test_parser_scanner gtest gtest_main)
 
 add_test(mutable_string Test_mutable_string)
