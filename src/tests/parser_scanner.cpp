@@ -48,7 +48,7 @@ TEST_F(ParserScannerTest, BasicCode) {
         "    a := 0\n"
         "    a -= 5\n"
         "\n"
-        "    if 1 {\n"
+        "    if 0 < 1 {\n"
         "        print(\"Will always be printed.\\n\")\n"
         "    } else {\n"
         "        print(\"Will never be seen.\n\")\n"
@@ -1393,13 +1393,13 @@ TEST_F(ParserScannerTest, ComplexFunctions1) {
         "func main() {\n"
         "    print(\"Zadejte cislo pro vypocet faktorialu: \")\n"
         "    a := 0\n"
-        "    a, _ = 45\n"
-        "    if 0 {\n"
+        "    a, _ = 45, 0\n"
+        "    if 0 > -1 {\n"
         "        print(\"Faktorial nejde spocitat!\\n\")\n"
         "    } else {\n"
         "        vysl := 1\n"
-        "        for bdav := 1 ; 0; a = 1 {\n"
-        "            vysl = vysl\n"
+        "        for bdav := 1 ; bdav < 10; a += 1 {\n"
+        "            vysl = vysl + 8\n"
         "        }\n"
         "        print(\"Vysledek je \", vysl, \"\\n\")\n"
         "    }\n"
@@ -1461,8 +1461,8 @@ TEST_F(ParserScannerTest, ComplexFunctions3) {
         "    print(\"pricemz se pismena nesmeji v posloupnosti opakovat: \")\n"
         "    err := 0\n"
         "    s1, err = w\n"
-        "    if 1 {\n"
-        "        for ; a; {\n"
+        "    if true {\n"
+        "        for ; a < 10; {\n"
         "            print(\"\\n\", \"Spatne zadana posloupnost, zkuste znovu: \")\n"
         "            s1, _ = 4, 4\n"
         "        }\n"
@@ -2288,3 +2288,372 @@ TEST_F(ParserScannerTest, UnaryOperators13) {
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
+// === Test expressions in if-else if-else statements ===
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a < 4 {\n"
+        "        foo = 42\n"
+        "    } else if b {\n"
+        "        foo = 1\n"
+        "    } else {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a != 1 {\n"
+        "        foo = 42\n"
+        "    } else if \n!!true {\n"
+        "        foo = 1\n"
+        "    } else {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a := 3 {\n"
+        "        foo = 42\n"
+        "    } else if b {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if true {\n"
+        "        foo = 42\n"
+        "    } else if \n false {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a == a {\n"
+        "        foo = 42\n"
+        "    } else if \n b != b {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements6) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if (a - 8) * 7 == b + 8 / 7 {\n"
+        "        foo = 42\n"
+        "    } else if \n !b && (c || d) != b || !(t && r) {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements7) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a < 4 {\n"
+        "        if a < 4 {\n"
+        "            if a < 4 {\n"
+        "                foo = 42\n"
+        "            } else if b {\n"
+        "                foo = 1\n"
+        "            } else {\n"
+        "                bar := 1\n"
+        "            }\n"
+        "        } else if b {\n"
+        "            foo = 1\n"
+        "        } else {\n"
+        "            bar := 1\n"
+        "        }\n"
+        "    } else if b {\n"
+        "        foo = 1\n"
+        "    } else {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements8) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a < 4 {\n"
+        "        if a < 4 {\n"
+        "            if a < 4 {\n"
+        "                foo = 42\n"
+        "            } else if b {\n"
+        "                foo = 1\n"
+        "            } else {\n"
+        "                bar := 1\n"
+        "        } else if b {\n"
+        "            foo = 1\n"
+        "        } else {\n"
+        "            bar := 1\n"
+        "        }\n"
+        "    } else if b {\n"
+        "        foo = 1\n"
+        "    } else {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements9) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a < 4 {\n"
+        "        if a < 4 {\n"
+        "            if a < 4 {\n"
+        "                foo = 42\n"
+        "            else {\n"
+        "                bar := 1\n"
+        "            }\n"
+        "        } else if b {\n"
+        "            foo = 1\n"
+        "        } else {\n"
+        "            bar := 1\n"
+        "        }\n"
+        "    } else if b {\n"
+        "        foo = 1\n"
+        "    } else {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements10) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a < 4 {\n"
+        "        if a < 4 {\n"
+        "            if a < 4 {\n"
+        "                foo = 42\n"
+        "            } else if b {\n"
+        "                foo = 1\n"
+        "            } else {\n"
+        "                bar := 1\n"
+        "            }\n"
+        "        } else if b {\n"
+        "            foo = 1\n"
+        "        } else {\n"
+        "            bar := 1\n"
+        "        }\n"
+        "    } else if b {\n"
+        "        foo = 1\n"
+        "    } else {\n"
+        "        bar := 1\n"
+         "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements11) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a < 4 {\n"
+        "        if a < 4 {\n"
+        "            if a < 4 {\n"
+        "                foo = 42\n"
+        "            } else if b {\n"
+        "                foo = 1\n"
+        "            } else {\n"
+        "                bar := 1\n"
+        "            }\n"
+        "        } else if b {\n"
+        "            foo = 1\n"
+        "        } else {\n"
+        "            bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements12) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a < 4 {\n"
+        "        if a < 4 {\n"
+        "            if a < 4 {\n"
+        "                foo = 42\n"
+        "            } else if b {\n"
+        "                foo = 1\n"
+        "            } else {\n"
+        "                bar := 1\n"
+        "            }\n"
+        "        } else if b {\n"
+        "            foo = 1\n"
+        "        } else \n"
+        "            bar := 1\n"
+        "        }\n"
+        "    } else if b {\n"
+        "        foo = 1\n"
+        "    } else {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements13) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a < 4 {\n"
+        "        if a < 4 {\n"
+        "            if {\n"
+        "                foo = 42\n"
+        "            } else if b {\n"
+        "                foo = 1\n"
+        "            } else {\n"
+        "                bar := 1\n"
+        "            }\n"
+        "        } else if b {\n"
+        "            foo = 1\n"
+        "        } else {\n"
+        "            bar := 1\n"
+        "        }\n"
+        "    } else if b {\n"
+        "        foo = 1\n"
+        "    } else {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements14) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a < 4 \n"
+        "        if a < 4 {\n"
+        "            if a < 4 {\n"
+        "                foo = 42\n"
+        "            } else if b {\n"
+        "                foo = 1\n"
+        "            } else {\n"
+        "                bar := 1\n"
+        "            }\n"
+        "        } else if b {\n"
+        "            foo = 1\n"
+        "        } else {\n"
+        "            bar := 1\n"
+        "        }\n"
+        "    } else if b {\n"
+        "        foo = 1\n"
+        "    } else {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements15) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a < 4 {\n"
+        "        if a < 4 {\n"
+        "            if a < 4 {\n"
+        "                foo = 42\n"
+        "            } else if b {\n"
+        "                foo = 1\n"
+        "            } else {\n"
+        "                bar := 1\n"
+        "            }\n"
+        "        } else if b {\n"
+        "            foo = 1\n"
+        "        } else {\n"
+        "            if a < 4 {\n"
+        "                foo = 42\n"
+        "            } else if b {\n"
+        "                foo = 1\n"
+        "            } else {\n"
+        "                bar := 1\n"
+        "            }\n"
+        "        }\n"
+        "    } else if b {\n"
+        "        foo = 1\n"
+        "    } else {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements16) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if\n a + 4 - 8 / 7 <= 745 {\n"
+        "        foo = 42\n"
+        "    } else if \n true && !a || b || false {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
