@@ -12,6 +12,7 @@
 
 extern "C" {
 #include "scanner.h"
+#include "tests_common.h"
 }
 
 #ifndef _STDINMOCKINGTEST_H
@@ -26,6 +27,7 @@ protected:
 #if VERBOSE > 1
         std::cout << "[TEST SetUp]\n";
 #endif
+        compiler_result = COMPILER_RESULT_SUCCESS;
         cinBackup = std::cin.rdbuf();
 
         buffer = new std::stringbuf();
@@ -34,7 +36,7 @@ protected:
 
     void TearDown() override {
 #if VERBOSE > 1
-        std::cout << "[TEST TearDown]\n";
+        std::cout << "[TEST TearDown] Final compiler result: " << compiler_result << '\n';
 #endif
         int toClear = buffer->in_avail();
         buffer->pubseekoff(toClear, std::ios_base::cur, std::ios_base::out);

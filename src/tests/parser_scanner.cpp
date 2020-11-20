@@ -23,7 +23,6 @@ extern "C" {
 #include "scanner.h"
 #include "parser.h"
 #include "mutable_string.h"
-#include "tests_common.h"
 }
 
 class ParserScannerTest : public StdinMockingScannerTest {
@@ -1411,30 +1410,35 @@ TEST_F(ParserScannerTest, ComplexFunctions1) {
 
 TEST_F(ParserScannerTest, ComplexFunctions2) {
     std::string inputStr = \
-        "// Program 3: Prace s retezci a vestavenymi funkcemi\n"
+        "// Program 2: Vypocet faktorialu (rekurzivne)\n"
         "package main\n"
+        "func factorial(n int) (int) {\n"
+        "   dec_n := n - 1\n"
+        "   if n < 2 {\n"
+        "       return 1\n"
+        "   } else {\n"
+        "       tmp := 0\n"
+        "       tmp = factorial(dec_n)\n"
+        "       return n * tmp\n"
+        "   }\n"
+        "}\n"
         "func main() {\n"
-        "    s1 := \"Toto je nejaky text\"\n"
-        "    s2 := a\n"
-        "    print(s1, \"\\n\", s2)\n"
-        "    s1len := 0\n"
-        "    s1len = a\n"
-        "    s1len = b\n"
-        "    s1, _ = 5, 4\n"
-        "    s1len = 4\n"
-        "    print(\"4 znaky od\", s1len, \". znaku v \\\"\", s2, \"\\\":\", s1, \"\\n\")\n"
-        "    print(\"Zadejte serazenou posloupnost vsech malych pismen a-h, \")\n"
-        "    print(\"pricemz se pismena nesmeji v posloupnosti opakovat: \")\n"
-        "    err := 0\n"
-        "    s1, err = w\n"
-        "    if 1 {\n"
-        "        for ; a; {\n"
-        "            print(\"\\n\", \"Spatne zadana posloupnost, zkuste znovu: \")\n"
-        "            s1, _ = 4, 4\n"
-        "        }\n"
-        "    } else {\n"
-        "    }\n"
-        "}\n";
+        "   print(\"Zadejte cislo pro vypocet faktorialu: \")\n"
+        "   a := 0\n"
+        "   err := 0\n"
+        "   a, err = inputi()\n"
+        "   if err == 0 {\n"
+        "       if a < 0 {\n"
+        "           print(\"Faktorial nejde spocitat!\", \"\\n\")\n"
+        "       } else {\n"
+        "           vysl := 0\n"
+        "           vysl = factorial(a)\n"
+        "           print(\"Vysledek je \", vysl, \"\\n\")\n"
+        "       }\n"
+        "   } else {\n"
+        "       print(\"Chyba pri nacitani celeho cisla!\\n\")\n"
+        "   }\n"
+        "}";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }

@@ -23,7 +23,6 @@
 extern "C" {
 #include "scanner.h"
 #include "mutable_string.h"
-#include "tests_common.h"
 }
 
 union ExpData {
@@ -39,6 +38,20 @@ struct ExpectedToken {
     ExpData data;
     EolRule nextEolRule;
     ScannerResult expectedResult;
+
+    ExpectedToken(ScannerResult expResult) {
+        type = TOKEN_DEFAULT;
+        data = {.intVal = 0};
+        nextEolRule = EOL_OPTIONAL;
+        expectedResult = expResult;
+    }
+
+    ExpectedToken(ScannerResult expResult, TokenType expType) {
+        type = expType;
+        data = {.intVal = 0};
+        nextEolRule = EOL_OPTIONAL;
+        expectedResult = expResult;
+    }
 
     ExpectedToken(TokenType expType) {
         type = expType;
@@ -78,10 +91,38 @@ const std::array<std::string, 7> stateNames =
          "NumberOverflow",
          "InternalError"};
 
-const std::array<std::string, 32> tokenTypeNames = {"Default", "Identifier", "Keyword", "IntVal", "FloatVal",
-                                                    "StringVal", "BoolVal", "+", "-", "*", "/", "+=", "-=", "*=", "/=",
-                                                    ":=", "=", "==", "!", "!=", "&&", "||", "(", ")", "{", "}", "<",
-                                                    ">", "<=", ">=", ",", ";"};
+const std::map<TokenType, std::string> tokenTypeNames = {{TOKEN_DEFAULT,             "Default"},
+                                                         {TOKEN_ID,                  "Identifier"},
+                                                         {TOKEN_KEYWORD,             "Keyword"},
+                                                         {TOKEN_INT,                 "IntVal"},
+                                                         {TOKEN_FLOAT,               "FloatVal"},
+                                                         {TOKEN_BOOL,                "BoolVal"},
+                                                         {TOKEN_STRING,              "StringVal"},
+                                                         {TOKEN_PLUS,                "+"},
+                                                         {TOKEN_MINUS,               "-"},
+                                                         {TOKEN_MULTIPLY,            "*"},
+                                                         {TOKEN_DIVIDE,              "/"},
+                                                         {TOKEN_PLUS_ASSIGN,         "+="},
+                                                         {TOKEN_MINUS_ASSIGN,        "-="},
+                                                         {TOKEN_MULTIPLY_ASSIGN,     "*="},
+                                                         {TOKEN_DEFINE,              ":="},
+                                                         {TOKEN_DIVIDE_ASSIGN,       "/="},
+                                                         {TOKEN_ASSIGN,              "="},
+                                                         {TOKEN_EQUAL_TO,            "=="},
+                                                         {TOKEN_NOT,                 "!"},
+                                                         {TOKEN_NOT_EQUAL_TO,        "!="},
+                                                         {TOKEN_AND,                 "&&"},
+                                                         {TOKEN_OR,                  "||"},
+                                                         {TOKEN_LEFT_BRACKET,        "("},
+                                                         {TOKEN_RIGHT_BRACKET,       ")"},
+                                                         {TOKEN_CURLY_LEFT_BRACKET,  "{"},
+                                                         {TOKEN_CURLY_RIGHT_BRACKET, "}"},
+                                                         {TOKEN_LESS_THAN,           "<"},
+                                                         {TOKEN_GREATER_THAN,        ">"},
+                                                         {TOKEN_LESS_OR_EQUAL,       "<="},
+                                                         {TOKEN_GREATER_OR_EQUAL,    ">="},
+                                                         {TOKEN_COMMA,               ","},
+                                                         {TOKEN_SEMICOLON,           ";"}};
 
 class ScannerTest : public StdinMockingScannerTest {
 protected:
@@ -94,7 +135,8 @@ ScannerResult scanner_get_token_wrapper(Token *token, EolRule eolRule, ScannerRe
     std::cout << "[SCANNER] Token. Result: '" << stateNames[res] << "' (exp. '"
               << stateNames[expRes]
               << "'). Type: ["
-              << tokenTypeNames[token->type] << "] (exp. [" << tokenTypeNames[expType] << "]).\n";
+              << tokenTypeNames.find(token->type)->second << "] (exp. [" << tokenTypeNames.find(expType)->second
+              << "]).\n";
 #endif
     return res;
 }
@@ -142,7 +184,30 @@ void ScannerTest::ComplexTest(std::string &inputStr, std::list<ExpectedToken> &e
         std::cout << "[SCANNER] Token. Result: '" << stateNames[res] << "' (exp. '"
                   << stateNames[expectedToken.expectedResult]
                   << "'). Type: ["
-                  << tokenTypeNames[resultToken.type] << "] (exp. [" << tokenTypeNames[expectedToken.type] << "]).\n";
+                  << tokenTypeNames.find(resultToken.type)->second << "] (exp. ["
+                  << tokenTypeNames.find(expectedToken.type)->second << "]).";
+
+        switch (resultToken.type) {
+            case TOKEN_ID:
+                std::cout << " Value: '" << mstr_content(&resultToken.data.str_val) << "'\n";
+                break;
+            case TOKEN_KEYWORD:
+                // TODO
+                std::cout << '\n';
+                break;
+            case TOKEN_INT:
+                std::cout << " Value: " << resultToken.data.num_int_val << '\n';
+                break;
+            case TOKEN_FLOAT:
+                std::cout << " Value: " << resultToken.data.num_float_val << '\n';
+                break;
+            case TOKEN_BOOL:
+                std::cout << " Value: " << resultToken.data.bool_val << '\n';
+                break;
+            default:
+                std::cout << '\n';
+                break;
+        }
 #endif
         ASSERT_EQ(res, expectedToken.expectedResult);
         ASSERT_EQ(resultToken.type, expectedToken.type);
@@ -361,6 +426,65 @@ TEST_F(ScannerTest, Int) {
     ASSERT_EQ(resultToken.data.num_int_val, 1);
 }
 
+TEST_F(ScannerTest, IntStartingWithZero1) {
+    // Go interprets this as an octal number, same as C
+    LEX_SUCCESS("05 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 5);
+}
+
+TEST_F(ScannerTest, IntStartingWithZero2) {
+    // Go interprets this as an octal number, same as C
+    // So this should yield an error
+    LEX("09 ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT);
+}
+
+TEST_F(ScannerTest, IntStartingWithMultipleZeroes1) {
+    // Go interprets this as an octal number, same as C
+    LEX_SUCCESS("00005 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 5);
+}
+
+TEST_F(ScannerTest, IntStartingWithMultipleZeroes2) {
+    // Go interprets this as an octal number, same as C
+    // So this should yield an error
+    LEX_SUCCESS("00105 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 69);
+}
+
+TEST_F(ScannerTest, IntMultiple) {
+    LEX_SUCCESS("123456 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 123456);
+}
+
+TEST_F(ScannerTest, IntMultipleWithZero) {
+    LEX_SUCCESS("103456 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 103456);
+}
+
+TEST_F(ScannerTest, IntUnderscore) {
+    LEX_SUCCESS("123_456 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 123456);
+}
+
+TEST_F(ScannerTest, IntUnderscoreInvalid) {
+    LEX("1__456 ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT);
+}
+
+TEST_F(ScannerTest, IntUnderscoreWithZero) {
+    LEX_SUCCESS("52_103_456 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 52103456);
+}
+
+TEST_F(ScannerTest, IntUnderscoreStartingWithZero) {
+    LEX_SUCCESS("052_103_456 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 052103456);
+}
+
+TEST_F(ScannerTest, IntUnderscoreStartingWithMultipleZeroes) {
+    LEX_SUCCESS("0052_103_456 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 052103456);
+}
+
 TEST_F(ScannerTest, IntZero) {
     LEX_SUCCESS("0 ", TOKEN_INT);
     ASSERT_EQ(resultToken.data.num_int_val, 0);
@@ -391,6 +515,37 @@ TEST_F(ScannerTest, IntBinaryUpperCase) {
     ASSERT_EQ(resultToken.data.num_int_val, 2);
 }
 
+TEST_F(ScannerTest, IntBinaryUnderscore) {
+    // This is valid in Go
+    LEX_SUCCESS("0b_1 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 1);
+}
+
+TEST_F(ScannerTest, IntBinaryUpperCaseUnderscore1) {
+    LEX_SUCCESS("0B1_1 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 3);
+}
+
+TEST_F(ScannerTest, IntBinaryUpperCaseUnderscore2) {
+    LEX_SUCCESS("0B_1 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 1);
+}
+
+TEST_F(ScannerTest, IntBinaryUnderscoreMultipleZeroes) {
+    LEX_SUCCESS("0b_001 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 1);
+}
+
+TEST_F(ScannerTest, IntBinaryUnderscoreMultiple1) {
+    LEX_SUCCESS("0b100_001 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 33);
+}
+
+TEST_F(ScannerTest, IntBinaryUnderscoreMultiple2) {
+    LEX_SUCCESS("0b010_100_001 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 0b10100001);
+}
+
 TEST_F(ScannerTest, IntOctal) {
     LEX_SUCCESS("0o1 ", TOKEN_INT);
     ASSERT_EQ(resultToken.data.num_int_val, 1);
@@ -414,6 +569,37 @@ TEST_F(ScannerTest, IntOctalMultiple) {
 TEST_F(ScannerTest, IntOctalUpperCase) {
     LEX_SUCCESS("0O10 ", TOKEN_INT);
     ASSERT_EQ(resultToken.data.num_int_val, 8);
+}
+
+TEST_F(ScannerTest, IntOctalUpperCaseUnderscore1) {
+    LEX_SUCCESS("0O10_7 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 0107);
+}
+
+TEST_F(ScannerTest, IntOctalUpperCaseUnderscore2) {
+    LEX_SUCCESS("0O_7 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 7);
+}
+
+TEST_F(ScannerTest, IntOctalUnderscore) {
+    // This is valid in Go
+    LEX_SUCCESS("0o_7 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 7);
+}
+
+TEST_F(ScannerTest, IntOctalUnderscoreMultipleZeroes) {
+    LEX_SUCCESS("0o_006 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 6);
+}
+
+TEST_F(ScannerTest, IntOctalUnderscoreMultiple1) {
+    LEX_SUCCESS("0o1_001 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 513);
+}
+
+TEST_F(ScannerTest, IntOctalUnderscoreMultiple2) {
+    LEX_SUCCESS("0o1_123_001 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 01123001);
 }
 
 TEST_F(ScannerTest, IntHexa) {
@@ -456,19 +642,54 @@ TEST_F(ScannerTest, IntHexaUpperCase) {
     ASSERT_EQ(resultToken.data.num_int_val, 16);
 }
 
-TEST_F(ScannerTest, IntMultiple) {
-    LEX_SUCCESS("123456 ", TOKEN_INT);
-    ASSERT_EQ(resultToken.data.num_int_val, 123456);
+TEST_F(ScannerTest, IntHexaUpperCaseUnderscore1) {
+    LEX_SUCCESS("0X10_A ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 266);
+}
+
+TEST_F(ScannerTest, IntHexaUpperCaseUnderscore2) {
+    LEX_SUCCESS("0X_A ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 10);
+}
+
+TEST_F(ScannerTest, IntHexaUnderscore) {
+    LEX_SUCCESS("0x_b ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 11);
+}
+
+TEST_F(ScannerTest, IntHexaUnderscoreMultipleZeroes) {
+    LEX_SUCCESS("0x_00b ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 11);
+}
+
+TEST_F(ScannerTest, IntHexaUnderscoreMultiple1) {
+    LEX_SUCCESS("0x1_001 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 0x1001);
+}
+
+TEST_F(ScannerTest, IntHexaUnderscoreMultiple2) {
+    LEX_SUCCESS("0x1_123_001 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 0x1123001);
+}
+
+TEST_F(ScannerTest, IntHexaUnderscoreMultiple3) {
+    LEX_SUCCESS("0x1_1A3_0CD ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 0x11A30CD);
+}
+
+TEST_F(ScannerTest, IntHexaUnderscoreMultiple4) {
+    LEX_SUCCESS("0x1_1a3_0cd ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 0x11A30CD);
+}
+
+TEST_F(ScannerTest, IntHexaUnderscoreMultiple5) {
+    LEX_SUCCESS("0xb_1A3_0cD ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 0xb1A30cD);
 }
 
 TEST_F(ScannerTest, IntTooBig) {
     LEX("9223372036854775809 ", EOL_OPTIONAL,
         SCANNER_RESULT_NUMBER_OVERFLOW, TOKEN_INT);
-}
-
-TEST_F(ScannerTest, IntMultipleWithZero) {
-    LEX_SUCCESS("103456 ", TOKEN_INT);
-    ASSERT_EQ(resultToken.data.num_int_val, 103456);
 }
 
 TEST_F(ScannerTest, IntExp) {
@@ -571,9 +792,39 @@ TEST_F(ScannerTest, FloatExp) {
     ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 1.0e1);
 }
 
+TEST_F(ScannerTest, FloatExpWithUnderscore) {
+    LEX_SUCCESS("1.0e1_2 ", TOKEN_FLOAT);
+    ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 1.0e12);
+}
+
 TEST_F(ScannerTest, FloatExpUpperCase) {
     LEX_SUCCESS("1.0E1 ", TOKEN_FLOAT);
     ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 1.0e1);
+}
+
+TEST_F(ScannerTest, FloatExpUpperCaseWithUnderscore) {
+    LEX_SUCCESS("1.0E1_2 ", TOKEN_FLOAT);
+    ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 1.0e12);
+}
+
+TEST_F(ScannerTest, FloatExpUnderscoreIntegerPart) {
+    LEX_SUCCESS("150_302.0E12 ", TOKEN_FLOAT);
+    ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 150302.0e12);
+}
+
+TEST_F(ScannerTest, FloatExpUnderscoreFractionPart) {
+    LEX_SUCCESS("150302.2_5E12 ", TOKEN_FLOAT);
+    ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 150302.25e12);
+}
+
+TEST_F(ScannerTest, FloatExpUnderscoreBothParts) {
+    LEX_SUCCESS("150_302.2_5E12 ", TOKEN_FLOAT);
+    ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 150302.25e12);
+}
+
+TEST_F(ScannerTest, FloatExpUnderscoreEverywhere) {
+    LEX_SUCCESS("150_302.2_5E1_2 ", TOKEN_FLOAT);
+    ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 150302.25e12);
 }
 
 TEST_F(ScannerTest, FloatExpZero) {
@@ -629,6 +880,17 @@ TEST_F(ScannerTest, FloatExpMinusSignMultiple) {
 TEST_F(ScannerTest, FloatExpMinusSignMultipleZero) {
     LEX_SUCCESS("1600000.0e-010 ", TOKEN_FLOAT);
     ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 1600000.0e-10);
+}
+
+TEST_F(ScannerTest, FloatUnderscore) {
+    // This is valid in Go
+    LEX_SUCCESS("0.93_75", TOKEN_FLOAT);
+    ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 0.9375);
+}
+
+TEST_F(ScannerTest, FloatUnderscoreBothParts) {
+    LEX_SUCCESS("123_456.93_75", TOKEN_FLOAT);
+    ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 123456.9375);
 }
 
 TEST_F(ScannerTest, StringEmpty) {
@@ -705,6 +967,22 @@ TEST_F(ScannerTest, StringComplex) {
     LEX_SUCCESS("\"\\t\\\"Prilis zlutoucky \\x6Bun upel da\\x62elske \\x6fdy!\\\"\" ",
                 TOKEN_STRING);
     ASSERT_STREQ(mstr_content(&resultToken.data.str_val), "\t\"Prilis zlutoucky kun upel dabelske ody!\"");
+}
+
+TEST_F(ScannerTest, StringUnexpectedEol) {
+    LEX("\"A str\ning\" ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING);
+}
+
+TEST_F(ScannerTest, StringUnexpectedHexa1) {
+    LEX("\"\\x9g\" ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING);
+}
+
+TEST_F(ScannerTest, StringUnexpectedHexa2) {
+    LEX("\"\\xg9\" ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING);
+}
+
+TEST_F(ScannerTest, StringUnexpectedHexaEol) {
+    LEX("\"\\xa\n9\" ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING);
 }
 
 TEST_F(ScannerTest, KeywordBool) {
@@ -867,3 +1145,267 @@ TEST_F(ScannerTest, TokenSemicolon) {
     LEX_SUCCESS("; a", TOKEN_SEMICOLON);
 }
 
+TEST_F(ScannerTest, InvalidInput_Amp) {
+    std::string inputStr = "// compiler\n//\npackage main\n\nfunc main() {\n\t&\n}\n ";
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_PACKAGE}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, InvalidInput_BracketInIdentifier) {
+    std::string inputStr = "// compiler\n//\npackage m]ain\n\nfunc main() {\n}\n ";
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_PACKAGE}),
+            ExpectedToken(TOKEN_ID, {.strVal = "m"}),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE),
+            ExpectedToken(TOKEN_ID, {.strVal = "ain"}),
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, InvalidInput_DollarSign) {
+    std::string inputStr = "package main\n\nfunc main() {\n}\n$\n ";
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_PACKAGE}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, InvalidInput_UnexpectedDot) {
+    std::string inputStr = "package main\n\nfunc main(.) {\n}\n ";
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_PACKAGE}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, InvalidInput_QuestionMark) {
+    std::string inputStr = "package main\n\nfunc main?() {\n}\n ";
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_PACKAGE}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_REQUIRED)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+
+TEST_F(ScannerTest, InvalidInput_Hash) {
+    std::string inputStr = "package main\n\nfunc # main() {\n}\n ";
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_PACKAGE}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_REQUIRED)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, Comments_LineInBlock) {
+    std::string inputStr = "func main() {\n /* A nested // comment */\n}\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_REQUIRED)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, Comments_BlockInLine) {
+    std::string inputStr = "func main() {\n // A /* nested */ comment\n}\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_REQUIRED)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, Comments_LineInLine) {
+    std::string inputStr = "func main() {\n // A // nested comment\n}\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_REQUIRED)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, Comments_Multiline) {
+    std::string inputStr = "func main() {\n \t/* a\nmultiline\t\t \ncomment */\n}\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_REQUIRED)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, Comment_NeverendingBlock) {
+    std::string inputStr = "func main() {\n \t/* a comment with no ending\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+    };
+
+    ComplexTest(inputStr, expectedResult);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, Comment_BlockIsWhitespace1) {
+    std::string inputStr = "func/*block comment*/main() ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, Comment_BlockIsWhitespace2) {
+    std::string inputStr = "func/**/main() ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, Comment_BlockIsWhitespace3) {
+    std::string inputStr = "func main(/**/) ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET, EOL_FORBIDDEN),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, Comment_BlockIsWhitespaceConsumingEOL) {
+    std::string inputStr = "func main(/*\n\n\n*/) ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET, EOL_FORBIDDEN),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, Comment_LineIsEOL) {
+    std::string inputStr = "func main() {// line comment\n}\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET, EOL_FORBIDDEN),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, Comment_LineEOLPreceedsBlock) {
+    std::string inputStr = "func main() {// nested /* pseudo\n block comment*/}\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET, EOL_FORBIDDEN),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_ID, {.strVal = "block"}),
+            ExpectedToken(TOKEN_ID, {.strVal = "comment"}),
+            ExpectedToken(TOKEN_MULTIPLY),
+            ExpectedToken(TOKEN_DIVIDE),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}

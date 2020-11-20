@@ -7,6 +7,9 @@
  * @author Ondřej Ondryáš (xondry02), FIT BUT
  */
 
+#ifndef _TESTS_COMMON_H
+#define _TESTS_COMMON_H 1
+
 #include "stderr_message.h"
 #include <stdarg.h>
 
@@ -32,7 +35,14 @@ int get_char_internal(int *feof, int *ferror) {
 }
 
 void set_compiler_result(CompilerResult compiler_result_arg) {
+#if VERBOSE > 1
+    std::cout << "[TEST] Set compiler result request. Current val: " << compiler_result << "; Requested val: " << compiler_result_arg << "\n";
+#endif
+
     if (compiler_result == COMPILER_RESULT_SUCCESS) {
+#if VERBOSE > 1
+        std::cout << "[TEST] Compiler result changed!\n";
+#endif
         compiler_result = compiler_result_arg;
     }
 }
@@ -53,4 +63,7 @@ void stderr_message(const char *module, MessageType message_type, CompilerResult
     va_start(arguments, fmt);
     std::vprintf(fmt, arguments);
     va_end(arguments);
+
+    std::cout << '\n';
 }
+#endif
