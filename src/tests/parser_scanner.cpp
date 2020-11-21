@@ -646,7 +646,7 @@ TEST_F(ParserScannerTest, EOLInIfElseStatement1) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
         "    } else {\n"
         "        bar := 1\n"
@@ -661,7 +661,7 @@ TEST_F(ParserScannerTest, EOLInIfElseStatement2) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if \na {\n"
+        "    if \na < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
         "    } else {\n"
         "        bar := 1\n"
@@ -676,7 +676,7 @@ TEST_F(ParserScannerTest, EOLInIfElseStatement3) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a \n{\n"
+        "    if a < 0 && b >= foobarvar \n{\n"
         "        foo = 42\n"
         "    } else {\n"
         "        bar := 1\n"
@@ -691,7 +691,7 @@ TEST_F(ParserScannerTest, EOLInIfElseStatement4) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
         "    } \n else {\n"
         "        bar := 1\n"
@@ -706,7 +706,7 @@ TEST_F(ParserScannerTest, EOLInIfElseStatement5) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if na {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
         "    } else \n {\n"
         "        bar := 1\n"
@@ -721,7 +721,7 @@ TEST_F(ParserScannerTest, EOLInIfElseStatement6) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
         "    \n\n\n\n"
         "} else {\n"
@@ -737,7 +737,7 @@ TEST_F(ParserScannerTest, EOLInIfElseStatement7) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "    \n\n\n\n"
         "        foo = 42\n"
         "} else {\n"
@@ -753,7 +753,7 @@ TEST_F(ParserScannerTest, EOLInIfElseStatement8) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {"
+        "    if a < 0 && b >= foobarvar {"
         "        foo = 42\n"
         "} else {\n"
         "        bar := 1\n"
@@ -768,7 +768,7 @@ TEST_F(ParserScannerTest, EOLInIfElseStatement9) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
         "} else {"
         "        bar := 1\n"
@@ -785,9 +785,9 @@ TEST_F(ParserScannerTest, EOLInIfElseIfElseStatement1) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
-        "    } else if b {\n"
+        "    } else if a < b || b != foobarvar {\n"
         "        foo = 1\n"
         "    } else {\n"
         "        bar := 1\n"
@@ -802,9 +802,9 @@ TEST_F(ParserScannerTest, EOLInIfElseIfElseStatement2) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
-        "    } else if \nb {\n"
+        "    } else if \na < b || b != foobarvar {\n"
         "        foo = 1\n"
         "    } else {\n"
         "        bar := 1\n"
@@ -819,9 +819,9 @@ TEST_F(ParserScannerTest, EOLInIfElseIfElseStatement3) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
-        "    } else if b\n {\n"
+        "    } else if a < b || b != foobarvar\n {\n"
         "        foo = 1\n"
         "    } else {\n"
         "        bar := 1\n"
@@ -836,9 +836,9 @@ TEST_F(ParserScannerTest, EOLInIfElseIfElseStatement4) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
-        "    } \n else if b {\n"
+        "    } \n else if a < b || b != foobarvar {\n"
         "        foo = 1\n"
         "    } else {\n"
         "        bar := 1\n"
@@ -853,9 +853,9 @@ TEST_F(ParserScannerTest, EOLInIfElseIfElseStatement5) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
-        "    } else if b {"
+        "    } else if a < b || b != foobarvar {"
         "        foo = 1\n"
         "    } else {\n"
         "        bar := 1\n"
@@ -870,7 +870,7 @@ TEST_F(ParserScannerTest, EOLInIfElseIfElseStatement6) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
         "    } else if {\n"
         "        foo = 1\n"
@@ -887,9 +887,9 @@ TEST_F(ParserScannerTest, EOLInIfElseIfStatement1) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
-        "    } else if b \n {\n"
+        "    } else if a < b || b != foobarvar \n {\n"
         "        bar := 1\n"
         "    }\n"
         "}\n";
@@ -902,9 +902,9 @@ TEST_F(ParserScannerTest, EOLInIfElseIfStatement2) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
-        "    } else if \n b {\n"
+        "    } else if \n a < b || b != foobarvar {\n"
         "        bar := 1\n"
         "    }\n"
         "}\n";
@@ -917,9 +917,9 @@ TEST_F(ParserScannerTest, EOLInIfElseIfStatement3) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if\n a {\n"
+        "    if\n a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
-        "    } else if \n b {\n"
+        "    } else if \n a < b || b != foobarvar {\n"
         "        bar := 1\n"
         "    }\n"
         "}\n";
@@ -932,15 +932,92 @@ TEST_F(ParserScannerTest, EOLInIfElseIfStatement4) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a \n{\n"
+        "    if a < 0 && b >= foobarvar \n{\n"
         "        foo = 42\n"
-        "    } else if \n b {\n"
+        "    } else if \n a < b || b != foobarvar {\n"
         "        bar := 1\n"
         "    }\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
+
+TEST_F(ParserScannerTest, EOLInIfElseIfStatement5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if\n a <\n 0 &&\n b >=\n foobarvar {\n"
+        "        foo = 42\n"
+        "    } else if \n a < b || b != foobarvar {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, EOLInIfElseIfStatement6) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if\n a < 0\n && b >= foobarvar {\n"
+        "        foo = 42\n"
+        "    } else if \n a < b || b != foobarvar {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, EOLInIfElseIfStatement7) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if\n a < 0 && b \n>= foobarvar {\n"
+        "        foo = 42\n"
+        "    } else if \n a < b || b != foobarvar {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, EOLInIfElseIfStatement8) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if\n a < 0 && b >\n= foobarvar {\n"
+        "        foo = 42\n"
+        "    } else if \n a < b || b != foobarvar {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, EOLInIfElseIfStatement9) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if\n a < 0 &\n& b >= foobarvar {\n"
+        "        foo = 42\n"
+        "    } else if \n a < b || b != foobarvar {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
 
 // === Test EOL in function call ===
 
@@ -2960,6 +3037,44 @@ TEST_F(ParserScannerTest, ExpressionInIfStatements16) {
         "        foo = 42\n"
         "    } else if \n true && !a || b || false {\n"
         "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements17) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if ((0==251) {\n"
+        "    } else {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements18) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if 0==0 {\n"
+        "    } else {\n"
+        "    }\n"
+        "    for ;0!=0; {\n"
+        "    }\n"
+        "    if 0<1 {\n"
+        "    } else {\n"
+        "    }\n"
+        "    if 0>1 {\n"
+        "    } else {\n"
+        "    }\n"
+        "    for ;1<=0; {\n"
+        "    }\n"
+        "    for ;0>=1; {\n"
         "    }\n"
         "}\n";
 
