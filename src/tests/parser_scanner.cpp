@@ -481,14 +481,14 @@ TEST_F(ParserScannerTest, IncompleteFunctionDefinition5) {
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
-// === Assing commmand EOLs tests ===
+// === Test EOLs in assing statement ===
 
 TEST_F(ParserScannerTest, AssignEOLMissing) {
     std::string inputStr = \
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a, b = 1, 2"
+        "    a, b = 1 + two, 2 / three"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
@@ -499,7 +499,7 @@ TEST_F(ParserScannerTest, AssignEOLForbidden1) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a\n, b = 1, 2\n"
+        "    a\n, b = 1 + two, 2 / three\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
@@ -510,7 +510,7 @@ TEST_F(ParserScannerTest, AssignEOL2) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a,\n b = 1, 2\n"
+        "    a,\n b = 1 + two, 2 / three\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -521,7 +521,7 @@ TEST_F(ParserScannerTest, AssignEOL3) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a, b\n = 1, 2\n"
+        "    a, b\n = 1 + two, 2 / three\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
@@ -532,7 +532,7 @@ TEST_F(ParserScannerTest, AssignEOL4) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a, b =\n 1, 2\n"
+        "    a, b = \n1 + two, 2 / three\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -543,7 +543,7 @@ TEST_F(ParserScannerTest, AssignEOL5) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a, b = 1\n, 2\n"
+        "    a, b = 1\n + two, 2 / three\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
@@ -554,10 +554,112 @@ TEST_F(ParserScannerTest, AssignEOL6) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a, b = 1,\n 2\n"
+        "    a, b = 1 + two,\n 2 / three\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, AssignEOL7) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, b = 1 + two\n , 2 / three\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, AssignEOL8) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, b = 1 + two, 2\n / three\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, AssignEOL9) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, b = 1 + two, 2 / \n three\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, AssignEOL10) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, b = 1 + \n two, 2 /\n three\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, AssignStatement1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := 36478\n"
+        "    b := a = 4\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, AssignStatement2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := 36478 ** 1\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, AssignStatement3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "     := 36478 * 1\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, AssignStatement4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := \n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, AssignStatement5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo\n"
+        "}\n"
+        "func foo() {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
 // === Test EOL in commands ===
@@ -567,7 +669,7 @@ TEST_F(ParserScannerTest, EOLInDefinitionOfVariable1) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a\n := 2\n"
+        "    a\n = 1 + two\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
@@ -578,7 +680,7 @@ TEST_F(ParserScannerTest, EOLInDefinitionOfVariable2) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a :=\n 12\n"
+        "    a, b =\n 1 + \n two\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -589,7 +691,7 @@ TEST_F(ParserScannerTest, EOLInDefinitionOfVariable3) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a, b \n := 1, 2\n"
+        "    a, b \n = 1 + two, 2 / three\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
@@ -600,7 +702,7 @@ TEST_F(ParserScannerTest, EOLInDefinitionOfVariable4) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a, b := 1\n, 2\n"
+        "    a, b = 1\n+ two, 2 / three\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
@@ -611,7 +713,7 @@ TEST_F(ParserScannerTest, EOLInDefinitionOfVariable5) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a, b := 1,\n 2\n"
+        "    a, b =\n 1 +\n two,\n 2 /\n three\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -622,7 +724,7 @@ TEST_F(ParserScannerTest, EOLInDefinitionOfVariable6) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a, _ := 1, 2\n"
+        "    a, _ = 1 + two, 2 / three\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -1491,6 +1593,17 @@ TEST_F(ParserScannerTest, AddComments4) {
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, AddComments5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := 5/* Nested /*comment */ */ + 2\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
 // === Test function definition format ===
