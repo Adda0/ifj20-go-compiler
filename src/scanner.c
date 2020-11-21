@@ -268,7 +268,6 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
             } else {
                 *automaton_state = STATE_ZERO_NUM;
-                read_char = EMPTY_CHAR;
             }
             break;
 
@@ -283,7 +282,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
         case STATE_ZERO_UNDERSCORE:
             if (read_char == '_') {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "Line %llu, col %llu: '_' must must separate successive digits. Did you mean to write a number? To do that, you would have to add a digit after the '%s_'.\n",
+                               "Line %llu, col %llu: '_' must separate successive digits. Did you mean to write a number? To do that, you would have to add a digit after the '%s_'.\n",
                                line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
             } else {
@@ -524,7 +523,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
         case STATE_INT_UNDERSCORE:
             if (read_char == '_') {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "Line %llu, col %llu: '_' must must separate successive digits. Did you mean to write a number? To do that, you would have to add a digit after the '%s_'.\n",
+                               "Line %llu, col %llu: '_' must separate successive digits. Did you mean to write a number? To do that, you would have to add a digit after the '%s_'.\n",
                                line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
             } else {
@@ -570,7 +569,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
         case STATE_FLOAT_UNDERSCORE:
             if (read_char == '_') {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "Line %llu, col %llu: '_' must must separate successive digits. Did you mean to write a number? To do that, you would have to add a digit after the '%s_'.\n",
+                               "Line %llu, col %llu: '_' must separate successive digits. Did you mean to write a number? To do that, you would have to add a digit after the '%s_'.\n",
                                line_num, char_num, mstr_content(mutable_string), mstr_content(mutable_string));
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
             } else {
@@ -653,7 +652,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
         case STATE_FLOAT_EXPONENT_UNDERSCORE:
             if (read_char == '_') {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "Line %llu, col %llu: '_' must must separate successive digits.\n",
+                               "Line %llu, col %llu: '_' must separate successive digits.\n",
                                line_num, char_num);
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
             } else {
@@ -892,7 +891,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 *automaton_state = STATE_ESCAPE_CHARACTER_IN_STRING;
             } else if (read_char == '\n') {
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
-                               "Line %llu, col %llu: newline character in string. Newline character is not allowed in string.\n", line_num, char_num);
+                               "Line %llu, col %llu: Newline character in string. Newline character is not allowed in string.\n", line_num, char_num);
                 *automaton_state = STATE_STRING_INVALID;
             } else {
                 mstr_append(mutable_string, read_char);
