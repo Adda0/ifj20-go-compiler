@@ -1161,7 +1161,7 @@ TEST_F(ParserScannerTest, EOLInFunctionCall4) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foo(\n(a + 7 + (-9)) && !true , var * 8 - (var2))\n"
+        "    foo(\n(\na + 7 + (\n-9)) && !true , var * 8 - (\nvar2))\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -2001,7 +2001,7 @@ TEST_F(ParserScannerTest, LexicalErrorCompilerResult4) {
         "pa]ckage main\n"
         "\n"
         "func main() {\n"
-        " a := \"foo\\sbar\" \n"
+        "    a := \"foo\\sbar\" \n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
@@ -2012,7 +2012,7 @@ TEST_F(ParserScannerTest, LexicalErrorCompilerResult5) {
         "]package main\n"
         "\n"
         "func main() {\n"
-        " a := \"foo\\sbar\" \n"
+        "    a := \"foo\\sbar\" \n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_LEXICAL);
@@ -2025,7 +2025,7 @@ TEST_F(ParserScannerTest, FunctionCall1) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "   foo(a, b)\n"
+        "    foo(a, b)\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -2036,7 +2036,7 @@ TEST_F(ParserScannerTest, FunctionCall2) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "   foo(5+4)\n"
+        "    foo(5+4)\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -2047,7 +2047,7 @@ TEST_F(ParserScannerTest, FunctionCall3) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "   foo(true)\n"
+        "    foo(true)\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -2058,7 +2058,7 @@ TEST_F(ParserScannerTest, FunctionCall4) {
         "package main\n"
         "\n"
         "func main() {\n"
-        " a = foo()\n"
+        "    a = foo()\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -2069,7 +2069,7 @@ TEST_F(ParserScannerTest, FunctionCall5) {
         "package main\n"
         "\n"
         "func main() {\n"
-        " a := foo()\n"
+        "    a := foo()\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -2080,7 +2080,7 @@ TEST_F(ParserScannerTest, FunctionCall6) {
         "package main\n"
         "\n"
         "func main() {\n"
-        " a = foo(4, 5)\n"
+        "    a = foo(4, 5)\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -2091,7 +2091,7 @@ TEST_F(ParserScannerTest, FunctionCall7) {
         "package main\n"
         "\n"
         "func main() {\n"
-        " a = foo(true, 7, 5.4)\n"
+        "    a = foo(true, 7, 5.4)\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -2102,7 +2102,7 @@ TEST_F(ParserScannerTest, FunctionCall8) {
         "package main\n"
         "\n"
         "func main() {\n"
-        " a, b = foo()\n"
+        "    a, b = foo()\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -2113,7 +2113,7 @@ TEST_F(ParserScannerTest, FunctionCall9) {
         "package main\n"
         "\n"
         "func main() {\n"
-        " a, b = foo(7, 4, 1)\n"
+        "    a, b = foo(7, 4, 1)\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -2124,7 +2124,7 @@ TEST_F(ParserScannerTest, FunctionCall10) {
         "package main\n"
         "\n"
         "func main() {\n"
-        " a, _ = foo(7 + 4, 3 + 1)\n"
+        "    a, _ = foo(7 + 4, 3 + 1)\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -2135,7 +2135,7 @@ TEST_F(ParserScannerTest, FunctionCall11) {
         "package main\n"
         "\n"
         "func main() {\n"
-        " _, _ = foo()\n"
+        "    _, _ = foo()\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL);
@@ -2146,7 +2146,7 @@ TEST_F(ParserScannerTest, FunctionCall12) {
         "package main\n"
         "\n"
         "func main() {\n"
-        " a, _, _ = foo(a && b, 4 + 5 / 7)\n"
+        "    a, _, _ = foo(a && b, 4 + 5 / 7)\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -2157,7 +2157,7 @@ TEST_F(ParserScannerTest, FunctionCall13) {
         "package main\n"
         "\n"
         "func main() {\n"
-        " a, _, _ = foo(a + 5 && 4 + b)\n"
+        "    a, _, _ = foo(a + 5 && 4 + b)\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -2168,7 +2168,7 @@ TEST_F(ParserScannerTest, FunctionCall14) {
         "package main\n"
         "\n"
         "func main() {\n"
-        " a, _, _ = foo((a * 7 - 4) && (b - 9 * (-8)), \"test\")\n"
+        "    a, _, _ = foo((a * 7 - 4) && (b - 9 * (-8)), \"test\")\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -2179,7 +2179,7 @@ TEST_F(ParserScannerTest, FunctionCall15) {
         "package main\n"
         "\n"
         "func main() {\n"
-        " a, _, _ = foo((a))\n"
+        "    a, _, _ = foo((a))\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -2190,7 +2190,7 @@ TEST_F(ParserScannerTest, FunctionCall16) {
         "package main\n"
         "\n"
         "func main() {\n"
-        " a, _, _ = foo((a && b))\n"
+        "    a, _, _ = foo((a && b))\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -2201,7 +2201,7 @@ TEST_F(ParserScannerTest, FunctionCall17) {
         "package main\n"
         "\n"
         "func main() {\n"
-        " a, _, _ = 5 + foo(a && b)\n"
+        "    a, _, _ = 5 + foo(a && b)\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -2212,7 +2212,7 @@ TEST_F(ParserScannerTest, FunctionCall18) {
         "package main\n"
         "\n"
         "func main() {\n"
-        " a, _, _ = 5 / foo(a && b)\n"
+        "    a, _, _ = 5 / foo(a && b)\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -2223,7 +2223,7 @@ TEST_F(ParserScannerTest, FunctionCall19) {
         "package main\n"
         "\n"
         "func main() {\n"
-        " a, _, _ = !foo(a && b)\n"
+        "    a, _, _ = !foo(a && b)\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -2234,10 +2234,65 @@ TEST_F(ParserScannerTest, FunctionCall20) {
         "package main\n"
         "\n"
         "func main() {\n"
-        " a, _, _ = +5 - (-5) / !foo(a && b)\n"
+        "    a, _, _ = +5 - (-5) / !foo(a && b)\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, FunctionCall21) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    +5 - (-5) / !foo(a && b)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, FunctionCall22) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    !foo(a && b)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, FunctionCall23) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    1 + foo(a && b)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, FunctionCall24) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(a && b) - 1\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, FunctionCall25) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(a && b) - 8 / 7\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
 // === Test basic expression parsing ===
