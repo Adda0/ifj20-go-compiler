@@ -45,8 +45,8 @@ TEST_F(ParserScannerTest, BasicCode) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a := 0\n"
-        "    a -= 5\n"
+        "    a := 0 * 8\n"
+        "    a -= 5 - 7\n"
         "\n"
         "    if 0 < 1 {\n"
         "        print(\"Will always be printed.\\n\")\n"
@@ -65,7 +65,8 @@ TEST_F(ParserScannerTest, MinimalisticFunction) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a := 0\n"
+        "    abc := 672\n"
+        "    a := 666 - abc\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -88,7 +89,7 @@ TEST_F(ParserScannerTest, PackageTypo) {
         "pckage main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a == true {\n"
         "    }\n"
         "}\n";
 
@@ -99,7 +100,7 @@ TEST_F(ParserScannerTest, EOLMissingMainFunc) {
     std::string inputStr = \
         "package main"
         "func main() {\n"
-        "    if a {\n"
+        "    if a == true {\n"
         "    }\n"
         "}\n";
 
@@ -110,7 +111,7 @@ TEST_F(ParserScannerTest, EOLMissingError1) {
     std::string inputStr = \
         "package main "
         "func main() {\n"
-        "    if a {\n"
+        "    if a == true {\n"
         "    }\n"
         "}\n";
 
@@ -122,7 +123,7 @@ TEST_F(ParserScannerTest, EOLMissingError2) {
         "package main\n"
         "\n"
         "func main() {"
-        "    if a {\n"
+        "    if a == true {\n"
         "    }\n"
         "}\n";
 
@@ -134,7 +135,7 @@ TEST_F(ParserScannerTest, EOLMissingError3) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {"
+        "    if a == true {"
         "    }\n"
         "}\n";
 
@@ -146,7 +147,7 @@ TEST_F(ParserScannerTest, EOLMissingError4) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {"
+        "    if a == true {"
         "    }"
         "}\n";
 
@@ -158,9 +159,9 @@ TEST_F(ParserScannerTest, EOLMissingError5) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
-        "        if \"cond\" {"
-        "           a == 5\n"
+        "    if a == true {\n"
+        "        if a != true {"
+        "           a = 5\n"
         "        }\n"
         "    }\n"
         "}\n";
@@ -173,9 +174,9 @@ TEST_F(ParserScannerTest, EOLMissingError6) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
-        "        if \"cond\" {\n"
-        "           a == 5"
+        "    if a == true {\n"
+        "        if a != true {\n"
+        "           a = 5"
         "        }\n"
         "    }\n"
         "}\n";
@@ -188,8 +189,8 @@ TEST_F(ParserScannerTest, EOLMissingError7) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
-        "        if 0.5 {\n"
+        "    if 1-2+3 {\n"
+        "        if !a == abc {\n"
         "            a = \"String\\n\"\n"
         "        }"
         "    }\n"
@@ -203,8 +204,8 @@ TEST_F(ParserScannerTest, EOLMissingError8) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
-        "        if 0.5 {\n"
+        "    if 1-2+3 {\n"
+        "        if 1*2/3 {\n"
         "            a = \"String\\n\"\n"
         "            b := 545.4e-10"
         "        }\n"
@@ -219,8 +220,8 @@ TEST_F(ParserScannerTest, LastEOLIsNotRequired) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
-        "        if 0.5 {\n"
+        "    if 1-2+3 {\n"
+        "        if 1*2/3 {\n"
         "            a = \"String\\n\"\n"
         "            b := 545.4e-10\n"
         "        }\n"
@@ -256,7 +257,7 @@ TEST_F(ParserScannerTest, EOLInForLoop1) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    for a := 5; b; c {"
+        "    for a := 5; a < 79; a = a + 8 {"
         "    }\n"
         "}\n";
 
@@ -268,7 +269,7 @@ TEST_F(ParserScannerTest, EOLInForLoop2) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    for a := 5; b; c {\n"
+        "    for a := 5; a < 79; a = a + 8 {\n"
         "    }"
         "}\n";
 
@@ -280,7 +281,7 @@ TEST_F(ParserScannerTest, EOLInForLoop3) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    for a := 5;\n b; c {\n"
+        "    for a := 5; \n a < 79; a = a + 8 {\n"
         "    }\n"
         "}\n";
 
@@ -292,7 +293,7 @@ TEST_F(ParserScannerTest, EOLInForLoopForbidden1) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    for\n a; b; c {\n"
+        "    for \n a := 5; a < 79; a = a + 8 {\n"
         "    }\n"
         "}\n";
 
@@ -304,7 +305,7 @@ TEST_F(ParserScannerTest, EOLInForLoopForbidden2) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    for a\n; b; c {\n"
+        "    for a\n := 5; a < 79; a = a + 8 {\n"
         "    }\n"
         "}\n";
 
@@ -316,7 +317,7 @@ TEST_F(ParserScannerTest, EOLInForLoopForbidden3) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    for a := 5; b\n; c {\n"
+        "    for a := 5; a < 79\n; a = a + 8 { {\n"
         "    }\n"
         "}\n";
 
@@ -328,7 +329,7 @@ TEST_F(ParserScannerTest, EOLInForLoopForbidden4) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    for a := 5; b;\n c {\n"
+        "    for a := 5; a < 79; \na = a + 8 { {\n"
         "    }\n"
         "}\n";
 
@@ -340,7 +341,7 @@ TEST_F(ParserScannerTest, EOLInForLoopForbidden5) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    for a := 5; b; c\n {\n"
+        "    for a := 5; a < 79; a = a + 8\n {\n"
         "    }\n"
         "}\n";
 
@@ -352,7 +353,7 @@ TEST_F(ParserScannerTest, EOLInForLoopForbidden6) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    for a := 5; b; c {\n"
+        "    for a := 5; a < 79; a = a + 8 {\n"
         "    }\n"
         "}\n";
 
