@@ -373,15 +373,50 @@ ASTNode *cf_ast_init(ASTNewNodeTarget target, ASTNodeType type, unsigned dataCou
         CF_ACT_AST_CHECK_RN();
     }
 
-    return NULL; // TODO
+    ASTNode *newNode = calloc(1, sizeof(ASTNode) + dataCount * sizeof(ASTNodeData));
+    CF_ALLOC_CHECK_RN(newNode);
+
+    if (target != AST_ROOT) {
+        newNode->parent = activeAst;
+        if (target == AST_LEFT_OPERAND || target == AST_UNARY_OPERAND) {
+            activeAst->left = newNode;
+        } else {
+            activeAst->right = newNode;
+        }
+    }
+
+    newNode->actionType = type;
+    newNode->dataCount = dataCount;
+
+    activeAst = newNode;
+    return newNode;
 }
 
 // Create a new leaf AST with one-length data, links it to the currently active AST node and DOES NOT make it active.
 // The target parameter must NOT be ROOT.
 ASTNode *cf_ast_add_leaf(ASTNewNodeTarget target, ASTNodeType type, ASTNodeData data) {
     CF_ACT_AST_CHECK_RN();
+    if (target == AST_ROOT) {
+        currentError = CF_ERROR_INVALID_AST_TARGET;
+        return NULL;
+    }
 
-    return NULL; // TODO
+    ASTNode *newNode = calloc(1, sizeof(ASTNode) + 1 * sizeof(ASTNodeData));
+    CF_ALLOC_CHECK_RN(newNode);
+
+    newNode->parent = activeAst;
+    if (target == AST_LEFT_OPERAND || target == AST_UNARY_OPERAND) {
+        activeAst->left = newNode;
+    } else {
+        activeAst->right = newNode;
+    }
+
+    newNode->actionType = type;
+    newNode->dataCount = 1;
+    newNode->data[0] = data;
+
+    activeAst = newNode;
+    return newNode;
 }
 
 // Returns the current active AST node.
