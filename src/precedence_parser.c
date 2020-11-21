@@ -204,13 +204,14 @@ bool eol_allowed_after(int type) {
         case TOKEN_GREATER_THAN:
         case TOKEN_GREATER_OR_EQUAL:
         case TOKEN_COMMA:
+        case TOKEN_LEFT_BRACKET:
             return true;
         default:
             return false;
     }
 }
 
-bool reduce(PrecedenceStack *stack, PrecedenceNode *start) {
+bool reduce(PrecedenceStack *stack, PrecedenceNode *start, int *function_level) {
     for (int i = 0; i < NUMBER_OF_RULES; i++) {
         PrecedenceNode *current = start->rptr;
         bool matches = true;
@@ -251,6 +252,10 @@ bool reduce(PrecedenceStack *stack, PrecedenceNode *start) {
             }
         }
         if (current == NULL && matches) {
+            if (rules[i][1] == SYMB_FUNCTION) {
+                // Function call reduced, decrease function nesting level
+                (*function_level)--;
+            }
             precedence_stack_pop_from(stack, start);
             Token nonterminal = {.type = rules[i][0]};
             precedence_stack_push(stack, nonterminal);
@@ -260,12 +265,14 @@ bool reduce(PrecedenceStack *stack, PrecedenceNode *start) {
     return false;
 }
 
-bool matches_assign_rule(AssignRule assign_rule, int definitions, int assignments, int function_calls) {
+bool matches_assign_rule(AssignRule assign_rule, int definitions, int assignments, int function_calls,
+                         int other_tokens) {
     switch (assign_rule) {
         case VALID_STATEMENT:
             // A statement can only contain one definition or assignment (and the rest is irrelevant)
             // or only a single function call which isn't assigned anywhere.
-            if (definitions + assignments == 1 || function_calls == 1 && (definitions + assignments) == 0) {
+            if (definitions + assignments == 1 || \
+                        function_calls == 1 && (definitions + assignments + other_tokens) == 0) {
                 return true;
             } else {
                 stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL,
@@ -303,7 +310,8 @@ bool matches_assign_rule(AssignRule assign_rule, int definitions, int assignment
     }
 }
 
-void update_assignment_counters(int type, int *definitions, int *assignments, int *function_calls) {
+void update_token_counters(int type, int *definitions, int *assignments, int *function_calls, int *other_tokens,
+                           int *function_level) {
     switch (type) {
         case TOKEN_DEFINE:
             (*definitions)++;
@@ -316,9 +324,17 @@ void update_assignment_counters(int type, int *definitions, int *assignments, in
             (*assignments)++;
             return;
         case SYMB_FUNCTION:
-            (*function_calls)++;
+            // We only care about the number of top-level function calls
+            if (*function_level == 0) {
+                (*function_calls)++;
+            }
+            (*function_level)++;
             return;
         default:
+            // We only care about tokens outside of functions
+            if (*function_level == 0) {
+                (*other_tokens)++;
+            }
             return;
     }
 }
@@ -344,6 +360,8 @@ int parse_expression(AssignRule assign_rule, bool eol_before_allowed) {
     int definitions = 0;
     int assignments = 0;
     int function_calls = 0;
+    int function_level = 0;
+    int other_tokens = 0;
     bool eol_allowed = true;
     bool done = false;
     while (!done) {
@@ -372,7 +390,8 @@ int parse_expression(AssignRule assign_rule, bool eol_before_allowed) {
                                    "no memory when pushing onto stack\n");
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
-                update_assignment_counters(token.type, &definitions, &assignments, &function_calls);
+                update_token_counters(token.type, &definitions, &assignments, &function_calls, &other_tokens,
+                                      &function_level);
                 check_new_token(EOL_OPTIONAL);
                 eol_allowed = eol_allowed_after(prev_token.type);
                 break;
@@ -387,7 +406,8 @@ int parse_expression(AssignRule assign_rule, bool eol_before_allowed) {
                                    "no memory when pushing onto stack\n");
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
-                update_assignment_counters(token.type, &definitions, &assignments, &function_calls);
+                update_token_counters(token.type, &definitions, &assignments, &function_calls, &other_tokens,
+                                      &function_level);
                 check_new_token(EOL_OPTIONAL);
                 eol_allowed = eol_allowed_after(prev_token.type);
                 break;
@@ -398,7 +418,7 @@ int parse_expression(AssignRule assign_rule, bool eol_before_allowed) {
                                    "supposed to reduce but not reduction start found\n");
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
-                if (!reduce(&stack, to_reduce)) {
+                if (!reduce(&stack, to_reduce, &function_level)) {
                     stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL,
                                    "Line %u, col %u: tried to reduce the preceeding expression, no rule found\n",
                                    token.context.line_num, token.context.char_num);
@@ -416,7 +436,7 @@ int parse_expression(AssignRule assign_rule, bool eol_before_allowed) {
         }
     }
 
-    if (!matches_assign_rule(assign_rule, definitions, assignments, function_calls)) {
+    if (!matches_assign_rule(assign_rule, definitions, assignments, function_calls, other_tokens)) {
         syntax_error();
     }
     precedence_stack_dispose(&stack);
