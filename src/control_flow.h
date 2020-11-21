@@ -23,31 +23,35 @@ typedef enum cfgraph_data_type {
 
 typedef enum ast_node_action_type {
     // ARITHMETIC group
-    CF_ADD,
-    CF_SUBTRACT,
-    CF_MULTIPLY,
-    CF_DIVIDE,
-    CF_AR_NEGATE,
+#define AST_ARITHMETIC 0
+    AST_ADD = AST_ARITHMETIC,
+    AST_SUBTRACT,
+    AST_MULTIPLY,
+    AST_DIVIDE,
+    AST_AR_NEGATE,
     // LOGIC group
-    CF_LOG_NOT,
-    CF_LOG_AND,
-    CF_LOG_OR,
-    CF_LOG_EQ,
-    CF_LOG_LT,
-    CF_LOG_GT,
-    CF_LOG_LTE,
-    CF_LOG_GTE,
+#define AST_LOGIC 100
+    AST_LOG_NOT = AST_LOGIC,
+    AST_LOG_AND,
+    AST_LOG_OR,
+    AST_LOG_EQ,
+    AST_LOG_LT,
+    AST_LOG_GT,
+    AST_LOG_LTE,
+    AST_LOG_GTE,
     // CONTROL group
-    CF_ASSIGN,
-    CF_DEFINE,
-    CF_FUNC_CALL,
+#define AST_CONTROL 200
+    AST_ASSIGN = AST_CONTROL,
+    AST_DEFINE,
+    AST_FUNC_CALL,
     // VALUE group
-    CF_AST_LIST,
-    CF_ID,
-    CF_CONST_INT,
-    CF_CONST_FLOAT,
-    CF_CONST_STRING,
-    CF_CONST_BOOL
+#define AST_VALUE 300
+    AST_LIST = AST_VALUE,
+    AST_ID,
+    AST_CONST_INT,
+    AST_CONST_FLOAT,
+    AST_CONST_STRING,
+    AST_CONST_BOOL
 } ASTNodeType;
 
 struct ast_node;
@@ -114,11 +118,11 @@ typedef struct cfgraph_statement {
     } data;
 } CFStatement;
 
-struct cfgraph_variable_list_node {
-    struct cfgraph_functions_list_node *previous;
-    struct cfgraph_functions_list_node *next;
-    CFVariable *variable;
-};
+typedef struct cfgraph_variable_list_node {
+    struct cfgraph_variable_list_node *previous;
+    struct cfgraph_variable_list_node *next;
+    CFVariable variable;
+} CFVarListNode;
 
 typedef struct cfgraph_function {
     const char *name;
@@ -130,11 +134,11 @@ typedef struct cfgraph_function {
     CFStatement *rootStatement;
 } CFFunction;
 
-struct cfgraph_functions_list_node {
+typedef struct cfgraph_functions_list_node {
     struct cfgraph_functions_list_node *previous;
     struct cfgraph_functions_list_node *next;
-    CFFunction *fun;
-};
+    CFFunction fun;
+} CFFuncListNode;
 
 struct program_structure {
     CFFunction *mainFunc;
@@ -159,8 +163,19 @@ typedef enum ast_new_node_target {
 
 typedef enum cfgraph_error {
     CF_NO_ERROR,
-    CF_ERROR_INVALID_AST_TARGET
+    CF_ERROR_INVALID_AST_TARGET,
+    CF_ERROR_INVALID_AST_TYPE,
+    CF_ERROR_MAIN_REDEFINITION,
+    CF_ERROR_RETURN_VALUES_NAMING_MISMATCH,
+    CF_ERROR_INTERNAL,
+    CF_ERROR_INVALID_ENUM_VALUE,
+    CF_ERROR_INVALID_OPERATION,
+    CF_ERROR_NO_ACTIVE_AST,
+    CF_ERROR_NO_ACTIVE_STATEMENT,
+    CF_ERROR_NO_ACTIVE_FUNCTION
 } CFError;
+
+struct program_structure *get_program();
 
 // Returns the current error state.
 CFError cf_error();
@@ -173,6 +188,7 @@ void cf_init();
 CFFunction *cf_get_function(const char *name, bool setActive);
 
 // Creates a function and sets it as the active function.
+// Clears the active statement.
 CFFunction *cf_make_function(const char *name);
 
 // Adds an argument to the active function.
@@ -185,8 +201,8 @@ void cf_add_return_value(const char *name, CFDataType type);
 
 // Creates a statement in the current function and sets it as the active statement.
 // Links it with the function and the previous active statement.
-// If the statementType is RETURN, creates a new AST_LIST type AST with the amount of data nodes equal to the number of
-// Throws error if the current statement is an IF or a FOR statement.
+// If the statementType is RETURN, creates a new AST_LIST type AST with the amount of data nodes
+// equal to the number of arguments of the current function.
 CFStatement *cf_make_next_statement(CFStatementType statementType);
 
 /* Uses the active AST as the AST of the active statement.
@@ -197,12 +213,12 @@ CFStatement *cf_make_next_statement(CFStatementType statementType);
  * If the active statement is a FOR statement:
  *  - The target AST is determined using the target parameter, which must NOT be STATEMENT_BODY.
  *  - For FOR_DEFINITION target, the type of the AST must be DEFINE.
- *  - For FOR_CONDITIONAL target, the type must be FUNC_CALL or one of the LOGIC group.
+ *  - For FOR_CONDITIONAL target, the type must be FUNC_CALL, ID, CONST_BOOL or one of the LOGIC group.
  *  - For FOR_AFTERTHOUGHT target, the type must be ASSIGN.
  *
  * If the active statement is an IF statement:
  *  - The target parameter must be IF_CONDITIONAL.
- *  - The type of the AST must be FUNC_CALL or one of the LOGIC group.
+ *  - The type of the AST must be FUNC_CALL, ID, CONST_BOOL or one of the LOGIC group.
  *
  * If the active statement is a RETURN statement:
  *  - The target parameter must be RETURN_LIST.
@@ -215,15 +231,15 @@ CFStatement *cf_pop_previous_branched_statement();
 
 // Creates a statement and sets it as the THEN branch statement for the currently active IF statement.
 // If the active statement is not an IF statement, throws an error.
-CFStatement *cf_make_if_then_statement();
+CFStatement *cf_make_if_then_statement(CFStatementType statementType);
 
 // Creates a statement and sets it as the ELSE branch statement for the currently active IF statement.
 // If the active statement is not an IF statement, throws an error.
-CFStatement *cf_make_if_else_statement();
+CFStatement *cf_make_if_else_statement(CFStatementType statementType);
 
 // Creates a statement and sets it as the body statement for the currently active FOR statement.
 // If the active statement is not an FOR statement, throws an error.
-CFStatement *cf_make_for_body_statement();
+CFStatement *cf_make_for_body_statement(CFStatementType statementType);
 
 // Creates a new AST and sets it as the active AST node.
 // If target is not ROOT, links it to the currently active AST node.
