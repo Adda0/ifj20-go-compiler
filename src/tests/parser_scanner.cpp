@@ -2032,6 +2032,103 @@ TEST_F(ParserScannerTest, FunctionHeader8) {
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
+TEST_F(ParserScannerTest, FunctionHeader9) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "func foo foo(i int, s string) (bool, int) {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, FunctionHeader10) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "func foo (i int, s string) () {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, FunctionHeader11) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "func foo (i int, s string) () {\n"
+        "    {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, FunctionHeader12) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "func foo (i int, s string) () {\n"
+        "    func bar (i int, s string) () {\n"
+        "    }\n";
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, FunctionHeader13) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "func foo (54 int, s string) () {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, FunctionHeader14) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "func foo (i int, s string) (foo) {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, FunctionHeader15) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "a := 5\n"
+        "func foo (i int, s string) () {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, FunctionHeader16) {
+    std::string inputStr = \
+        "package main\n"
+        "\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
+}
+
 // === Test compiler result lexical error ===
 
 TEST_F(ParserScannerTest, LexicalErrorCompilerResult1) {
