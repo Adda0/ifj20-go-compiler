@@ -11,14 +11,17 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define CF_ALLOC_CHECK(ptr) if ((ptr) == NULL) { currentError = CF_ERROR_INTERNAL; return; }
-#define CF_ALLOC_CHECK_RN(ptr) if ((ptr) == NULL) { currentError = CF_ERROR_INTERNAL; return NULL; }
-#define CF_ACT_FUN_CHECK() if (activeFunc == NULL) { currentError = CF_ERROR_NO_ACTIVE_FUNCTION; return; }
-#define CF_ACT_FUN_CHECK_RN() if (activeFunc == NULL) { currentError = CF_ERROR_NO_ACTIVE_FUNCTION; return NULL; }
-#define CF_ACT_STAT_CHECK() if (activeStat == NULL) { currentError = CF_ERROR_NO_ACTIVE_STATEMENT; return; }
-#define CF_ACT_STAT_CHECK_RN() if (activeStat == NULL) { currentError = CF_ERROR_NO_ACTIVE_STATEMENT; return NULL; }
-#define CF_ACT_AST_CHECK() if (activeAst == NULL) { currentError = CF_ERROR_NO_ACTIVE_AST; return; }
-#define CF_ACT_AST_CHECK_RN() if (activeAst == NULL) { currentError = CF_ERROR_NO_ACTIVE_AST; return NULL; }
+#define CF_ALLOC_CHECK(ptr) do { if ((ptr) == NULL) { currentError = CF_ERROR_INTERNAL; return; } } while(0)
+#define CF_ALLOC_CHECK_RN(ptr) do { if ((ptr) == NULL) { currentError = CF_ERROR_INTERNAL; return NULL; } } while(0)
+#define CF_ACT_FUN_CHECK() do { if (activeFunc == NULL) { currentError = CF_ERROR_NO_ACTIVE_FUNCTION; return; } } while(0)
+#define CF_ACT_FUN_CHECK_RN() do { if (activeFunc == NULL) { currentError = CF_ERROR_NO_ACTIVE_FUNCTION; return NULL; } } while(0)
+#define CF_ACT_STAT_CHECK() do { if (activeStat == NULL) { currentError = CF_ERROR_NO_ACTIVE_STATEMENT; return; } } while(0)
+#define CF_ACT_STAT_CHECK_RN() do { if (activeStat == NULL) { currentError = CF_ERROR_NO_ACTIVE_STATEMENT; return NULL; } } while(0)
+#define CF_ACT_AST_CHECK() do { if (activeAst == NULL) { currentError = CF_ERROR_NO_ACTIVE_AST; return; } } while(0)
+#define CF_ACT_AST_CHECK_RN() do { if (activeAst == NULL) { currentError = CF_ERROR_NO_ACTIVE_AST; return NULL; } } while(0)
+
+extern ASTNode *cf_ast_init(ASTNewNodeTarget target, ASTNodeType type); // NOLINT(readability-redundant-declaration)
+extern ASTNode *cf_ast_init_for_list(ASTNodeType type, int listDataIndex); // NOLINT(readability-redundant-declaration)
 
 static struct program_structure *program;
 CFError currentError = CF_NO_ERROR;
@@ -31,20 +34,16 @@ struct program_structure *get_program() {
     return program;
 }
 
-// Returns the current error state.
 CFError cf_error() {
     return currentError;
 }
 
-// Initializes the control flow graph generator.
 void cf_init() {
     program = malloc(sizeof(struct program_structure));
     program->mainFunc = NULL;
     program->functionList = NULL;
 }
 
-// Finds a function, that is already present in the CF graph, and returns a pointer to it.
-// If setActive is true, sets it as the active function.
 CFFunction *cf_get_function(const char *name, bool setActive) {
     CFFuncListNode *n = program->functionList;
     while (n != NULL) {
@@ -57,7 +56,6 @@ CFFunction *cf_get_function(const char *name, bool setActive) {
     return NULL;
 }
 
-// Creates a function and sets it as the active function.
 CFFunction *cf_make_function(const char *name) {
     CFFuncListNode *n = program->functionList;
     CFFuncListNode *newNode = calloc(1, sizeof(CFFuncListNode));
@@ -87,7 +85,6 @@ CFFunction *cf_make_function(const char *name) {
     return newFunctionNode;
 }
 
-// Adds an argument to the active function.
 void cf_add_argument(const char *name, CFDataType type) {
     CF_ACT_FUN_CHECK();
 
@@ -106,9 +103,6 @@ void cf_add_argument(const char *name, CFDataType type) {
     activeFunc->argumentsCount++;
 }
 
-// Adds a return value to the active function.
-// The name parameter may be NULL, in that case, all following parameters must also be unnamed.
-// An error is thrown when trying to add a named return value to a function with unnamed return values and vice-versa.
 void cf_add_return_value(const char *name, CFDataType type) {
     CF_ACT_FUN_CHECK();
 
@@ -135,10 +129,6 @@ void cf_add_return_value(const char *name, CFDataType type) {
     activeFunc->returnValuesCount++;
 }
 
-// Creates a statement in the current function and sets it as the active statement.
-// Links it with the function and the previous active statement.
-// If the statementType is RETURN, creates a new AST_LIST type AST with the amount of data nodes
-// equal to the number of arguments of the current function.
 CFStatement *cf_make_next_statement(CFStatementType statementType) {
     CF_ACT_FUN_CHECK_RN();
 
@@ -167,7 +157,7 @@ CFStatement *cf_make_next_statement(CFStatementType statementType) {
             newStat->data.forData = calloc(1, sizeof(CFStatementFor));
             break;
         case CF_RETURN:
-            newStat->data.bodyAst = cf_ast_init(AST_ROOT, AST_LIST, activeFunc->returnValuesCount);
+            newStat->data.bodyAst = cf_ast_init_with_data(AST_ROOT, AST_LIST, activeFunc->returnValuesCount);
             break;
         default:
             currentError = CF_ERROR_INVALID_ENUM_VALUE;
@@ -178,25 +168,6 @@ CFStatement *cf_make_next_statement(CFStatementType statementType) {
     return newStat;
 }
 
-/* Uses the active AST as the AST of the active statement.
- * If the active statement is a basic statement:
- *  - The target parameter must be STATEMENT_BODY.
- *  - The type of the AST must be DEFINE, ASSIGN or FUNC_CALL.
- *
- * If the active statement is a FOR statement:
- *  - The target AST is determined using the target parameter, which must NOT be STATEMENT_BODY.
- *  - For FOR_DEFINITION target, the type of the AST must be DEFINE.
- *  - For FOR_CONDITIONAL target, the type must be FUNC_CALL, ID, CONST_BOOL or one of the LOGIC group.
- *  - For FOR_AFTERTHOUGHT target, the type must be ASSIGN.
- *
- * If the active statement is an IF statement:
- *  - The target parameter must be IF_CONDITIONAL.
- *  - The type of the AST must be FUNC_CALL, ID, CONST_BOOL or one of the LOGIC group.
- *
- * If the active statement is a RETURN statement:
- *  - The target parameter must be RETURN_LIST.
- *  - The type of the AST must be AST_LIST.
-**/
 void cf_use_ast(CFASTTarget target) {
     CF_ACT_STAT_CHECK();
     CF_ACT_AST_CHECK();
@@ -281,7 +252,6 @@ void cf_use_ast(CFASTTarget target) {
     }
 }
 
-// Finds the closest parent IF or FOR statement and sets it as the active statement.
 CFStatement *cf_pop_previous_branched_statement() {
     if (activeStat == NULL) return NULL;
     CFStatement *n = activeStat->parentStatement;
@@ -297,8 +267,6 @@ CFStatement *cf_pop_previous_branched_statement() {
     return n;
 }
 
-// Creates a statement and sets it as the THEN branch statement for the currently active IF statement.
-// If the active statement is not an IF statement, throws an error.
 CFStatement *cf_make_if_then_statement(CFStatementType type) {
     if (activeStat->statementType != CF_IF) {
         currentError = CF_ERROR_INVALID_OPERATION;
@@ -320,8 +288,6 @@ CFStatement *cf_make_if_then_statement(CFStatementType type) {
     return newStat;
 }
 
-// Creates a statement and sets it as the ELSE branch statement for the currently active IF statement.
-// If the active statement is not an IF statement, throws an error.
 CFStatement *cf_make_if_else_statement(CFStatementType type) {
     if (activeStat->statementType != CF_IF) {
         currentError = CF_ERROR_INVALID_OPERATION;
@@ -343,8 +309,6 @@ CFStatement *cf_make_if_else_statement(CFStatementType type) {
     return newStat;
 }
 
-// Creates a statement and sets it as the body statement for the currently active FOR statement.
-// If the active statement is not an FOR statement, throws an error.
 CFStatement *cf_make_for_body_statement(CFStatementType type) {
     if (activeStat->statementType != CF_FOR) {
         currentError = CF_ERROR_INVALID_OPERATION;
@@ -366,9 +330,7 @@ CFStatement *cf_make_for_body_statement(CFStatementType type) {
     return newStat;
 }
 
-// Creates a new AST and sets it as the active AST node.
-// If target is not ROOT, links it to the currently active AST node.
-ASTNode *cf_ast_init(ASTNewNodeTarget target, ASTNodeType type, unsigned dataCount) {
+ASTNode *cf_ast_init_with_data(ASTNewNodeTarget target, ASTNodeType type, unsigned dataCount) {
     if (target != AST_ROOT) {
         CF_ACT_AST_CHECK_RN();
     }
@@ -392,11 +354,15 @@ ASTNode *cf_ast_init(ASTNewNodeTarget target, ASTNodeType type, unsigned dataCou
     return newNode;
 }
 
-ASTNode *cf_ast_init_for_list(ASTNodeType type, unsigned dataCount, unsigned listDataIndex) {
+ASTNode *cf_ast_init_for_list_with_data(ASTNodeType type, unsigned dataCount, int listDataIndex) {
     CF_ACT_AST_CHECK_RN();
     if (activeAst->actionType != AST_LIST) {
         currentError = CF_ERROR_INVALID_AST_TYPE;
         return NULL;
+    }
+
+    if (listDataIndex == -1) {
+        listDataIndex = activeAst->dataPointerIndex++; // NOLINT(cppcoreguidelines-narrowing-conversions)
     }
 
     ASTNode *newNode = calloc(1, sizeof(ASTNode) + dataCount * sizeof(ASTNodeData));
@@ -411,8 +377,6 @@ ASTNode *cf_ast_init_for_list(ASTNodeType type, unsigned dataCount, unsigned lis
     return newNode;
 }
 
-// Create a new leaf AST with one-length data, links it to the currently active AST node and DOES NOT make it active.
-// The target parameter must NOT be ROOT.
 ASTNode *cf_ast_add_leaf(ASTNewNodeTarget target, ASTNodeType type, ASTNodeData data) {
     CF_ACT_AST_CHECK_RN();
     if (target == AST_ROOT) {
@@ -423,13 +387,13 @@ ASTNode *cf_ast_add_leaf(ASTNewNodeTarget target, ASTNodeType type, ASTNodeData 
     ASTNode *newNode = calloc(1, sizeof(ASTNode) + 1 * sizeof(ASTNodeData));
     CF_ALLOC_CHECK_RN(newNode);
 
-    newNode->parent = activeAst;
     if (target == AST_LEFT_OPERAND || target == AST_UNARY_OPERAND) {
         activeAst->left = newNode;
     } else {
         activeAst->right = newNode;
     }
 
+    newNode->parent = activeAst;
     newNode->actionType = type;
     newNode->dataCount = 1;
     newNode->data[0] = data;
@@ -437,17 +401,38 @@ ASTNode *cf_ast_add_leaf(ASTNewNodeTarget target, ASTNodeType type, ASTNodeData 
     return newNode;
 }
 
-// Returns the current active AST node.
+ASTNode *cf_ast_add_leaf_for_list(ASTNodeType type, ASTNodeData data, int listDataIndex) {
+    CF_ACT_AST_CHECK_RN();
+    if (activeAst->actionType != AST_LIST) {
+        currentError = CF_ERROR_INVALID_AST_TYPE;
+        return NULL;
+    }
+
+    if (listDataIndex == -1) {
+        listDataIndex = activeAst->dataPointerIndex++; // NOLINT(cppcoreguidelines-narrowing-conversions)
+    }
+
+    ASTNode *newNode = calloc(1, sizeof(ASTNode) + 1 * sizeof(ASTNodeData));
+    CF_ALLOC_CHECK_RN(newNode);
+
+    activeAst->data[listDataIndex].astPtr = newNode;
+
+    newNode->parent = activeAst;
+    newNode->actionType = type;
+    newNode->dataCount = 1;
+    newNode->data[0] = data;
+
+    return newNode;
+}
+
 ASTNode *cf_ast_current() {
     return activeAst;
 }
 
-// Changes the active AST node.
 void cf_ast_set_current(ASTNode *node) {
     activeAst = node;
 }
 
-// Changes the active AST node to the parent of the currently active AST node.
 ASTNode *cf_ast_parent() {
     CF_ACT_AST_CHECK_RN();
     activeAst = activeAst->parent;
@@ -474,7 +459,6 @@ ASTNode *cf_ast_list_root() {
     return NULL;
 }
 
-// Returns true if the active AST node is a root node.
 bool cf_ast_is_root() {
     if (activeAst == NULL) {
         currentError = CF_ERROR_NO_ACTIVE_AST;
@@ -484,7 +468,6 @@ bool cf_ast_is_root() {
     return activeAst->parent == NULL;
 }
 
-// Finds the root of the AST and sets it as the active node.
 ASTNode *cf_ast_root() {
     CF_ACT_AST_CHECK_RN();
 
@@ -495,14 +478,12 @@ ASTNode *cf_ast_root() {
     return activeAst;
 }
 
-// Sets the data of the active AST node on the specified position.
 void cf_ast_set_data(unsigned position, ASTNodeData data) {
     CF_ACT_AST_CHECK();
+    activeAst->data[position] = data;
 }
 
-// Sets the first position of the active AST node data that hasn't been yet set.
-// Returns the set position.
 unsigned cf_ast_push_data(ASTNodeData data) {
     cf_ast_set_data(activeAst->dataPointerIndex, data);
-    return activeAst->dataPointerIndex;
+    return activeAst->dataPointerIndex++;
 }

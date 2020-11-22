@@ -18,6 +18,7 @@ typedef enum cfgraph_data_type {
     CF_FLOAT,
     CF_STRING,
     CF_BOOL,
+    CF_UNKNOWN,
     CF_NIL
 } CFDataType;
 
@@ -243,13 +244,30 @@ CFStatement *cf_make_for_body_statement(CFStatementType statementType);
 
 // Creates a new AST and sets it as the active AST node.
 // If target is not ROOT, links it to the currently active AST node.
-ASTNode *cf_ast_init(ASTNewNodeTarget target, ASTNodeType type, unsigned dataCount);
+ASTNode *cf_ast_init_with_data(ASTNewNodeTarget target, ASTNodeType type, unsigned dataCount);
 
-ASTNode *cf_ast_init_for_list(ASTNodeType type, unsigned dataCount, unsigned listDataIndex);
+inline ASTNode *cf_ast_init(ASTNewNodeTarget target, ASTNodeType type) {
+    return cf_ast_init_with_data(target, type, 0);
+}
+
+// Creates a new AST meant for being included as data for the currently active AST node of type AST_LIST.
+// Sets the newly created AST as the active AST node and assigns it to the previously active AST_LIST node
+// at the specified data index. Setting the data index parameter to -1 will instead push the data,
+// similarly to cf_ast_push_data().
+// If the currently active AST node is not an AST_LIST, throws an error.
+ASTNode *cf_ast_init_for_list_with_data(ASTNodeType type, unsigned dataCount, int listDataIndex);
+
+inline ASTNode *cf_ast_init_for_list(ASTNodeType type, int listDataIndex) {
+    return cf_ast_init_for_list_with_data(type, 0, listDataIndex);
+}
 
 // Create a new leaf AST with one-length data, links it to the currently active AST node and DOES NOT make it active.
 // The target parameter must NOT be ROOT.
 ASTNode *cf_ast_add_leaf(ASTNewNodeTarget target, ASTNodeType type, ASTNodeData data);
+
+// Create a new leaf AST with one-length data, links it to the currently active AST_LIST node's data
+// and DOES NOT make it active. The semantics is similar to cf_ast_init_for_list().
+ASTNode *cf_ast_add_leaf_for_list(ASTNodeType type, ASTNodeData data, int listDataIndex);
 
 // Returns the current active AST node.
 ASTNode *cf_ast_current();
