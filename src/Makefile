@@ -13,7 +13,7 @@ CTESTFLAGS ?= ""
 all: compiler
 
 compiler: scanner.o mutable_string.o stderr_message.o compiler.o \
-		  parser.o precedence_parser.o stacks.o
+		  parser.o precedence_parser.o stacks.o symtable.o
 
 scanner.o: scanner.c scanner.h mutable_string.h compiler.h \
 		   scanner_static.h stderr_message.h
@@ -25,6 +25,7 @@ parser.o: parser.c parser.h compiler.h scanner.h mutable_string.h stderr_message
 precedence_parser.o: precedence_parser.c precedence_parser.h scanner.h \
 					 mutable_string.h compiler.h parser.h stderr_message.h stacks.h
 stacks.o: stacks.c stacks.h scanner.h mutable_string.h compiler.h precedence_parser.h
+symtable.o: symtable.c symtable.h stderr_message.h compiler.h
 
 
 test:
