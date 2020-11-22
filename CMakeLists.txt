@@ -42,7 +42,13 @@ add_executable(Compiler
         src/parser.h src/parser.c
         src/precedence_parser.h src/precedence_parser.c
         src/stacks.h src/stacks.c
-        src/control_flow.h src/control_flow.c)
+        src/control_flow.h src/control_flow.c
+        src/code_generator.c src/code_generator.h)
+
+add_executable(ControlFlowTester
+        src/control_flow.h src/control_flow.c
+        src/code_generator.h src/code_generator.c
+        src/cftest.c)
 
 # ------- Tests -------
 add_executable(Test_mutable_string src/mutable_string.h src/mutable_string.c src/tests/mutable_string.cpp)
