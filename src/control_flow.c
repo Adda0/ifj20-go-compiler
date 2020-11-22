@@ -258,7 +258,7 @@ void cf_use_ast(CFASTTarget target) {
 CFStatement *cf_pop_previous_branched_statement() {
     if (activeStat == NULL) return NULL;
     CFStatement *n = activeStat->parentStatement;
-    while (n->statementType != CF_IF) {
+    while (n->statementType != CF_IF && n->statementType != CF_FOR) {
         n = n->parentStatement;
 
         if (n == NULL) {
