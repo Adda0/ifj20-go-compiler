@@ -74,23 +74,24 @@ void print_ast(ASTNode *root) {
             ASTNodeData d = root->data[i];
             switch (root->actionType) {
                 case AST_LIST:
-                    printf("-- AST list member #%u:\n", i);
+                    printf("[[ASTLIST] ", i);
                     print_ast(d.astPtr);
+                    printf("]");
                     break;
                 case AST_ID:
-                    printf("ID?");
+                    printf("$%s", d.symbolTableItemPtr->key);
                     break;
                 case AST_CONST_INT:
-                    printf("%li", d.intConstantValue);
+                    printf("int@%li", d.intConstantValue);
                     break;
                 case AST_CONST_FLOAT:
-                    printf("%f", d.floatConstantValue);
+                    printf("float@%f", d.floatConstantValue);
                     break;
                 case AST_CONST_STRING:
-                    printf("'%s'", d.stringConstantValue);
+                    printf("string@%s", d.stringConstantValue);
                     break;
                 case AST_CONST_BOOL:
-                    printf(d.boolConstantValue ? "true" : "false");
+                    printf(d.boolConstantValue ? "bool@true" : "bool@false");
                     break;
             }
 
@@ -135,7 +136,7 @@ void print_stat_rec(CFStatement *stat) {
             print_ast(stat->data.forData->conditionalAst);
             printf("\n-- Afterthought expr:\n");
             print_ast(stat->data.forData->afterthoughtAst);
-            printf("-- BODY\n");
+            printf("\n-- BODY\n");
             print_stat_rec(stat->data.forData->bodyStatement);
             printf("-- END FOR\n");
             break;
