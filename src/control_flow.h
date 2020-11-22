@@ -158,7 +158,7 @@ typedef enum ast_new_node_target {
 } ASTNewNodeTarget;
 
 typedef enum cfgraph_error {
-    CF_NO_ERROR,
+    CF_NO_ERROR = 0,
     CF_ERROR_INVALID_AST_TARGET,
     CF_ERROR_INVALID_AST_TYPE,
     CF_ERROR_MAIN_REDEFINITION,
@@ -173,8 +173,9 @@ typedef enum cfgraph_error {
 
 struct program_structure *get_program();
 
-// Returns the current error state.
-CFError cf_error();
+// Holds the current error state. The "no error" state is guaranteed to be a zero,
+// so an error check may be performed using `if (cf_error)`.
+extern CFError cf_error;
 
 // Initializes the control flow graph generator.
 void cf_init();

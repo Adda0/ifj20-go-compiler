@@ -1,9 +1,14 @@
 #include "control_flow.h"
 #include "code_generator.h"
-#include <stdlib.h>
+#include <stdio.h>
 
 int main() {
     cf_init();
+
+    if(cf_error) {
+        fprintf(stderr, "Couldn't initialise CFG.");
+        return 1;
+    }
 
     cf_make_function("main");
     cf_add_return_value(NULL, CF_INT);
