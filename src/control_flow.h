@@ -245,6 +245,8 @@ CFStatement *cf_make_for_body_statement(CFStatementType statementType);
 // If target is not ROOT, links it to the currently active AST node.
 ASTNode *cf_ast_init(ASTNewNodeTarget target, ASTNodeType type, unsigned dataCount);
 
+ASTNode *cf_ast_init_for_list(ASTNodeType type, unsigned dataCount, unsigned listDataIndex);
+
 // Create a new leaf AST with one-length data, links it to the currently active AST node and DOES NOT make it active.
 // The target parameter must NOT be ROOT.
 ASTNode *cf_ast_add_leaf(ASTNewNodeTarget target, ASTNodeType type, ASTNodeData data);
@@ -257,6 +259,8 @@ void cf_ast_set_current(ASTNode *node);
 
 // Changes the active AST node to the parent of the currently active AST node.
 ASTNode *cf_ast_parent();
+
+ASTNode *cf_ast_list_root();
 
 // Returns true if the active AST node is a root node.
 bool cf_ast_is_root();

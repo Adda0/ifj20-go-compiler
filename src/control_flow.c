@@ -285,7 +285,7 @@ void cf_use_ast(CFASTTarget target) {
 CFStatement *cf_pop_previous_branched_statement() {
     if (activeStat == NULL) return NULL;
     CFStatement *n = activeStat->parentStatement;
-    while (n->parentStatement->statementType != CF_IF) {
+    while (n->statementType != CF_IF) {
         n = n->parentStatement;
 
         if (n == NULL) {
@@ -392,6 +392,25 @@ ASTNode *cf_ast_init(ASTNewNodeTarget target, ASTNodeType type, unsigned dataCou
     return newNode;
 }
 
+ASTNode *cf_ast_init_for_list(ASTNodeType type, unsigned dataCount, unsigned listDataIndex) {
+    CF_ACT_AST_CHECK_RN();
+    if (activeAst->actionType != AST_LIST) {
+        currentError = CF_ERROR_INVALID_AST_TYPE;
+        return NULL;
+    }
+
+    ASTNode *newNode = calloc(1, sizeof(ASTNode) + dataCount * sizeof(ASTNodeData));
+    CF_ALLOC_CHECK_RN(newNode);
+
+    newNode->parent = activeAst;
+    activeAst->data[listDataIndex].astPtr = newNode;
+    newNode->actionType = type;
+    newNode->dataCount = dataCount;
+
+    activeAst = newNode;
+    return newNode;
+}
+
 // Create a new leaf AST with one-length data, links it to the currently active AST node and DOES NOT make it active.
 // The target parameter must NOT be ROOT.
 ASTNode *cf_ast_add_leaf(ASTNewNodeTarget target, ASTNodeType type, ASTNodeData data) {
@@ -415,7 +434,6 @@ ASTNode *cf_ast_add_leaf(ASTNewNodeTarget target, ASTNodeType type, ASTNodeData 
     newNode->dataCount = 1;
     newNode->data[0] = data;
 
-    activeAst = newNode;
     return newNode;
 }
 
@@ -433,6 +451,27 @@ void cf_ast_set_current(ASTNode *node) {
 ASTNode *cf_ast_parent() {
     CF_ACT_AST_CHECK_RN();
     activeAst = activeAst->parent;
+    return activeAst;
+}
+
+ASTNode *cf_ast_list_root() {
+    CF_ACT_AST_CHECK_RN();
+
+    ASTNode *n = activeAst;
+    while (n != NULL) {
+        if (n->parent->actionType == AST_LIST) {
+            for (unsigned i = 0; i < n->parent->dataCount; i++) {
+                if (n->parent->data[i].astPtr == n) {
+                    activeAst = n->parent;
+                    return activeAst;
+                }
+            }
+        }
+
+        n = n->parent;
+    }
+
+    return NULL;
 }
 
 // Returns true if the active AST node is a root node.
@@ -448,7 +487,12 @@ bool cf_ast_is_root() {
 // Finds the root of the AST and sets it as the active node.
 ASTNode *cf_ast_root() {
     CF_ACT_AST_CHECK_RN();
-    return NULL; // TODO
+
+    while (activeAst != NULL) {
+        activeAst = activeAst->parent;
+    }
+
+    return activeAst;
 }
 
 // Sets the data of the active AST node on the specified position.
