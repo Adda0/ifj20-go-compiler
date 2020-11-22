@@ -1,7 +1,10 @@
 #include "control_flow.h"
 #include "code_generator.h"
 #include "symtable.h"
+#include "compiler.h"
 #include <stdio.h>
+
+CompilerResult compiler_result = COMPILER_RESULT_SUCCESS;
 
 int main() {
     STSymbol i = {.identifier = "i",

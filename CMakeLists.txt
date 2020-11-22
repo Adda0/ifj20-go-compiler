@@ -43,12 +43,15 @@ add_executable(Compiler
         src/precedence_parser.h src/precedence_parser.c
         src/stacks.h src/stacks.c
         src/control_flow.h src/control_flow.c
-        src/code_generator.c src/code_generator.h)
+        src/optimiser.h src/optimiser.c
+        src/code_generator.h src/code_generator_simple.c)
 
 add_executable(ControlFlowTester
         src/symtable.h
         src/control_flow.h src/control_flow.c
-        src/code_generator.h src/code_generator.c
+        src/code_generator.h src/code_generator_simple.c
+        src/optimiser.h src/optimiser.c
+        src/stderr_message.h src/stderr_message.c
         src/cftest.c)
 
 # ------- Tests -------
