@@ -2,7 +2,7 @@
  *
  * IFJ20 compiler
  *
- * @brief Implements scanner
+ * @brief Implements the scanner module.
  *
  * @author David Chocholatý (xchoch08), FIT BUT
  */
@@ -18,7 +18,6 @@
 #include "scanner.h"
 #include "scanner_static.h"
 #include "stderr_message.h"
-
 
 ScannerResult scanner_get_token(Token *token, EolRule eol_rule) {
     // 'static' solves the problem of reading one more char before returning Token

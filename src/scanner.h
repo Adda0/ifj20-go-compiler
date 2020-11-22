@@ -2,7 +2,7 @@
  *
  * IFJ20 compiler
  *
- * @brief Contains declarations of functions and data types required for implementation of scanner in scanner.c.
+ * @brief Contains declarations of functions and data types for the scanner module.
  *
  * @author David Chocholatý (xchoch08), FIT BUT
  */

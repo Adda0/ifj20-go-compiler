@@ -2,7 +2,7 @@
  *
  * IFJ20 compiler
  *
- * @brief Contains declarations of various stacks
+ * @brief Contains declarations of functions and data types for various stack types.
  *
  * @author František Nečas (xnecas27), FIT BUT
  */

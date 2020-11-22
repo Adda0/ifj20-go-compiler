@@ -2,9 +2,9 @@
  *
  * IFJ20 compiler
  *
- * @brief Contains declarations of data types and functions implementing a mutable string.
+ * @brief Contains declarations of functions and data types representing a mutable string.
  *
- * @author František Nečas  (xnecas27), FIT BUT
+ * @author František Nečas (xnecas27), FIT BUT
  */
 
 #ifndef _MUTABLE_STRING_H

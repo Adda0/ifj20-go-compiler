@@ -2,7 +2,7 @@
  *
  * IFJ20 compiler
  *
- * @brief Contains declarations of functions and data types for IFJ20 parser.
+ * @brief Contains macros and declarations of functions and data types for the recursive descent parser.
  *
  * @author František Nečas (xnecas27), FIT BUT
  */

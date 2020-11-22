@@ -2,7 +2,7 @@
  *
  * IFJ20 compiler tests
  *
- * @brief Contains tests for the parser and scanner modules.
+ * @brief Contains tests covering mainly the parser functionality, though in cooperation with scanner.
  *
  * @author David Chocholatý (xchoch08), FIT BUT
  */
@@ -22,7 +22,6 @@
 extern "C" {
 #include "scanner.h"
 #include "parser.h"
-#include "mutable_string.h"
 }
 
 class ParserScannerTest : public StdinMockingScannerTest {
