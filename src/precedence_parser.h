@@ -2,7 +2,7 @@
  *
  * IFJ20 compiler
  *
- * @brief Contains declarations of functions and data types for precedence parsing.
+ * @brief Contains declarations of functions and data types for the precedence parser module.
  *
  * @author František Nečas (xnecas27), FIT BUT
  */

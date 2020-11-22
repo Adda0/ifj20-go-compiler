@@ -2,7 +2,7 @@
  *
  * IFJ20 compiler
  *
- * @brief Implements message to stderr informing the user about errors and warnings in the source code.
+ * @brief Implements the interface for informing the user about compiler errors and warnings.
  *
  * @author David Chocholatý (xchoch08), FIT BUT
  */

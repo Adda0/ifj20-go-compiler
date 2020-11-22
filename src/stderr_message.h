@@ -2,7 +2,7 @@
  *
  * IFJ20 compiler
  *
- * @brief Contains data types and function declarations for error/warning messages to stderr.
+ * @brief Contains declarations of functions and data types for the error and warning messages interface.
  *
  * @author David Chocholatý (xchoch08), FIT BUT
  */

@@ -2,7 +2,7 @@
  *
  * IFJ20 compiler
  *
- * @brief Contains definitions for the target code generator.
+ * @brief Implements the target code generator.
  *
  * @author Ondřej Ondryáš (xondry02), FIT BUT
  */

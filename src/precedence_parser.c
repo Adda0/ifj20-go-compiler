@@ -2,7 +2,7 @@
  *
  * IFJ20 compiler
  *
- * @brief Contains implementation of precedence parser
+ * @brief Implements the precedence parser module.
  *
  * @author František Nečas (xnecas27), FIT BUT
  */

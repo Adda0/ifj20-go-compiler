@@ -2,7 +2,7 @@
  *
  * IFJ20 compiler
  *
- * @brief Contains data types and declarations for the target code generator.
+ * @brief Contains declarations of functions and data types for the target code generator.
  *
  * @author Ondřej Ondryáš (xondry02), FIT BUT
  */

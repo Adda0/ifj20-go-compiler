@@ -2,7 +2,7 @@
  *
  * IFJ20 compiler
  *
- * @brief Contains data types and declarations for the control flow graph.
+ * @brief Contains declarations of functions and data types for the control flow graph.
  *
  * @author Ondřej Ondryáš (xondry02), FIT BUT
  */

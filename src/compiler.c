@@ -2,7 +2,7 @@
  *
  * IFJ20 compiler
  *
- * @brief Main source file for compiler, implementing main function of the compiler.
+ * @brief Main source file for the compiler.
  *
  * @author David Chocholatý (xchoch08), FIT BUT
  */

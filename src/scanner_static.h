@@ -2,7 +2,7 @@
  *
  * IFJ20 compiler
  *
- * @brief Contains declarations of static functions of scanner.c.
+ * @brief Contains declarations for static functions of the scanner module.
  *
  * @author David Chocholatý (xchoch08), FIT BUT
  */

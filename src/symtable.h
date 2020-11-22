@@ -2,10 +2,10 @@
  *
  * IFJ20 compiler
  *
- * @brief Contains declarations of symbol table.
+ * @brief Contains declarations of functions and data types for the symbol table module.
  *
  * @author František Nečas (xnecas27), FIT BUT
- * @author Ondřej Ondryáš (xondry02), FIT BUT
+ * @author Ondřej Ondryáš  (xondry02), FIT BUT
  */
 
 #ifndef _SYMTABLE_H

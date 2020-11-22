@@ -2,8 +2,7 @@
  *
  * IFJ20 compiler
  *
- * @brief Contains general declarations and data types for the main function
- * of the entire compiler in compiler.c.
+ * @brief Contains declarations of functions and data types for the compiler main entry point module.
  *
  * @author David Chocholatý (xchoch08), FIT BUT
  */

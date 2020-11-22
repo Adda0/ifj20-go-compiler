@@ -2,9 +2,9 @@
  *
  * IFJ20 compiler
  *
- * @brief Contains implementation of mutable string data structure.
+ * @brief Implements the mutable string data structure.
  *
- * @author František Nečas  (xnecas27), FIT BUT
+ * @author František Nečas (xnecas27), FIT BUT
  */
 
 #include <stdlib.h>
