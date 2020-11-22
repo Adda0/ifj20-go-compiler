@@ -51,7 +51,7 @@ typedef STDataType CFDataType;
 struct ast_node;
 
 typedef union ast_node_data {
-    const STItem *symbolTableItemPtr;
+    const STSymbol *symbolTableItemPtr;
     struct ast_node *astPtr;
     int64_t intConstantValue;
     double floatConstantValue;

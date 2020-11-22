@@ -4,30 +4,24 @@
 #include <stdio.h>
 
 int main() {
-    STItem i = {.key = "i",
-            .data = (STSymbol) {.identifier = "i",
-                    .type = ST_SYMBOL_VAR,
-                    .data = (STSymbolData) {.var_data = (STVariableData) {.type = CF_INT}}}};
-    STItem a = {.key = "a",
-            .data = (STSymbol) {.identifier = "a",
-                    .type = ST_SYMBOL_VAR,
-                    .data = (STSymbolData) {.var_data = (STVariableData) {.type = CF_INT}}}};
-    STItem b = {.key = "b",
-            .data = (STSymbol) {.identifier = "b",
-                    .type = ST_SYMBOL_VAR,
-                    .data = (STSymbolData) {.var_data = (STVariableData) {.type = CF_INT}}}};
-    STItem fun1 = {.key = "fun1",
-            .data = (STSymbol) {.identifier = "fun1",
-                    .type = ST_SYMBOL_FUNC,
-                    .data = (STSymbolData) {.func_data = (STFunctionData) {.defined=true}}}};
-    STItem print = {.key = "print",
-            .data = (STSymbol) {.identifier = "print",
-                    .type = ST_SYMBOL_FUNC,
-                    .data = (STSymbolData) {.func_data = (STFunctionData) {.defined=true}}}};
-    STItem aFor = {.key = "a",
-            .data = (STSymbol) {.identifier = "a",
-                    .type = ST_SYMBOL_VAR,
-                    .data = (STSymbolData) {.var_data = (STVariableData) {.type = CF_INT}}}};
+    STSymbol i = {.identifier = "i",
+            .type = ST_SYMBOL_VAR,
+            .data = (STSymbolData) {.var_data = (STVariableData) {.type = CF_INT}}};
+    STSymbol a = {.identifier = "a",
+            .type = ST_SYMBOL_VAR,
+            .data = (STSymbolData) {.var_data = (STVariableData) {.type = CF_INT}}};
+    STSymbol b = {.identifier = "b",
+            .type = ST_SYMBOL_VAR,
+            .data = (STSymbolData) {.var_data = (STVariableData) {.type = CF_INT}}};
+    STSymbol fun1 = {.identifier = "fun1",
+            .type = ST_SYMBOL_FUNC,
+            .data = (STSymbolData) {.func_data = (STFunctionData) {.defined=true}}};
+    STSymbol print = {.identifier = "print",
+            .type = ST_SYMBOL_FUNC,
+            .data = (STSymbolData) {.func_data = (STFunctionData) {.defined=true}}};
+    STSymbol aFor = {.identifier = "a",
+            .type = ST_SYMBOL_VAR,
+            .data = (STSymbolData) {.var_data = (STVariableData) {.type = CF_INT}}};
 
     cf_init();
 
@@ -82,7 +76,7 @@ int main() {
     // AST (AST_LIST) has been created automatically
     cf_ast_add_leaf_for_list(AST_CONST_INT, (ASTNodeData) {.intConstantValue = 1}, 0);
     cf_ast_init_for_list(AST_SUBTRACT, 1);
-    cf_ast_add_leaf(AST_LEFT_OPERAND, AST_ID, (ASTNodeData) { .symbolTableItemPtr = &b});
+    cf_ast_add_leaf(AST_LEFT_OPERAND, AST_ID, (ASTNodeData) {.symbolTableItemPtr = &b});
     cf_ast_add_leaf(AST_RIGHT_OPERAND, AST_CONST_INT, (ASTNodeData) {.intConstantValue = 2});
 
     cf_pop_previous_branched_statement();
@@ -126,7 +120,7 @@ int main() {
     // return i
     cf_make_next_statement(CF_RETURN);
     cf_ast_add_leaf_for_list(AST_ID, (ASTNodeData) {.symbolTableItemPtr = &i}, 0);
-    cf_ast_add_leaf_for_list(AST_CONST_INT, (ASTNodeData) { .intConstantValue = 128}, 1);
+    cf_ast_add_leaf_for_list(AST_CONST_INT, (ASTNodeData) {.intConstantValue = 128}, 1);
 
     tcg_generate();
 

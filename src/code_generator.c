@@ -82,7 +82,7 @@ void print_ast(ASTNode *root) {
                     else print_ast(d.astPtr);
                     break;
                 case AST_ID:
-                    printf("$%s", d.symbolTableItemPtr->key);
+                    printf("$%s", d.symbolTableItemPtr->identifier);
                     break;
                 case AST_CONST_INT:
                     printf("int@%li", d.intConstantValue);
