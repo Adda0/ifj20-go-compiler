@@ -168,6 +168,11 @@ CFStatement *cf_make_next_statement(CFStatementType statementType) {
     return newStat;
 }
 
+void cf_assign_symtable(SymbolTable *symbolTable) {
+    CF_ACT_STAT_CHECK();
+    activeStat->localSymbolTable = symbolTable;
+}
+
 void cf_use_ast(CFASTTarget target) {
     CF_ACT_STAT_CHECK();
     CF_ACT_AST_CHECK();

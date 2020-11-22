@@ -11,17 +11,17 @@ int main() {
     cf_make_next_statement(CF_BASIC);
 
     cf_ast_init(AST_ROOT, AST_DEFINE);
-    cf_ast_add_leaf(AST_LEFT_OPERAND, AST_ID, (ASTNodeData) {.symbolTablePtr = NULL});
+    cf_ast_add_leaf(AST_LEFT_OPERAND, AST_ID, (ASTNodeData) {.symbolTableItemPtr = NULL});
     cf_ast_add_leaf(AST_RIGHT_OPERAND, AST_CONST_INT, (ASTNodeData) {.intConstantValue = 10});
     cf_use_ast(CF_STATEMENT_BODY);
 
     cf_make_next_statement(CF_BASIC);
     cf_ast_init(AST_ROOT, AST_ASSIGN);
-    cf_ast_add_leaf(AST_LEFT_OPERAND, AST_ID, (ASTNodeData) {.symbolTablePtr = NULL});
+    cf_ast_add_leaf(AST_LEFT_OPERAND, AST_ID, (ASTNodeData) {.symbolTableItemPtr = NULL});
     cf_ast_init(AST_RIGHT_OPERAND, AST_MULTIPLY);
-    cf_ast_add_leaf(AST_LEFT_OPERAND, AST_ID, (ASTNodeData) {.symbolTablePtr = NULL});
+    cf_ast_add_leaf(AST_LEFT_OPERAND, AST_ID, (ASTNodeData) {.symbolTableItemPtr = NULL});
     cf_ast_init(AST_RIGHT_OPERAND, AST_FUNC_CALL);
-    cf_ast_add_leaf(AST_UNARY_OPERAND, AST_ID, (ASTNodeData) {.symbolTablePtr = NULL});
+    cf_ast_add_leaf(AST_UNARY_OPERAND, AST_ID, (ASTNodeData) {.symbolTableItemPtr = NULL});
 
     cf_ast_root();
     cf_use_ast(CF_STATEMENT_BODY);
@@ -36,7 +36,7 @@ int main() {
 
     cf_make_if_then_statement(CF_BASIC);
     cf_ast_init(AST_ROOT, AST_FUNC_CALL);
-    cf_ast_add_leaf(AST_UNARY_OPERAND, AST_ID, (ASTNodeData) {.symbolTablePtr = NULL});
+    cf_ast_add_leaf(AST_UNARY_OPERAND, AST_ID, (ASTNodeData) {.symbolTableItemPtr = NULL});
 
     cf_use_ast(CF_STATEMENT_BODY);
 
@@ -51,7 +51,7 @@ int main() {
     cf_ast_init(AST_ROOT, AST_ASSIGN);
 
     cf_make_next_statement(CF_RETURN);
-    cf_ast_add_leaf_for_list(AST_ID, (ASTNodeData) {.symbolTablePtr = NULL}, 0);
+    cf_ast_add_leaf_for_list(AST_ID, (ASTNodeData) {.symbolTableItemPtr = NULL}, 0);
 
     tcg_generate();
 

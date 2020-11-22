@@ -12,15 +12,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-
-typedef enum cfgraph_data_type {
-    CF_INT,
-    CF_FLOAT,
-    CF_STRING,
-    CF_BOOL,
-    CF_UNKNOWN,
-    CF_NIL
-} CFDataType;
+#include "symtable.h"
 
 typedef enum ast_node_action_type {
     // ARITHMETIC group
@@ -55,10 +47,11 @@ typedef enum ast_node_action_type {
     AST_CONST_BOOL
 } ASTNodeType;
 
+typedef STDataType CFDataType;
 struct ast_node;
 
 typedef union ast_node_data {
-    const void *symbolTablePtr;
+    const STItem *symbolTableItemPtr;
     struct ast_node *astPtr;
     int64_t intConstantValue;
     double floatConstantValue;
@@ -110,6 +103,8 @@ typedef struct cfgraph_statement {
     struct cfgraph_function *parentFunction;
     struct cfgraph_statement *parentStatement;
     struct cfgraph_statement *followingStatement;
+
+    SymbolTable *localSymbolTable;
 
     CFStatementType statementType;
     union {
@@ -205,6 +200,9 @@ void cf_add_return_value(const char *name, CFDataType type);
 // If the statementType is RETURN, creates a new AST_LIST type AST with the amount of data nodes
 // equal to the number of arguments of the current function.
 CFStatement *cf_make_next_statement(CFStatementType statementType);
+
+// Assigns a pointer to a symbol table to the active statement.
+void cf_assign_symtable(SymbolTable *symbolTable);
 
 /* Uses the active AST as the AST of the active statement.
  * If the active statement is a basic statement:

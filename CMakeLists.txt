@@ -46,6 +46,7 @@ add_executable(Compiler
         src/code_generator.c src/code_generator.h)
 
 add_executable(ControlFlowTester
+        src/symtable.h
         src/control_flow.h src/control_flow.c
         src/code_generator.h src/code_generator.c
         src/cftest.c)
