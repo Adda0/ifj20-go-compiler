@@ -45,13 +45,13 @@ TEST_F(ParserScannerTest, BasicCode) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a := 0\n"
-        "    a -= 5\n"
+        "    a := 0 * 8\n"
+        "    a -= 5 - 7\n"
         "\n"
-        "    if 1 {\n"
+        "    if 0 < 1 {\n"
         "        print(\"Will always be printed.\\n\")\n"
         "    } else {\n"
-        "        print(\"Will never be seen.\n\")\n"
+        "        print(\"Will never be seen.\\n\")\n"
         "    }\n"
         "    \n"
         "    return\n"
@@ -65,7 +65,8 @@ TEST_F(ParserScannerTest, MinimalisticFunction) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a := 0\n"
+        "    abc := 672\n"
+        "    a := 666 - abc\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -88,7 +89,7 @@ TEST_F(ParserScannerTest, PackageTypo) {
         "pckage main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a == true {\n"
         "    }\n"
         "}\n";
 
@@ -99,7 +100,7 @@ TEST_F(ParserScannerTest, EOLMissingMainFunc) {
     std::string inputStr = \
         "package main"
         "func main() {\n"
-        "    if a {\n"
+        "    if a == true {\n"
         "    }\n"
         "}\n";
 
@@ -110,7 +111,7 @@ TEST_F(ParserScannerTest, EOLMissingError1) {
     std::string inputStr = \
         "package main "
         "func main() {\n"
-        "    if a {\n"
+        "    if a == true {\n"
         "    }\n"
         "}\n";
 
@@ -122,7 +123,7 @@ TEST_F(ParserScannerTest, EOLMissingError2) {
         "package main\n"
         "\n"
         "func main() {"
-        "    if a {\n"
+        "    if a == true {\n"
         "    }\n"
         "}\n";
 
@@ -134,7 +135,7 @@ TEST_F(ParserScannerTest, EOLMissingError3) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {"
+        "    if a == true {"
         "    }\n"
         "}\n";
 
@@ -146,7 +147,7 @@ TEST_F(ParserScannerTest, EOLMissingError4) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {"
+        "    if a == true {"
         "    }"
         "}\n";
 
@@ -158,9 +159,9 @@ TEST_F(ParserScannerTest, EOLMissingError5) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
-        "        if \"cond\" {"
-        "           a == 5\n"
+        "    if a == true {\n"
+        "        if a != true {"
+        "           a = 5\n"
         "        }\n"
         "    }\n"
         "}\n";
@@ -173,9 +174,9 @@ TEST_F(ParserScannerTest, EOLMissingError6) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
-        "        if \"cond\" {\n"
-        "           a == 5"
+        "    if a == true {\n"
+        "        if a != true {\n"
+        "           a = 5"
         "        }\n"
         "    }\n"
         "}\n";
@@ -188,8 +189,8 @@ TEST_F(ParserScannerTest, EOLMissingError7) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
-        "        if 0.5 {\n"
+        "    if 1-2+3 {\n"
+        "        if !a == abc {\n"
         "            a = \"String\\n\"\n"
         "        }"
         "    }\n"
@@ -203,8 +204,8 @@ TEST_F(ParserScannerTest, EOLMissingError8) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
-        "        if 0.5 {\n"
+        "    if 1-2+3 {\n"
+        "        if 1*2/3 {\n"
         "            a = \"String\\n\"\n"
         "            b := 545.4e-10"
         "        }\n"
@@ -219,8 +220,8 @@ TEST_F(ParserScannerTest, LastEOLIsNotRequired) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
-        "        if 0.5 {\n"
+        "    if 1-2+3 {\n"
+        "        if 1*2/3 {\n"
         "            a = \"String\\n\"\n"
         "            b := 545.4e-10\n"
         "        }\n"
@@ -256,7 +257,7 @@ TEST_F(ParserScannerTest, EOLInForLoop1) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    for a := 5; b; c {"
+        "    for a := 5; a < 79; a = a + 8 {"
         "    }\n"
         "}\n";
 
@@ -268,7 +269,7 @@ TEST_F(ParserScannerTest, EOLInForLoop2) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    for a := 5; b; c {\n"
+        "    for a := 5; a < 79; a = a + 8 {\n"
         "    }"
         "}\n";
 
@@ -280,7 +281,7 @@ TEST_F(ParserScannerTest, EOLInForLoop3) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    for a := 5;\n b; c {\n"
+        "    for a := 5; \n a < 79; a = a + 8 {\n"
         "    }\n"
         "}\n";
 
@@ -292,11 +293,11 @@ TEST_F(ParserScannerTest, EOLInForLoopForbidden1) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    for\n a; b; c {\n"
+        "    for \n a := 5; a < 79; a = a + 8 {\n"
         "    }\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
 TEST_F(ParserScannerTest, EOLInForLoopForbidden2) {
@@ -304,7 +305,7 @@ TEST_F(ParserScannerTest, EOLInForLoopForbidden2) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    for a\n; b; c {\n"
+        "    for a\n := 5; a < 79; a = a + 8 {\n"
         "    }\n"
         "}\n";
 
@@ -316,7 +317,7 @@ TEST_F(ParserScannerTest, EOLInForLoopForbidden3) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    for a := 5; b\n; c {\n"
+        "    for a := 5; a < 79\n; a = a + 8 { {\n"
         "    }\n"
         "}\n";
 
@@ -328,7 +329,7 @@ TEST_F(ParserScannerTest, EOLInForLoopForbidden4) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    for a := 5; b;\n c {\n"
+        "    for a := 5; a < 79; \na = a + 8 { {\n"
         "    }\n"
         "}\n";
 
@@ -340,7 +341,7 @@ TEST_F(ParserScannerTest, EOLInForLoopForbidden5) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    for a := 5; b; c\n {\n"
+        "    for a := 5; a < 79; a = a + 8\n {\n"
         "    }\n"
         "}\n";
 
@@ -352,12 +353,25 @@ TEST_F(ParserScannerTest, EOLInForLoopForbidden6) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    for a := 5; b; c {\n"
+        "    for a := 5; a < 79; a = a + 8 {\n"
         "    }\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
+
+TEST_F(ParserScannerTest, EOLInForLoopForbidden7) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for \n ; a < 79; a = a + 8 {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
 
 TEST_F(ParserScannerTest, EOLInFuncDefinitionForbidden1) {
     std::string inputStr = \
@@ -480,14 +494,14 @@ TEST_F(ParserScannerTest, IncompleteFunctionDefinition5) {
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
-// === Assing commmand EOLs tests ===
+// === Test EOLs in assing statement ===
 
 TEST_F(ParserScannerTest, AssignEOLMissing) {
     std::string inputStr = \
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a, b = 1, 2"
+        "    a, b = 1 + two, 2 / three"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
@@ -498,7 +512,7 @@ TEST_F(ParserScannerTest, AssignEOLForbidden1) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a\n, b = 1, 2\n"
+        "    a\n, b = 1 + two, 2 / three\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
@@ -509,7 +523,7 @@ TEST_F(ParserScannerTest, AssignEOL2) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a,\n b = 1, 2\n"
+        "    a,\n b = 1 + two, 2 / three\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -520,7 +534,7 @@ TEST_F(ParserScannerTest, AssignEOL3) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a, b\n = 1, 2\n"
+        "    a, b\n = 1 + two, 2 / three\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
@@ -531,7 +545,7 @@ TEST_F(ParserScannerTest, AssignEOL4) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a, b =\n 1, 2\n"
+        "    a, b = \n1 + two, 2 / three\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -542,7 +556,7 @@ TEST_F(ParserScannerTest, AssignEOL5) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a, b = 1\n, 2\n"
+        "    a, b = 1\n + two, 2 / three\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
@@ -553,10 +567,112 @@ TEST_F(ParserScannerTest, AssignEOL6) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a, b = 1,\n 2\n"
+        "    a, b = 1 + two,\n 2 / three\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, AssignEOL7) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, b = 1 + two\n , 2 / three\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, AssignEOL8) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, b = 1 + two, 2\n / three\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, AssignEOL9) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, b = 1 + two, 2 / \n three\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, AssignEOL10) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, b = 1 + \n two, 2 /\n three\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, AssignStatement1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := 36478\n"
+        "    b := a = 4\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, AssignStatement2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := 36478 ** 1\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, AssignStatement3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "     := 36478 * 1\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, AssignStatement4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := \n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, AssignStatement5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo\n"
+        "}\n"
+        "func foo() {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
 // === Test EOL in commands ===
@@ -566,7 +682,7 @@ TEST_F(ParserScannerTest, EOLInDefinitionOfVariable1) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a\n := 2\n"
+        "    a\n = 1 + two\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
@@ -577,7 +693,7 @@ TEST_F(ParserScannerTest, EOLInDefinitionOfVariable2) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a :=\n 12\n"
+        "    a, b =\n 1 + \n two\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -588,7 +704,7 @@ TEST_F(ParserScannerTest, EOLInDefinitionOfVariable3) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a, b \n := 1, 2\n"
+        "    a, b \n = 1 + two, 2 / three\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
@@ -599,7 +715,7 @@ TEST_F(ParserScannerTest, EOLInDefinitionOfVariable4) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a, b := 1\n, 2\n"
+        "    a, b = 1\n+ two, 2 / three\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
@@ -610,7 +726,7 @@ TEST_F(ParserScannerTest, EOLInDefinitionOfVariable5) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a, b := 1,\n 2\n"
+        "    a, b =\n 1 +\n two,\n 2 /\n three\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -621,7 +737,7 @@ TEST_F(ParserScannerTest, EOLInDefinitionOfVariable6) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a, _ := 1, 2\n"
+        "    a, _ = 1 + two, 2 / three\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -645,7 +761,7 @@ TEST_F(ParserScannerTest, EOLInIfElseStatement1) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
         "    } else {\n"
         "        bar := 1\n"
@@ -660,7 +776,7 @@ TEST_F(ParserScannerTest, EOLInIfElseStatement2) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if \na {\n"
+        "    if \na < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
         "    } else {\n"
         "        bar := 1\n"
@@ -675,7 +791,7 @@ TEST_F(ParserScannerTest, EOLInIfElseStatement3) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a \n{\n"
+        "    if a < 0 && b >= foobarvar \n{\n"
         "        foo = 42\n"
         "    } else {\n"
         "        bar := 1\n"
@@ -690,7 +806,7 @@ TEST_F(ParserScannerTest, EOLInIfElseStatement4) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
         "    } \n else {\n"
         "        bar := 1\n"
@@ -705,7 +821,7 @@ TEST_F(ParserScannerTest, EOLInIfElseStatement5) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if na {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
         "    } else \n {\n"
         "        bar := 1\n"
@@ -720,7 +836,7 @@ TEST_F(ParserScannerTest, EOLInIfElseStatement6) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
         "    \n\n\n\n"
         "} else {\n"
@@ -736,7 +852,7 @@ TEST_F(ParserScannerTest, EOLInIfElseStatement7) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "    \n\n\n\n"
         "        foo = 42\n"
         "} else {\n"
@@ -752,7 +868,7 @@ TEST_F(ParserScannerTest, EOLInIfElseStatement8) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {"
+        "    if a < 0 && b >= foobarvar {"
         "        foo = 42\n"
         "} else {\n"
         "        bar := 1\n"
@@ -767,7 +883,7 @@ TEST_F(ParserScannerTest, EOLInIfElseStatement9) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
         "} else {"
         "        bar := 1\n"
@@ -784,9 +900,9 @@ TEST_F(ParserScannerTest, EOLInIfElseIfElseStatement1) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
-        "    } else if b {\n"
+        "    } else if a < b || b != foobarvar {\n"
         "        foo = 1\n"
         "    } else {\n"
         "        bar := 1\n"
@@ -801,9 +917,9 @@ TEST_F(ParserScannerTest, EOLInIfElseIfElseStatement2) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
-        "    } else if \nb {\n"
+        "    } else if \na < b || b != foobarvar {\n"
         "        foo = 1\n"
         "    } else {\n"
         "        bar := 1\n"
@@ -818,9 +934,9 @@ TEST_F(ParserScannerTest, EOLInIfElseIfElseStatement3) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
-        "    } else if b\n {\n"
+        "    } else if a < b || b != foobarvar\n {\n"
         "        foo = 1\n"
         "    } else {\n"
         "        bar := 1\n"
@@ -835,9 +951,9 @@ TEST_F(ParserScannerTest, EOLInIfElseIfElseStatement4) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
-        "    } \n else if b {\n"
+        "    } \n else if a < b || b != foobarvar {\n"
         "        foo = 1\n"
         "    } else {\n"
         "        bar := 1\n"
@@ -852,9 +968,9 @@ TEST_F(ParserScannerTest, EOLInIfElseIfElseStatement5) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
-        "    } else if b {"
+        "    } else if a < b || b != foobarvar {"
         "        foo = 1\n"
         "    } else {\n"
         "        bar := 1\n"
@@ -869,7 +985,7 @@ TEST_F(ParserScannerTest, EOLInIfElseIfElseStatement6) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
         "    } else if {\n"
         "        foo = 1\n"
@@ -886,9 +1002,9 @@ TEST_F(ParserScannerTest, EOLInIfElseIfStatement1) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
-        "    } else if b \n {\n"
+        "    } else if a < b || b != foobarvar \n {\n"
         "        bar := 1\n"
         "    }\n"
         "}\n";
@@ -901,9 +1017,9 @@ TEST_F(ParserScannerTest, EOLInIfElseIfStatement2) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a {\n"
+        "    if a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
-        "    } else if \n b {\n"
+        "    } else if \n a < b || b != foobarvar {\n"
         "        bar := 1\n"
         "    }\n"
         "}\n";
@@ -916,9 +1032,9 @@ TEST_F(ParserScannerTest, EOLInIfElseIfStatement3) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if\n a {\n"
+        "    if\n a < 0 && b >= foobarvar {\n"
         "        foo = 42\n"
-        "    } else if \n b {\n"
+        "    } else if \n a < b || b != foobarvar {\n"
         "        bar := 1\n"
         "    }\n"
         "}\n";
@@ -931,15 +1047,92 @@ TEST_F(ParserScannerTest, EOLInIfElseIfStatement4) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    if a \n{\n"
+        "    if a < 0 && b >= foobarvar \n{\n"
         "        foo = 42\n"
-        "    } else if \n b {\n"
+        "    } else if \n a < b || b != foobarvar {\n"
         "        bar := 1\n"
         "    }\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
+
+TEST_F(ParserScannerTest, EOLInIfElseIfStatement5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if\n a <\n 0 &&\n b >=\n foobarvar {\n"
+        "        foo = 42\n"
+        "    } else if \n a < b || b != foobarvar {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, EOLInIfElseIfStatement6) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if\n a < 0\n && b >= foobarvar {\n"
+        "        foo = 42\n"
+        "    } else if \n a < b || b != foobarvar {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, EOLInIfElseIfStatement7) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if\n a < 0 && b \n>= foobarvar {\n"
+        "        foo = 42\n"
+        "    } else if \n a < b || b != foobarvar {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, EOLInIfElseIfStatement8) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if\n a < 0 && b >\n= foobarvar {\n"
+        "        foo = 42\n"
+        "    } else if \n a < b || b != foobarvar {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, EOLInIfElseIfStatement9) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if\n a < 0 &\n& b >= foobarvar {\n"
+        "        foo = 42\n"
+        "    } else if \n a < b || b != foobarvar {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
 
 // === Test EOL in function call ===
 
@@ -948,7 +1141,7 @@ TEST_F(ParserScannerTest, EOLInFunctionCall1) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foo(a, c)\n"
+        "    foo((a + 7 + (-9)) && !true , var * 8 - (var2))\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -959,7 +1152,7 @@ TEST_F(ParserScannerTest, EOLInFunctionCall2) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foo\n(a, c)\n"
+        "    foo\n((a + 7 + (-9)) && !true , var * 8 - (var2))\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
@@ -970,7 +1163,7 @@ TEST_F(ParserScannerTest, EOLInFunctionCall3) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foo(a \n, c)\n"
+        "    foo((a + 7 + (-9)) && !true \n, var * 8 - (var2))\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
@@ -981,10 +1174,10 @@ TEST_F(ParserScannerTest, EOLInFunctionCall4) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foo(\na, c)\n"
+        "    foo(\n(\na + 7 + (\n-9)) && !true , var * 8 - (\nvar2))\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
 
@@ -993,7 +1186,7 @@ TEST_F(ParserScannerTest, EOLInFunctionCall5) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foo(a, \nc )\n"
+        "    foo((a + 7 + (-9)) && !true ,\n var * 8 - (var2))\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -1004,7 +1197,7 @@ TEST_F(ParserScannerTest, EOLInFunctionCall6) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foo(a, c\n )\n"
+        "    foo((a + 7 + (-9)) && !true , var * 8 - (var2)\n)\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
@@ -1043,6 +1236,172 @@ TEST_F(ParserScannerTest, EOLInFunctionCall9) {
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
+
+TEST_F(ParserScannerTest, EOLInFunctionCall10) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo((\na + 7 + (-9)) && !true , bar * 8 - (var2))\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, EOLInFunctionCall11) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo((a +\n 7 +\n (-9)) &&\n !true , bar *\n 8 -\n (var2))\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, EOLInFunctionCall12) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo((a\n + 7 + (-9)) && !true , bar * 8 - (var2))\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, EOLInFunctionCall13) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo((a + 7 + (\n-9)) && !true , bar * 8 - (var2))\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, EOLInFunctionCall14) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo((a + 7\n + (-9)) && !true , bar * 8 - (var2))\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, EOLInFunctionCall15) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo((a + 7 + (-9))\n && !true , bar * 8 - (var2))\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, EOLInFunctionCall16) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo((a + 7 + (-9)) && !\ntrue , bar * 8 - (var2))\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, EOLInFunctionCall17) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo((a + 7 + (-9)) && !true , bar\n * 8 - (var2))\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, EOLInFunctionCall18) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo((a + 7 + (-9)) && !true , bar * 8 - (var2\n))\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, EOLInFunctionCall19) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo((a + foo(7) + (-9)) && !true, bar * 8 - (var2))\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, EOLInFunctionCall20) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo((a + foo(7, 42, foo(54 / 6, 6-9, true)) + (-9)) && !true , bar * 8 - (var2))\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, EOLInFunctionCall21) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(\n(a))\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, EOLInFunctionCall22) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo((a\n))\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, EOLInFunctionCall23) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo((a))\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, EOLInFunctionCall24) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(a, int)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
 // === Test return command format ===
 
 TEST_F(ParserScannerTest, ReturnFormat1) {
@@ -1055,7 +1414,6 @@ TEST_F(ParserScannerTest, ReturnFormat1) {
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
-
 
 TEST_F(ParserScannerTest, ReturnFormat2) {
     std::string inputStr = \
@@ -1073,7 +1431,7 @@ TEST_F(ParserScannerTest, ReturnFormat3) {
         "package main\n"
         "\n"
         "func main() int {\n"
-        "    return a\n"
+        "    return a + foo(a)\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -1084,7 +1442,7 @@ TEST_F(ParserScannerTest, ReturnFormat4) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    return \n a\n"
+        "    return \n a + foo(a)\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
@@ -1095,7 +1453,7 @@ TEST_F(ParserScannerTest, ReturnFormat5) {
         "package main\n"
         "\n"
         "func main() (int, float64) {\n"
-        "    return a, b\n"
+        "    return a + foo(a), b / foo(b, foo(g + 5 * c)) && foo(b, c)\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -1106,7 +1464,7 @@ TEST_F(ParserScannerTest, ReturnFormat6) {
         "package main\n"
         "\n"
         "func main() (int, string, float64) {\n"
-        "    return a, b, c\n"
+        "    return a + foo(a), b / foo(b, foo(g + 5 * c)) && foo(b, c), 7/8*9+8+5982\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -1117,7 +1475,7 @@ TEST_F(ParserScannerTest, ReturnFormat7) {
         "package main\n"
         "\n"
         "func main() (int, string, float64) {\n"
-        "    return a, b\n, c\n"
+        "    return a + foo(a), b / foo(b, foo(g + 5 * c)) && foo(b, c)\n, 7/8*9+8+5982\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
@@ -1187,10 +1545,80 @@ TEST_F(ParserScannerTest, ReturnFormat12) {
         "}\n"
         "\n"
         "func foo() (int, string) {\n"
-        "    return 5, \"returned \n \\xaf string\"\n"
+        "    return 5, \"returned \\n \\xaf string\"\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ReturnFormat13) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "\n"
+        "func foo() (int,\n bool,\n float64) {\n"
+        "    return a +\n foo(\na),\n b /\n foo(\nb,\n foo(\ng +\n 5 *\n c)) &&\n foo(\nb,\n c), 7/\n8*\n9+\n8+\n5982\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ReturnFormat14) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "\n"
+        "func foo() (int, string) {\n"
+        "    return (a + foo(a)), (b / foo(b, foo(g + 5 * c)) && foo(b, c)), (7/8*9+8+5982)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ReturnFormat15) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "\n"
+        "func foo() (int, string) {\n"
+        "    return (a + foo(a), b / foo(b, foo(g + 5 * c)) && foo(b, c), 7/8*9+8+5982)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ReturnFormat16) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "\n"
+        "func foo() (int, string) {\n"
+        "    return a + foo(a)\n, b / foo(b, foo(g + 5 * c)) && foo(b, c), 7/8*9+8+5982\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ReturnFormat17) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "\n"
+        "func foo() (int, string) {\n"
+        "    return a + foo(a), b / foo(b, foo\n(g + 5 * c)) && foo(b, c), 7/8*9+8+5982\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
 // === Insert more whitespaces ===
@@ -1259,6 +1687,17 @@ TEST_F(ParserScannerTest, AddComments4) {
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, AddComments5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := 5/* Nested /*comment */ */ + 2\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
 // === Test function definition format ===
@@ -1393,13 +1832,13 @@ TEST_F(ParserScannerTest, ComplexFunctions1) {
         "func main() {\n"
         "    print(\"Zadejte cislo pro vypocet faktorialu: \")\n"
         "    a := 0\n"
-        "    a, _ = 45\n"
-        "    if 0 {\n"
+        "    a, _ = 45, 0\n"
+        "    if 0 > -1 {\n"
         "        print(\"Faktorial nejde spocitat!\\n\")\n"
         "    } else {\n"
         "        vysl := 1\n"
-        "        for bdav := 1 ; 0; a = 1 {\n"
-        "            vysl = vysl\n"
+        "        for bdav := 1 ; bdav < 10; a += 1 {\n"
+        "            vysl = vysl + 8\n"
         "        }\n"
         "        print(\"Vysledek je \", vysl, \"\\n\")\n"
         "    }\n"
@@ -1461,8 +1900,8 @@ TEST_F(ParserScannerTest, ComplexFunctions3) {
         "    print(\"pricemz se pismena nesmeji v posloupnosti opakovat: \")\n"
         "    err := 0\n"
         "    s1, err = w\n"
-        "    if 1 {\n"
-        "        for ; a; {\n"
+        "    if true {\n"
+        "        for ; a < 10; {\n"
         "            print(\"\\n\", \"Spatne zadana posloupnost, zkuste znovu: \")\n"
         "            s1, _ = 4, 4\n"
         "        }\n"
@@ -1514,6 +1953,1488 @@ TEST_F(ParserScannerTest, EmptyRandomFunction) {
         "package main\n"
         "\n"
         "func main() {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+// === Test function headers ===
+
+TEST_F(ParserScannerTest, FunctionHeader1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "func foo(i int, s string) (bool) {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, FunctionHeader2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "func foo(i int, s string) (bool, int) {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, FunctionHeader3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "func foo() bool, int {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, FunctionHeader4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "func foo(i int, s string) bar(bool, int) {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, FunctionHeader5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "func foo(i int, s string) bool {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, FunctionHeader6) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "func foo(i int, s string) (bool, int) {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, FunctionHeader7) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "func foo i int, s string (bool, int) {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, FunctionHeader8) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "func foo(i int s string) (bool, int) {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, FunctionHeader9) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "func foo foo(i int, s string) (bool, int) {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, FunctionHeader10) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "func foo (i int, s string) () {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, FunctionHeader11) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "func foo (i int, s string) () {\n"
+        "    {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, FunctionHeader12) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "func foo (i int, s string) () {\n"
+        "    func bar (i int, s string) () {\n"
+        "    }\n";
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, FunctionHeader13) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "func foo (54 int, s string) () {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, FunctionHeader14) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "func foo (i int, s string) (foo) {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, FunctionHeader15) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "a := 5\n"
+        "func foo (i int, s string) () {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, FunctionHeader16) {
+    std::string inputStr = \
+        "package main\n"
+        "\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
+}
+
+// === Test compiler result lexical error ===
+
+TEST_F(ParserScannerTest, LexicalErrorCompilerResult1) {
+    std::string inputStr = \
+        ">package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n";
+
+   ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, LexicalErrorCompilerResult2) {
+    std::string inputStr = \
+        "^package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n";
+
+   ComplexTest(inputStr, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ParserScannerTest, LexicalErrorCompilerResult3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := \"foo\\sbar\" \n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ParserScannerTest, LexicalErrorCompilerResult4) {
+    std::string inputStr = \
+        "pa]ckage main\n"
+        "\n"
+        "func main() {\n"
+        "    a := \"foo\\sbar\" \n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, LexicalErrorCompilerResult5) {
+    std::string inputStr = \
+        "]package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := \"foo\\sbar\" \n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+// === Test function call ===
+
+TEST_F(ParserScannerTest, FunctionCall1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(a, b)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, FunctionCall2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(5+4)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, FunctionCall3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(true)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, FunctionCall4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a = foo()\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, FunctionCall5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := foo()\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, FunctionCall6) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a = foo(4, 5)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, FunctionCall7) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a = foo(true, 7, 5.4)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, FunctionCall8) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, b = foo()\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, FunctionCall9) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, b = foo(7, 4, 1)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, FunctionCall10) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, _ = foo(7 + 4, 3 + 1)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, FunctionCall11) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    _, _ = foo()\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL);
+}
+
+TEST_F(ParserScannerTest, FunctionCall12) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, _, _ = foo(a && b, 4 + 5 / 7)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, FunctionCall13) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, _, _ = foo(a + 5 && 4 + b)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, FunctionCall14) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, _, _ = foo((a * 7 - 4) && (b - 9 * (-8)), \"test\")\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, FunctionCall15) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, _, _ = foo((a))\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, FunctionCall16) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, _, _ = foo((a && b))\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, FunctionCall17) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, _, _ = 5 + foo(a && b)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, FunctionCall18) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, _, _ = 5 / foo(a && b)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, FunctionCall19) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, _, _ = !foo(a && b)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, FunctionCall20) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, _, _ = +5 - (-5) / !foo(a && b)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, FunctionCall21) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    +5 - (-5) / !foo(a && b)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, FunctionCall22) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    !foo(a && b)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, FunctionCall23) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    1 + foo(a && b)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, FunctionCall24) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(a && b) - 1\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, FunctionCall25) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(a && b) - 8 / 7\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+// === Test basic expression parsing ===
+
+TEST_F(ParserScannerTest, BasicExpressionParsing1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := 5 + 4\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, BasicExpressionParsing2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := 5 - 4\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, BasicExpressionParsing3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := 5 * 4\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, BasicExpressionParsing4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := 5 / 4\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, BasicExpressionParsing5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := 5 = 4\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, BasicExpressionParsing6) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := 5 -+ 4\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, BasicExpressionParsing7) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := 5 */ 4\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, BasicExpressionParsing8) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := 5 := 4\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+// === Test EOLs in expression ===
+
+TEST_F(ParserScannerTest, EOLInExpression1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := 5 +\n 4\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, EOLInExpression2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a :=\n 5 + 4\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, EOLInExpression3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := 5\n + 4\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, EOLInExpression4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := 5 + 2\n + 4\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, EOLInExpression5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := \n foo()\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+// === Test logical operators ===
+
+TEST_F(ParserScannerTest, LogicalOperators1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := true && false\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, LogicalOperators2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := true || false\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, LogicalOperators3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := !true\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, LogicalOperators4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := !true && false\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, LogicalOperators5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := true && !false\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, LogicalOperators6) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := !false && !true\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, LogicalOperators7) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := false == true\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, LogicalOperators8) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := false != true\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, LogicalOperators9) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := !false != !true\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+// === Test unary operators ===
+
+TEST_F(ParserScannerTest, UnaryOperators1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := -5\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, UnaryOperators2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := +5\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, UnaryOperators3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := +-5\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, UnaryOperators4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := -+5\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, UnaryOperators5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := +(-5)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, UnaryOperators6) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := +(+5)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, UnaryOperators7) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := -(+5)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, UnaryOperators8) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := -(-5)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, UnaryOperators9) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := +(-5)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, UnaryOperators10) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := --5\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, UnaryOperators11) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := ++5\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, UnaryOperators12) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := true && !!false\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, UnaryOperators13) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " a := true && !!!false\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+// === Test expressions in for loops ===
+
+TEST_F(ParserScannerTest, ForLoops1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for i := 0; i < 10; i += 1 {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ForLoops2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for i, y := 0, 1; i < 10 && y < 11; i += 1 {\n"
+        "        y += 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ForLoops3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for i < 0; i < 10; i += 1 {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ForLoops4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for i := 0; i := 10; i += 1 {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ForLoops5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for i := 0; i < 10; i < 1 {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ForLoops6) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for i < 0; ; i += 1 {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ForLoops7) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for i := true; i != false; i = !i {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ForLoops8) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for i := true; i := 2; i = !i {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ForLoops9) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for ; i != false; i = !i {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ForLoops10) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for i := true; i != false; {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ForLoops11) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for i := true; i != false; {\n"
+        "        for i := true; i != false; {\n"
+        "            for i := true; i != false; {\n"
+        "            }\n"
+        "        }\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ForLoops12) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for i := true; i != false; {\n"
+        "        for a := 4; a < 5; a += 3 {\n"
+        "        }\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+// === Test expressions in if-else if-else statements ===
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a < 4 {\n"
+        "        foo = 42\n"
+        "    } else if b {\n"
+        "        foo = 1\n"
+        "    } else {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a != 1 {\n"
+        "        foo = 42\n"
+        "    } else if \n!!true {\n"
+        "        foo = 1\n"
+        "    } else {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a := 3 {\n"
+        "        foo = 42\n"
+        "    } else if b {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if true {\n"
+        "        foo = 42\n"
+        "    } else if \n false {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a == a {\n"
+        "        foo = 42\n"
+        "    } else if \n b != b {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements6) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if (a - 8) * 7 == b + 8 / 7 {\n"
+        "        foo = 42\n"
+        "    } else if \n !b && (c || d) != b || !(t && r) {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements7) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a < 4 {\n"
+        "        if a < 4 {\n"
+        "            if a < 4 {\n"
+        "                foo = 42\n"
+        "            } else if b && c - d {\n"
+        "                foo = 1\n"
+        "            } else {\n"
+        "                bar := 1\n"
+        "            }\n"
+        "        } else if 6 * 7 == 42 {\n"
+        "            foo = 1\n"
+        "        } else {\n"
+        "            bar := 1\n"
+        "        }\n"
+        "    } else if true || false {\n"
+        "        foo = 1\n"
+        "    } else {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements8) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a < 4 {\n"
+        "        if a < 4 {\n"
+        "            if a < 4 {\n"
+        "                foo = 42\n"
+        "            } else if b {\n"
+        "                foo = 1\n"
+        "            } else {\n"
+        "                bar := 1\n"
+        "        } else if b {\n"
+        "            foo = 1\n"
+        "        } else {\n"
+        "            bar := 1\n"
+        "        }\n"
+        "    } else if b {\n"
+        "        foo = 1\n"
+        "    } else {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements9) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a < 4 {\n"
+        "        if a < 4 {\n"
+        "            if a < 4 {\n"
+        "                foo = 42\n"
+        "            else {\n"
+        "                bar := 1\n"
+        "            }\n"
+        "        } else if b {\n"
+        "            foo = 1\n"
+        "        } else {\n"
+        "            bar := 1\n"
+        "        }\n"
+        "    } else if b {\n"
+        "        foo = 1\n"
+        "    } else {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements10) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a < 4 {\n"
+        "        if a < 4 {\n"
+        "            if a < 4 {\n"
+        "                foo = 42\n"
+        "            } else if b {\n"
+        "                foo = 1\n"
+        "            } else {\n"
+        "                bar := 1\n"
+        "            }\n"
+        "        } else if b {\n"
+        "            foo = 1\n"
+        "        } else {\n"
+        "            bar := 1\n"
+        "        }\n"
+        "    } else if b {\n"
+        "        foo = 1\n"
+        "    } else {\n"
+        "        bar := 1\n"
+         "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements11) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a < 4 {\n"
+        "        if a < 4 {\n"
+        "            if a < 4 {\n"
+        "                foo = 42\n"
+        "            } else if b {\n"
+        "                foo = 1\n"
+        "            } else {\n"
+        "                bar := 1\n"
+        "            }\n"
+        "        } else if b {\n"
+        "            foo = 1\n"
+        "        } else {\n"
+        "            bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements12) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a < 4 {\n"
+        "        if a < 4 {\n"
+        "            if a < 4 {\n"
+        "                foo = 42\n"
+        "            } else if b {\n"
+        "                foo = 1\n"
+        "            } else {\n"
+        "                bar := 1\n"
+        "            }\n"
+        "        } else if b {\n"
+        "            foo = 1\n"
+        "        } else \n"
+        "            bar := 1\n"
+        "        }\n"
+        "    } else if b {\n"
+        "        foo = 1\n"
+        "    } else {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements13) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a < 4 {\n"
+        "        if a < 4 {\n"
+        "            if {\n"
+        "                foo = 42\n"
+        "            } else if b {\n"
+        "                foo = 1\n"
+        "            } else {\n"
+        "                bar := 1\n"
+        "            }\n"
+        "        } else if b {\n"
+        "            foo = 1\n"
+        "        } else {\n"
+        "            bar := 1\n"
+        "        }\n"
+        "    } else if b {\n"
+        "        foo = 1\n"
+        "    } else {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements14) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a < 4 \n"
+        "        if a < 4 {\n"
+        "            if a < 4 {\n"
+        "                foo = 42\n"
+        "            } else if b {\n"
+        "                foo = 1\n"
+        "            } else {\n"
+        "                bar := 1\n"
+        "            }\n"
+        "        } else if b {\n"
+        "            foo = 1\n"
+        "        } else {\n"
+        "            bar := 1\n"
+        "        }\n"
+        "    } else if b {\n"
+        "        foo = 1\n"
+        "    } else {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements15) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if a < 4 {\n"
+        "        if a < 4 {\n"
+        "            if a < 4 {\n"
+        "                foo = 42\n"
+        "            } else if b {\n"
+        "                foo = 1\n"
+        "            } else {\n"
+        "                bar := 1\n"
+        "            }\n"
+        "        } else if b {\n"
+        "            foo = 1\n"
+        "        } else {\n"
+        "            if a < 4 {\n"
+        "                foo = 42\n"
+        "            } else if b {\n"
+        "                foo = 1\n"
+        "            } else {\n"
+        "                bar := 1\n"
+        "            }\n"
+        "        }\n"
+        "    } else if b {\n"
+        "        foo = 1\n"
+        "    } else {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements16) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if\n a + 4 - 8 / 7 <= 745 {\n"
+        "        foo = 42\n"
+        "    } else if \n true && !a || b || false {\n"
+        "        bar := 1\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements17) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if ((0==251) {\n"
+        "    } else {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ExpressionInIfStatements18) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if 0==0 {\n"
+        "    } else {\n"
+        "    }\n"
+        "    for ;0!=0; {\n"
+        "    }\n"
+        "    if 0<1 {\n"
+        "    } else {\n"
+        "    }\n"
+        "    if 0>1 {\n"
+        "    } else {\n"
+        "    }\n"
+        "    for ;1<=0; {\n"
+        "    }\n"
+        "    for ;0>=1; {\n"
+        "    }\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
