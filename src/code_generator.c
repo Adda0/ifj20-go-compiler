@@ -66,17 +66,20 @@ void print_ast(ASTNode *root) {
                 break;
         }
 
-        if (root->dataCount > 1) {
+        if (root->dataCount > 1 || root->actionType == AST_LIST) {
             printf("[[");
+        }
+
+        if (root->actionType == AST_LIST) {
+            printf("ASTLIST: ");
         }
 
         for (unsigned i = 0; i < root->dataCount; i++) {
             ASTNodeData d = root->data[i];
             switch (root->actionType) {
                 case AST_LIST:
-                    printf("[[ASTLIST] ", i);
-                    print_ast(d.astPtr);
-                    printf("]");
+                    if (d.astPtr == NULL) printf("(null)");
+                    else print_ast(d.astPtr);
                     break;
                 case AST_ID:
                     printf("$%s", d.symbolTableItemPtr->key);
@@ -100,7 +103,7 @@ void print_ast(ASTNode *root) {
             }
         }
 
-        if (root->dataCount > 1) {
+        if (root->dataCount > 1 || root->actionType == AST_LIST) {
             printf("]]");
         }
 

@@ -39,6 +39,7 @@ int main() {
     // func main()
     cf_make_function("main");
     cf_add_return_value(NULL, CF_INT);
+    cf_add_return_value(NULL, CF_INT);
 
     // i := 10
     cf_make_next_statement(CF_BASIC);
@@ -57,7 +58,7 @@ int main() {
     cf_ast_init(AST_RIGHT_OPERAND, AST_MULTIPLY);
     cf_ast_add_leaf(AST_LEFT_OPERAND, AST_ID, (ASTNodeData) {.symbolTableItemPtr = &a});
     cf_ast_init(AST_RIGHT_OPERAND, AST_FUNC_CALL);
-    cf_ast_add_leaf(AST_UNARY_OPERAND, AST_ID, (ASTNodeData) {.symbolTableItemPtr = &b});
+    cf_ast_add_leaf(AST_UNARY_OPERAND, AST_ID, (ASTNodeData) {.symbolTableItemPtr = &fun1});
 
     // if 5 < 10
     cf_make_next_statement(CF_IF);
@@ -68,18 +69,21 @@ int main() {
     cf_ast_add_leaf(AST_LEFT_OPERAND, AST_CONST_INT, (ASTNodeData) {.intConstantValue = 5});
     cf_ast_add_leaf(AST_RIGHT_OPERAND, AST_CONST_INT, (ASTNodeData) {.intConstantValue = 10});
 
-    // then
+    // then { fun1() }
     cf_make_if_then_statement(CF_BASIC);
     cf_ast_init(AST_ROOT, AST_FUNC_CALL);
     cf_use_ast(CF_STATEMENT_BODY);
 
     cf_ast_add_leaf(AST_UNARY_OPERAND, AST_ID, (ASTNodeData) {.symbolTableItemPtr = &fun1});
 
-    //else
+    //else { return 1, b - 2 }
     cf_pop_previous_branched_statement();
     cf_make_if_else_statement(CF_RETURN);
     // AST (AST_LIST) has been created automatically
     cf_ast_add_leaf_for_list(AST_CONST_INT, (ASTNodeData) {.intConstantValue = 1}, 0);
+    cf_ast_init_for_list(AST_SUBTRACT, 1);
+    cf_ast_add_leaf(AST_LEFT_OPERAND, AST_ID, (ASTNodeData) { .symbolTableItemPtr = &b});
+    cf_ast_add_leaf(AST_RIGHT_OPERAND, AST_CONST_INT, (ASTNodeData) {.intConstantValue = 2});
 
     cf_pop_previous_branched_statement();
 
@@ -122,6 +126,7 @@ int main() {
     // return i
     cf_make_next_statement(CF_RETURN);
     cf_ast_add_leaf_for_list(AST_ID, (ASTNodeData) {.symbolTableItemPtr = &i}, 0);
+    cf_ast_add_leaf_for_list(AST_CONST_INT, (ASTNodeData) { .intConstantValue = 128}, 1);
 
     tcg_generate();
 
