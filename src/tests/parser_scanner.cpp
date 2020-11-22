@@ -297,7 +297,7 @@ TEST_F(ParserScannerTest, EOLInForLoopForbidden1) {
         "    }\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
 TEST_F(ParserScannerTest, EOLInForLoopForbidden2) {
@@ -359,6 +359,19 @@ TEST_F(ParserScannerTest, EOLInForLoopForbidden6) {
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
+
+TEST_F(ParserScannerTest, EOLInForLoopForbidden7) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for \n ; a < 79; a = a + 8 {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
 
 TEST_F(ParserScannerTest, EOLInFuncDefinitionForbidden1) {
     std::string inputStr = \
@@ -1376,6 +1389,17 @@ TEST_F(ParserScannerTest, EOLInFunctionCall23) {
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, EOLInFunctionCall24) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(a, int)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
 // === Test return command format ===
