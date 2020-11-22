@@ -1407,7 +1407,7 @@ TEST_F(ParserScannerTest, ReturnFormat3) {
         "package main\n"
         "\n"
         "func main() int {\n"
-        "    return a\n"
+        "    return a + foo(a)\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -1418,7 +1418,7 @@ TEST_F(ParserScannerTest, ReturnFormat4) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    return \n a\n"
+        "    return \n a + foo(a)\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
@@ -1429,7 +1429,7 @@ TEST_F(ParserScannerTest, ReturnFormat5) {
         "package main\n"
         "\n"
         "func main() (int, float64) {\n"
-        "    return a, b\n"
+        "    return a + foo(a), b / foo(b, foo(g + 5 * c)) && foo(b, c)\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -1440,7 +1440,7 @@ TEST_F(ParserScannerTest, ReturnFormat6) {
         "package main\n"
         "\n"
         "func main() (int, string, float64) {\n"
-        "    return a, b, c\n"
+        "    return a + foo(a), b / foo(b, foo(g + 5 * c)) && foo(b, c), 7/8*9+8+5982\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -1451,7 +1451,7 @@ TEST_F(ParserScannerTest, ReturnFormat7) {
         "package main\n"
         "\n"
         "func main() (int, string, float64) {\n"
-        "    return a, b\n, c\n"
+        "    return a + foo(a), b / foo(b, foo(g + 5 * c)) && foo(b, c)\n, 7/8*9+8+5982\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
@@ -1525,6 +1525,76 @@ TEST_F(ParserScannerTest, ReturnFormat12) {
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ReturnFormat13) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "\n"
+        "func foo() (int,\n bool,\n float64) {\n"
+        "    return a +\n foo(\na),\n b /\n foo(\nb,\n foo(\ng +\n 5 *\n c)) &&\n foo(\nb,\n c), 7/\n8*\n9+\n8+\n5982\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ReturnFormat14) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "\n"
+        "func foo() (int, string) {\n"
+        "    return (a + foo(a)), (b / foo(b, foo(g + 5 * c)) && foo(b, c)), (7/8*9+8+5982)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ReturnFormat15) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "\n"
+        "func foo() (int, string) {\n"
+        "    return (a + foo(a), b / foo(b, foo(g + 5 * c)) && foo(b, c), 7/8*9+8+5982)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ReturnFormat16) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "\n"
+        "func foo() (int, string) {\n"
+        "    return a + foo(a)\n, b / foo(b, foo(g + 5 * c)) && foo(b, c), 7/8*9+8+5982\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, ReturnFormat17) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "}\n"
+        "\n"
+        "func foo() (int, string) {\n"
+        "    return a + foo(a), b / foo(b, foo\n(g + 5 * c)) && foo(b, c), 7/8*9+8+5982\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
 // === Insert more whitespaces ===
@@ -2947,17 +3017,17 @@ TEST_F(ParserScannerTest, ExpressionInIfStatements7) {
         "        if a < 4 {\n"
         "            if a < 4 {\n"
         "                foo = 42\n"
-        "            } else if b {\n"
+        "            } else if b && c - d {\n"
         "                foo = 1\n"
         "            } else {\n"
         "                bar := 1\n"
         "            }\n"
-        "        } else if b {\n"
+        "        } else if 6 * 7 == 42 {\n"
         "            foo = 1\n"
         "        } else {\n"
         "            bar := 1\n"
         "        }\n"
-        "    } else if b {\n"
+        "    } else if true || false {\n"
         "        foo = 1\n"
         "    } else {\n"
         "        bar := 1\n"
