@@ -14,9 +14,14 @@
 #include "mutable_string.h"
 #include "stderr_message.h"
 #include "precedence_parser.h"
+#include "stacks.h"
+#include "symtable.h"
+#include "control_flow.h"
 
 Token token, prev_token;
 ScannerResult scanner_result;
+SymtableStack symtable_stack;
+SymbolTable *function_table;
 
 int else_();
 
@@ -126,26 +131,34 @@ void clear_token() {
     }
 }
 
-int type() {
+int type(STDataType *data_type) {
     if (token.type != TOKEN_KEYWORD) {
         token_error("expected float64, int, string or bool keyword, got %s\n");
         syntax_error();
     }
     switch (token.data.keyword_type) {
         case KEYWORD_FLOAT64: // rule <type> -> float64
+            *data_type = CF_FLOAT;
+            break;
         case KEYWORD_INT:     // rule <type> -> int
+            *data_type = CF_INT;
+            break;
         case KEYWORD_STRING:  // rule <type> -> string
+            *data_type = CF_STRING;
+            break;
         case KEYWORD_BOOL:    // rule <type> -> bool
-            // We consumed one token, get a new one and return OK
-            check_new_token(EOL_FORBIDDEN);
-            syntax_ok();
+            *data_type = CF_BOOL;
+            break;
         default:
             token_error("expected float64, int, string or bool keyword, got %s\n");
             syntax_error();
     }
+    check_new_token(EOL_FORBIDDEN);
+    syntax_ok();
 }
 
-int params_n() {
+int params_n(STItem *current_function, bool ret_type) {
+    MutableString id;
     switch (token.type) {
         case TOKEN_RIGHT_BRACKET:
             // rule <params_n> -> eps
@@ -158,28 +171,50 @@ int params_n() {
                 token_error("expected identifier, got %s\n");
                 syntax_error();
             }
-            clear_token();
-
+            id = token.data.str_val;
             check_new_token(EOL_FORBIDDEN);
-            check_nonterminal(type());
-            return params_n();
+            STDataType data_type;
+            check_nonterminal(type(&data_type));
+            if (ret_type) {
+                if (!symtable_add_ret_type(current_function, mstr_content(&id), data_type)) {
+                    return COMPILER_RESULT_ERROR_INTERNAL;
+                }
+            } else {
+                if (!symtable_add_param(current_function, mstr_content(&id), data_type)) {
+                    return COMPILER_RESULT_ERROR_INTERNAL;
+                }
+            }
+            mstr_free(&id);
+            return params_n(current_function, ret_type);
         default:
             token_error("expected ) or , when parsing parameters, got %s\n");
             syntax_error();
     }
 }
 
-int params() {
+int params(STItem *current_function, bool ret_type) {
+    MutableString id;
     switch (token.type) {
         case TOKEN_RIGHT_BRACKET:
             // rule <params> -> eps
             syntax_ok();
         case TOKEN_ID:
             // rule <params> -> id <type> <params_n>
-            clear_token();
+            id = token.data.str_val;
             check_new_token(EOL_FORBIDDEN);
-            check_nonterminal(type());
-            return params_n();
+            STDataType data_type;
+            check_nonterminal(type(&data_type));
+            if (ret_type) {
+                if (!symtable_add_ret_type(current_function, mstr_content(&id), data_type)) {
+                    return COMPILER_RESULT_ERROR_INTERNAL;
+                }
+            } else {
+                if (!symtable_add_param(current_function, mstr_content(&id), data_type)) {
+                    return COMPILER_RESULT_ERROR_INTERNAL;
+                }
+            }
+            mstr_free(&id);
+            return params_n(current_function, ret_type);
         default:
             token_error("expected ) or identifier when parsing parameters, got %s\n");
             syntax_error();
@@ -187,6 +222,7 @@ int params() {
 }
 
 int else_n() {
+    SymbolTable *new_body_table;
     switch (token.type) {
         case TOKEN_CURLY_LEFT_BRACKET:
             // rule <else_n> -> { <body> }
@@ -195,7 +231,14 @@ int else_n() {
                 syntax_error();
             }
             check_new_token(EOL_REQUIRED);
+            if ((new_body_table = symtable_init(TABLE_SIZE)) == NULL) {
+                return COMPILER_RESULT_ERROR_INTERNAL;
+            }
+            if (symtable_stack_push(&symtable_stack, new_body_table) == NULL) {
+                return COMPILER_RESULT_ERROR_INTERNAL;
+            }
             check_nonterminal(body());
+            symtable_stack_pop(&symtable_stack);
             if (token.type != TOKEN_CURLY_RIGHT_BRACKET) {
                 token_error("expected } after else body, got %s\n");
                 syntax_error();
@@ -216,7 +259,14 @@ int else_n() {
                     syntax_error();
                 }
                 check_new_token(EOL_REQUIRED);
+                if ((new_body_table = symtable_init(TABLE_SIZE)) == NULL) {
+                    return COMPILER_RESULT_ERROR_INTERNAL;
+                }
+                if (symtable_stack_push(&symtable_stack, new_body_table) == NULL) {
+                    return COMPILER_RESULT_ERROR_INTERNAL;
+                }
                 check_nonterminal(body());
+                symtable_stack_pop(&symtable_stack);
                 if (token.type != TOKEN_CURLY_RIGHT_BRACKET) {
                     token_error("expected } after else body, got %s\n");
                     syntax_error();
@@ -271,7 +321,7 @@ int for_definition() {
             syntax_ok();
         case TOKEN_ID:
             // rule <for_definition> -> expression
-            check_nonterminal(parse_expression(DEFINE_REQUIRED, false));
+            check_nonterminal(parse_expression(DEFINE_REQUIRED, true));
             if (token.context.eol_read) {
                 eol_error("unexpected EOL after for definition\n");
                 syntax_error();
@@ -336,6 +386,7 @@ int return_follow() {
 }
 
 int statement() {
+    SymbolTable *new_body_table;
     switch (token.type) {
         case TOKEN_KEYWORD:
             switch (token.data.keyword_type) {
@@ -356,7 +407,14 @@ int statement() {
                         syntax_error();
                     }
                     check_new_token(EOL_REQUIRED);
+                    if ((new_body_table = symtable_init(TABLE_SIZE)) == NULL) {
+                        return COMPILER_RESULT_ERROR_INTERNAL;
+                    }
+                    if (symtable_stack_push(&symtable_stack, new_body_table) == NULL) {
+                        return COMPILER_RESULT_ERROR_INTERNAL;
+                    }
                     check_nonterminal(body());
+                    symtable_stack_pop(&symtable_stack);
                     if (token.type != TOKEN_CURLY_RIGHT_BRACKET) {
                         token_error("expected } after if body, got %s\n");
                         syntax_error();
@@ -388,6 +446,13 @@ int statement() {
                         syntax_error();
                     }
                     check_new_token(EOL_REQUIRED);
+                    if ((new_body_table = symtable_init(TABLE_SIZE)) == NULL) {
+                        return COMPILER_RESULT_ERROR_INTERNAL;
+                    }
+                    if (symtable_stack_push(&symtable_stack, new_body_table) == NULL) {
+                        return COMPILER_RESULT_ERROR_INTERNAL;
+                    }
+                    symtable_stack_pop(&symtable_stack);
                     check_nonterminal(body());
                     if (token.type != TOKEN_CURLY_RIGHT_BRACKET) {
                         token_error("expected } after for body, got %s\n");
@@ -440,7 +505,8 @@ int body() {
     }
 }
 
-int ret_type_n() {
+int ret_type_n(STItem *current_function) {
+    STDataType data_type;
     switch (token.type) {
         case TOKEN_RIGHT_BRACKET:
             // rule <ret_type_n> -> eps
@@ -448,20 +514,24 @@ int ret_type_n() {
         case TOKEN_COMMA:
             // rule <ret_type_n> -> , <type> <ret_type_n>
             check_new_token(EOL_OPTIONAL);
-            check_nonterminal(type());
-            return ret_type_n();
+            check_nonterminal(type(&data_type));
+            if (!symtable_add_ret_type(current_function, NULL, data_type)) {
+                return COMPILER_RESULT_ERROR_INTERNAL;
+            }
+            return ret_type_n(current_function);
         default:
             token_error("expected comma or ) after type inside return type, got %s\n");
             syntax_error();
     }
 }
 
-int ret_type_inner() {
+int ret_type_inner(STItem *current_function) {
+    STDataType data_type;
     switch (token.type) {
         case TOKEN_ID:
         case TOKEN_RIGHT_BRACKET:
             // rule <ret_type_inner> -> <params>
-            return params();
+            return params(current_function, true);
         case TOKEN_KEYWORD:
             switch (token.data.keyword_type) {
                 case KEYWORD_FLOAT64:
@@ -469,8 +539,11 @@ int ret_type_inner() {
                 case KEYWORD_STRING:
                 case KEYWORD_BOOL:
                     // rule <ret_type_inner> -> <type> <ret_type_n>
-                    check_nonterminal(type());
-                    return ret_type_n();
+                    check_nonterminal(type(&data_type));
+                    if (!symtable_add_ret_type(current_function, NULL, data_type)) {
+                        return COMPILER_RESULT_ERROR_INTERNAL;
+                    }
+                    return ret_type_n(current_function);
                 default:
                     token_error("col %u: expected float64, int, string or bool keyword, got %s\n");
                     syntax_error();
@@ -481,7 +554,8 @@ int ret_type_inner() {
     }
 }
 
-int ret_type() {
+int ret_type(STItem *current_function) {
+    STDataType data_type;
     switch (token.type) {
         case TOKEN_KEYWORD:
             switch (token.data.keyword_type) {
@@ -490,7 +564,11 @@ int ret_type() {
                 case KEYWORD_STRING:
                 case KEYWORD_BOOL:
                     // rule <ret_type> -> <type>
-                    return type();
+                    check_nonterminal(type(&data_type));
+                    if (!symtable_add_ret_type(current_function, NULL, data_type)) {
+                        return COMPILER_RESULT_ERROR_INTERNAL;
+                    }
+                    syntax_ok();
                 default:
                     token_error("expected float64, int, string or bool keyword, got %s\n");
                     syntax_error();
@@ -501,7 +579,7 @@ int ret_type() {
         case TOKEN_LEFT_BRACKET:
             // rule <ret_type> -> ( <ret_type_inner> )
             check_new_token(EOL_FORBIDDEN);
-            check_nonterminal(ret_type_inner());
+            check_nonterminal(ret_type_inner(current_function));
             if (token.type != TOKEN_RIGHT_BRACKET) {
                 token_error("expected ) after multiple function return types, got %s\n");
                 syntax_error();
@@ -530,6 +608,14 @@ int execution() {
             token_error("expected function identifier after func keyword, got %s\n");
             syntax_error();
         }
+        if (symtable_find(function_table, mstr_content(&token.data.str_val)) != NULL) {
+            redefine_error("redefinition of function %s\n");
+            semantic_error_redefine();
+        }
+        STItem *new_function = symtable_add(function_table, mstr_content(&token.data.str_val), ST_SYMBOL_FUNC);
+        if (new_function == NULL) {
+            return COMPILER_RESULT_ERROR_INTERNAL;
+        }
         clear_token();
 
         check_new_token(EOL_FORBIDDEN);
@@ -539,7 +625,7 @@ int execution() {
         }
 
         check_new_token(EOL_FORBIDDEN);
-        check_nonterminal(params());
+        check_nonterminal(params(new_function, false));
 
         if (token.type != TOKEN_RIGHT_BRACKET) {
             token_error("expected ) after function parameters, got %s\n");
@@ -547,15 +633,20 @@ int execution() {
         }
 
         check_new_token(EOL_FORBIDDEN);
-        check_nonterminal(ret_type());
+        check_nonterminal(ret_type(new_function));
 
         if (token.type != TOKEN_CURLY_LEFT_BRACKET) {
             token_error("expected { after function return type, got %s\n");
             syntax_error();
         }
 
+        SymbolTable *body_table = symtable_init(TABLE_SIZE);
+        if (body_table == NULL || symtable_stack_push(&symtable_stack, function_table) == NULL) {
+            return COMPILER_RESULT_ERROR_INTERNAL;
+        }
         check_new_token(EOL_REQUIRED);
         check_nonterminal(body());
+        symtable_stack_pop(&symtable_stack);
 
         if (token.type != TOKEN_CURLY_RIGHT_BRACKET) {
             token_error("expected } after function body, got %s\n");
@@ -571,6 +662,10 @@ int execution() {
 
 int program() {
     // rule <program> -> package id <execution>
+    function_table = symtable_init(TABLE_SIZE);
+    if (function_table == NULL) {
+        return COMPILER_RESULT_ERROR_INTERNAL;
+    }
     if (token.type != TOKEN_KEYWORD || token.data.keyword_type != KEYWORD_PACKAGE) {
         token_error("expected package keyword at the beginning of file, got %s\n");
         syntax_error();
@@ -582,10 +677,18 @@ int program() {
     }
     clear_token();
     check_new_token(EOL_REQUIRED);
-    return execution();
+    check_nonterminal(execution());
+    if (symtable_find(function_table, "main") == NULL) {
+        stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE,
+                       "missing function main\n");
+        semantic_error_redefine();
+    }
+    syntax_ok();
 }
 
 CompilerResult parser_parse() {
+    cf_init();
+    symtable_stack_init(&symtable_stack);
     check_new_token(EOL_OPTIONAL);
     return program();
 }
