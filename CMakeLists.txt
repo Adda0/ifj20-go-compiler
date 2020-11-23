@@ -74,6 +74,15 @@ add_executable(Test_parser_scanner
         src/stacks.h src/stacks.c)
 target_link_libraries(Test_parser_scanner gtest gtest_main)
 
+add_executable(Test_symbol_table
+        src/stderr_message.h
+        src/tests/tests_common.h
+        src/tests/symbol_table.cpp
+        src/symtable.h src/symtable.c)
+target_link_libraries(Test_symbol_table gtest gtest_main)
+
 add_test(mutable_string Test_mutable_string)
 add_test(scanner Test_scanner)
 add_test(parser_scanner Test_parser_scanner)
+add_test(symbol_table Test_symbol_table)
+

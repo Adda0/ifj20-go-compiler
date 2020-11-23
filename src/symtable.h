@@ -32,6 +32,7 @@ typedef enum st_type {
 typedef struct st_param {
     char *id;         /**< Id of the parameter (can be NULL if it is unnamed return type). */
     STDataType type;  /**< Type of the parameter. */
+    struct st_param *next;
 } STParam;
 
 /** A structure representing data for a symbol of type function. */
@@ -101,7 +102,7 @@ STItem *symtable_find(SymbolTable *table, const char *key);
  *
  * @param table Table to add to.
  * @param key Key to add.
- * @param typee Type of the new symbol.
+ * @param type Type of the new symbol.
  * @return Pointer to the new item. NULL if allocation failed.
  */
 STItem *symtable_add(SymbolTable *table, const char *key, STType type);
@@ -112,5 +113,23 @@ STItem *symtable_add(SymbolTable *table, const char *key, STType type);
  * @post All memory allocated by the symbol table has been freed.
  */
 void symtable_free(SymbolTable *table);
+
+/** @brief Adds a new parameter to function element in symbol table.
+ *
+ * @param item Symbol to add to.
+ * @param id Id of the parameter to be added.
+ * @param type Type of the parameter to be added.
+ * @return True if the parameter was added successfully, false otherwise.
+ */
+bool symtable_add_param(STItem *item, const char *id, STDataType type);
+
+/** @brief Adds a new return type to function element in symbol table.
+ *
+ * @param item Symbol to add to.
+ * @param id Id of the return type to be added.
+ * @param type Type of the return type to be added.
+ * @return True if the return type was added successfully, false otherwise.
+ */
+bool symtable_add_ret_type(STItem *item, const char *id, STDataType type);
 
 #endif
