@@ -287,6 +287,25 @@ TEST(SymTable, STAddParam2) {
     symtable_free(table);
 }
 
+TEST(SymTable, STAddParam3) {
+    SymbolTable *table = symtable_init(ARR_SIZE);
+    STItem *item = symtable_add(table, "a", ST_SYMBOL_FUNC);
+
+    symtable_add_param(item, "param1", CF_INT);
+    symtable_add_param(item, NULL, CF_BOOL);
+    symtable_add_param(item, NULL, CF_UNKNOWN);
+
+    item = symtable_find(table, "a");
+    ASSERT_EQ(item->data.data.func_data.params->type, CF_INT);
+    ASSERT_STREQ(item->data.data.func_data.params->id, "param1");
+    ASSERT_EQ(item->data.data.func_data.params->next->type, CF_BOOL);
+    ASSERT_STREQ(item->data.data.func_data.params->next->id, NULL);
+    ASSERT_EQ(item->data.data.func_data.params->next->next->type, CF_UNKNOWN);
+    ASSERT_STREQ(item->data.data.func_data.params->next->next->id, NULL);
+
+    symtable_free(table);
+}
+
 TEST(SymTable, STAddRetType1) {
     SymbolTable *table = symtable_init(ARR_SIZE);
     STItem *item = symtable_add(table, "a", ST_SYMBOL_FUNC);
@@ -315,6 +334,25 @@ TEST(SymTable, STAddRetType2) {
     ASSERT_STREQ(item->data.data.func_data.ret_types->next->id, "ret_type2");
     ASSERT_EQ(item->data.data.func_data.ret_types->next->next->type, CF_UNKNOWN);
     ASSERT_STREQ(item->data.data.func_data.ret_types->next->next->id, "ret_type3");
+
+    symtable_free(table);
+}
+
+TEST(SymTable, STAddRetType3) {
+    SymbolTable *table = symtable_init(ARR_SIZE);
+    STItem *item = symtable_add(table, "a", ST_SYMBOL_FUNC);
+
+    symtable_add_ret_type(item, "ret_type1", CF_INT);
+    symtable_add_ret_type(item, NULL, CF_BOOL);
+    symtable_add_ret_type(item, NULL, CF_UNKNOWN);
+
+    item = symtable_find(table, "a");
+    ASSERT_EQ(item->data.data.func_data.ret_types->type, CF_INT);
+    ASSERT_STREQ(item->data.data.func_data.ret_types->id, "ret_type1");
+    ASSERT_EQ(item->data.data.func_data.ret_types->next->type, CF_BOOL);
+    ASSERT_STREQ(item->data.data.func_data.ret_types->next->id, NULL);
+    ASSERT_EQ(item->data.data.func_data.ret_types->next->next->type, CF_UNKNOWN);
+    ASSERT_STREQ(item->data.data.func_data.ret_types->next->next->id, NULL);
 
     symtable_free(table);
 }
