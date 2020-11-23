@@ -51,7 +51,7 @@ typedef STDataType CFDataType;
 struct ast_node;
 
 typedef union ast_node_data {
-    const STSymbol *symbolTableItemPtr;
+    STSymbol *symbolTableItemPtr;
     struct ast_node *astPtr;
     int64_t intConstantValue;
     double floatConstantValue;
@@ -128,6 +128,8 @@ typedef struct cfgraph_function {
     struct cfgraph_variable_list_node *arguments;
     struct cfgraph_variable_list_node *returnValues;
     CFStatement *rootStatement;
+
+    bool terminated;
 } CFFunction;
 
 typedef struct cfgraph_functions_list_node {
@@ -138,6 +140,7 @@ typedef struct cfgraph_functions_list_node {
 
 struct program_structure {
     CFFunction *mainFunc;
+    SymbolTable *globalSymtable;
     struct cfgraph_functions_list_node *functionList;
 };
 
@@ -168,7 +171,8 @@ typedef enum cfgraph_error {
     CF_ERROR_INVALID_OPERATION,
     CF_ERROR_NO_ACTIVE_AST,
     CF_ERROR_NO_ACTIVE_STATEMENT,
-    CF_ERROR_NO_ACTIVE_FUNCTION
+    CF_ERROR_NO_ACTIVE_FUNCTION,
+    CF_ERROR_MAIN_NO_ARGUMENTS_OR_RETURN_VALUES
 } CFError;
 
 struct program_structure *get_program();
@@ -179,6 +183,9 @@ extern CFError cf_error;
 
 // Initializes the control flow graph generator.
 void cf_init();
+
+// Assigns a pointer to the global symbol table.
+void cf_assign_global_symtable(SymbolTable *symbolTable);
 
 // Finds a function, that is already present in the CF graph, and returns a pointer to it.
 // If setActive is true, sets it as the active function.
@@ -203,6 +210,7 @@ void cf_add_return_value(const char *name, CFDataType type);
 CFStatement *cf_make_next_statement(CFStatementType statementType);
 
 // Assigns a pointer to a symbol table to the active statement.
+// If the statement is a root statement of a function, assigns this symbol table to the function as well.
 void cf_assign_symtable(SymbolTable *symbolTable);
 
 /* Uses the active AST as the AST of the active statement.

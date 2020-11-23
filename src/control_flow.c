@@ -35,11 +35,12 @@ struct program_structure *get_program() {
 }
 
 void cf_init() {
-    program = malloc(sizeof(struct program_structure));
+    program = calloc(1, sizeof(struct program_structure));
     CF_ALLOC_CHECK(program);
+}
 
-    program->mainFunc = NULL;
-    program->functionList = NULL;
+void cf_assign_global_symtable(SymbolTable *symbolTable) {
+    program->globalSymtable = symbolTable;
 }
 
 CFFunction *cf_get_function(const char *name, bool setActive) {
@@ -85,6 +86,10 @@ CFFunction *cf_make_function(const char *name) {
 
 void cf_add_argument(const char *name, CFDataType type) {
     CF_ACT_FUN_CHECK();
+    if (program->mainFunc == activeFunc) {
+        cf_error = CF_ERROR_MAIN_NO_ARGUMENTS_OR_RETURN_VALUES;
+        return;
+    }
 
     CFVarListNode *n = activeFunc->arguments;
     CFVarListNode *newNode = malloc(sizeof(CFVarListNode));
@@ -103,6 +108,10 @@ void cf_add_argument(const char *name, CFDataType type) {
 
 void cf_add_return_value(const char *name, CFDataType type) {
     CF_ACT_FUN_CHECK();
+    if (program->mainFunc == activeFunc) {
+        cf_error = CF_ERROR_MAIN_NO_ARGUMENTS_OR_RETURN_VALUES;
+        return;
+    }
 
     CFVarListNode *n = activeFunc->returnValues;
 
@@ -483,6 +492,12 @@ ASTNode *cf_ast_root() {
 
 void cf_ast_set_data(unsigned position, ASTNodeData data) {
     CF_ACT_AST_CHECK();
+
+    // TODO: [DESIGN] reference counting might be done in the parser instead
+    if (activeAst->actionType == AST_ID) {
+        data.symbolTableItemPtr->reference_counter++;
+    }
+
     activeAst->data[position] = data;
 }
 
