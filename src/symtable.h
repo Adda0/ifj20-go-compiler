@@ -55,9 +55,10 @@ typedef union st_symbol_data {
 
 /** A structure representing a symbol. */
 typedef struct st_symbol {
-    STType type;            /**< Type of the symbol (function or variable). */
-    const char *identifier; /**< Identifier of the variable. */
-    STSymbolData data;      /**< Data of the symbol. */
+    STType type;                /**< Type of the symbol (function or variable). */
+    const char *identifier;     /**< Identifier of the variable. */
+    unsigned reference_counter; /**< Counter of symbol usages. */
+    STSymbolData data;          /**< Data of the symbol. */
 } STSymbol;
 
 /** A structure representing an item in the symbol table. */
