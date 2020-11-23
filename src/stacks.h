@@ -12,6 +12,7 @@
 
 #include <stdbool.h>
 #include "scanner.h"
+#include "symtable.h"
 
 typedef struct precedence_node {
     Token data;
@@ -59,5 +60,26 @@ void precedence_stack_dispose(PrecedenceStack *stack);
 
 /** @brief Clears the whole stack from pop_from to top. */
 void precedence_stack_pop_from(PrecedenceStack *stack, PrecedenceNode *pop_from);
+
+typedef struct symtable_node {
+    SymbolTable *table;
+    struct symtable_node *next;
+} SymtableNode;
+
+typedef struct symtable_stack {
+    SymtableNode *top;
+} SymtableStack;
+
+/** @brief Initializes the symtable stack. */
+void symtable_stack_init(SymtableStack *stack);
+
+/** @brief Pushes a new symbol table onto the stack. */
+SymtableNode *symtable_stack_push(SymtableStack *stack, SymbolTable *table);
+
+/** @brief Returns the top of the symbol table stack. */
+SymtableNode *symtable_stack_top(SymtableStack *stack);
+
+/** @brief Removes the top symbol table from the stack. */
+void symtable_stack_pop(SymtableStack *stack);
 
 #endif

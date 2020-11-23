@@ -12,6 +12,8 @@
 #include "scanner.h"
 #include "precedence_parser.h"
 #include "stacks.h"
+#include "stderr_message.h"
+#include "compiler.h"
 
 void precedence_stack_init(PrecedenceStack *stack) {
     stack->top = NULL;
@@ -88,4 +90,31 @@ void precedence_stack_pop_from(PrecedenceStack *stack, PrecedenceNode *pop_from)
         free(pop_from);
         pop_from = next;
     }
+}
+
+void symtable_stack_init(SymtableStack *stack) {
+    stack->top = NULL;
+}
+
+SymtableNode *symtable_stack_push(SymtableStack *stack, SymbolTable *table) {
+    SymtableNode *new_node = malloc(sizeof(SymtableNode));
+    if (new_node == NULL) {
+        stderr_message("stacks", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
+                       "Malloc of new item in symbol table stack failed.\n");
+        return NULL;
+    }
+    new_node->next = stack->top;
+    new_node->table = table;
+    stack->top = new_node;
+    return new_node;
+}
+
+SymtableNode *symtable_stack_top(SymtableStack *stack) {
+    return stack->top;
+}
+
+void symtable_stack_pop(SymtableStack *stack) {
+    SymtableNode *tmp = stack->top;
+    stack->top = stack->top->next;
+    free(tmp);
 }
