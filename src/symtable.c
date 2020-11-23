@@ -172,13 +172,17 @@ bool symtable_add_param(STItem *item, const char *id, STDataType type) {
 
     new->next = NULL;
     new->type = type;
-    new->id = (char *) malloc(sizeof(char) * (strlen(id) + 1));
-    if (new->id == NULL) {
-        free(new);
-        new = NULL;
-        return false;
+    if (id != NULL) {
+        new->id = (char *) malloc(sizeof(char) * (strlen(id) + 1));
+        if (new->id == NULL) {
+            free(new);
+            new = NULL;
+            return false;
+        }
+        strcpy(new->id, id);
+    } else {
+        new->id = NULL;
     }
-    strcpy(new->id, id);
 
     if (item->data.data.func_data.params == NULL) {
         item->data.data.func_data.params = new;
@@ -202,13 +206,18 @@ bool symtable_add_ret_type(STItem *item, const char *id, STDataType type) {
 
     new->next = NULL;
     new->type = type;
-    new->id = (char *) malloc(sizeof(char) * (strlen(id) + 1));
-    if (new->id == NULL) {
-        free(new);
-        new = NULL;
-        return false;
+
+    if (id != NULL) {
+        new->id = (char *) malloc(sizeof(char) * (strlen(id) + 1));
+        if (new->id == NULL) {
+            free(new);
+            new = NULL;
+            return false;
+        }
+        strcpy(new->id, id);
+    } else {
+        new->id = NULL;
     }
-    strcpy(new->id, id);
 
     if (item->data.data.func_data.ret_types == NULL) {
         item->data.data.func_data.ret_types = new;
