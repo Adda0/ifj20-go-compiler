@@ -15,11 +15,13 @@
 #include <stdbool.h>
 
 typedef enum cfgraph_data_type {
+    CF_UNKNOWN = 0,
+    CF_UNKNOWN_UNINFERRABLE,
     CF_INT,
     CF_FLOAT,
     CF_STRING,
     CF_BOOL,
-    CF_UNKNOWN,
+    CF_MULTIPLE,
     CF_NIL
 } STDataType;
 

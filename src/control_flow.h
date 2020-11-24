@@ -13,62 +13,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "symtable.h"
-
-typedef enum ast_node_action_type {
-    // ARITHMETIC group
-#define AST_ARITHMETIC 0
-    AST_ADD = AST_ARITHMETIC,
-    AST_SUBTRACT,
-    AST_MULTIPLY,
-    AST_DIVIDE,
-    AST_AR_NEGATE,
-    // LOGIC group
-#define AST_LOGIC 100
-    AST_LOG_NOT = AST_LOGIC,
-    AST_LOG_AND,
-    AST_LOG_OR,
-    AST_LOG_EQ,
-    AST_LOG_LT,
-    AST_LOG_GT,
-    AST_LOG_LTE,
-    AST_LOG_GTE,
-    // CONTROL group
-#define AST_CONTROL 200
-    AST_ASSIGN = AST_CONTROL,
-    AST_DEFINE,
-    AST_FUNC_CALL,
-    // VALUE group
-#define AST_VALUE 300
-    AST_LIST = AST_VALUE,
-    AST_ID,
-    AST_CONST_INT,
-    AST_CONST_FLOAT,
-    AST_CONST_STRING,
-    AST_CONST_BOOL
-} ASTNodeType;
+#include "ast.h"
 
 typedef STDataType CFDataType;
-struct ast_node;
-
-typedef union ast_node_data {
-    STSymbol *symbolTableItemPtr;
-    struct ast_node *astPtr;
-    int64_t intConstantValue;
-    double floatConstantValue;
-    const char *stringConstantValue;
-    bool boolConstantValue;
-} ASTNodeData;
-
-typedef struct ast_node {
-    struct ast_node *parent;
-    ASTNodeType actionType;
-    struct ast_node *left;
-    struct ast_node *right;
-
-    unsigned dataCount;
-    unsigned dataPointerIndex;
-    ASTNodeData data[];
-} ASTNode;
 
 typedef struct cfgraph_variable {
     const char *name;
@@ -140,11 +87,11 @@ typedef struct cfgraph_functions_list_node {
     CFFunction fun;
 } CFFuncListNode;
 
-struct program_structure {
+typedef struct cfgraph_program_structure {
     CFFunction *mainFunc;
     SymbolTable *globalSymtable;
     struct cfgraph_functions_list_node *functionList;
-};
+} CFProgram;
 
 typedef enum cfgraph_ast_target {
     CF_STATEMENT_BODY,
@@ -179,7 +126,7 @@ typedef enum cfgraph_error {
     CF_ERROR_SYMTABLE_TARGET_HAS_CHILDREN
 } CFError;
 
-struct program_structure *get_program();
+CFProgram *get_program();
 
 // Holds the current error state. The "no error" state is guaranteed to be a zero,
 // so an error check may be performed using `if (cf_error)`.
@@ -224,7 +171,11 @@ CFStatement *cf_make_next_statement(CFStatementType statementType);
 // This can only be done on a statement with NO following statement!
 void cf_assign_statement_symtable(SymbolTable *symbolTable);
 
-/* Uses the active AST as the AST of the active statement.
+// Uses the specified AST as the AST of the active statement.
+// The semantics of cf_use_ast_explicit() apply.
+void cf_use_ast(CFASTTarget target);
+
+/* Uses the specified AST as the AST of the active statement.
  * If the active statement is a basic statement:
  *  - The target parameter must be STATEMENT_BODY.
  *  - The type of the AST must be DEFINE, ASSIGN or FUNC_CALL.
@@ -243,7 +194,7 @@ void cf_assign_statement_symtable(SymbolTable *symbolTable);
  *  - The target parameter must be RETURN_LIST.
  *  - The type of the AST must be AST_LIST.
 **/
-void cf_use_ast(CFASTTarget target);
+void cf_use_ast_explicit(ASTNode *node, CFASTTarget target);
 
 // Finds the closest parent IF or FOR statement and sets it as the active statement.
 CFStatement *cf_pop_previous_branched_statement();

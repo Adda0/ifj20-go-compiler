@@ -23,19 +23,19 @@
 extern ASTNode *cf_ast_init(ASTNewNodeTarget target, ASTNodeType type); // NOLINT(readability-redundant-declaration)
 extern ASTNode *cf_ast_init_for_list(ASTNodeType type, int listDataIndex); // NOLINT(readability-redundant-declaration)
 
-static struct program_structure *program;
+static CFProgram *program;
 CFError cf_error = CF_NO_ERROR;
 
 CFStatement *activeStat;
 CFFunction *activeFunc;
 ASTNode *activeAst;
 
-struct program_structure *get_program() {
+CFProgram *get_program() {
     return program;
 }
 
 void cf_init() {
-    program = calloc(1, sizeof(struct program_structure));
+    program = calloc(1, sizeof(struct cfgraph_program_structure));
     CF_ALLOC_CHECK(program);
 }
 
@@ -207,8 +207,12 @@ void cf_assign_statement_symtable(SymbolTable *symbolTable) {
 }
 
 void cf_use_ast(CFASTTarget target) {
-    CF_ACT_STAT_CHECK();
     CF_ACT_AST_CHECK();
+    cf_use_ast_explicit(activeAst, target);
+}
+
+void cf_use_ast_explicit(ASTNode *ast, CFASTTarget target) {
+    CF_ACT_STAT_CHECK();
 
     // TODO: this is a bit spaghetti, a cleanup would be nice
     switch (activeStat->statementType) {
@@ -218,14 +222,14 @@ void cf_use_ast(CFASTTarget target) {
                 return;
             }
 
-            if (activeAst->actionType != AST_DEFINE
-                && activeAst->actionType != AST_ASSIGN
-                && activeAst->actionType != AST_FUNC_CALL) {
+            if (ast->actionType != AST_DEFINE
+                && ast->actionType != AST_ASSIGN
+                && ast->actionType != AST_FUNC_CALL) {
                 cf_error = CF_ERROR_INVALID_AST_TYPE;
                 return;
             }
 
-            activeStat->data.bodyAst = activeAst;
+            activeStat->data.bodyAst = ast;
             break;
         case CF_IF:
             if (target != CF_IF_CONDITIONAL) {
@@ -233,41 +237,41 @@ void cf_use_ast(CFASTTarget target) {
                 return;
             }
 
-            if (activeAst->actionType != AST_FUNC_CALL
-                && activeAst->actionType != AST_ID
-                && activeAst->actionType != AST_CONST_BOOL
-                && !(activeAst->actionType >= AST_LOGIC && activeAst->actionType < AST_CONTROL)) {
+            if (ast->actionType != AST_FUNC_CALL
+                && ast->actionType != AST_ID
+                && ast->actionType != AST_CONST_BOOL
+                && !(ast->actionType >= AST_LOGIC && ast->actionType < AST_CONTROL)) {
                 cf_error = CF_ERROR_INVALID_AST_TYPE;
                 return;
             }
 
-            activeStat->data.ifData->conditionalAst = activeAst;
+            activeStat->data.ifData->conditionalAst = ast;
             break;
         case CF_FOR:
             switch (target) {
                 case CF_FOR_DEFINITION:
-                    if (activeAst->actionType != AST_DEFINE) {
+                    if (ast->actionType != AST_DEFINE) {
                         cf_error = CF_ERROR_INVALID_AST_TYPE;
                         return;
                     }
-                    activeStat->data.forData->definitionAst = activeAst;
+                    activeStat->data.forData->definitionAst = ast;
                     break;
                 case CF_FOR_CONDITIONAL:
-                    if (activeAst->actionType != AST_FUNC_CALL
-                        && activeAst->actionType != AST_ID
-                        && activeAst->actionType != AST_CONST_BOOL
-                        && !(activeAst->actionType >= AST_LOGIC && activeAst->actionType < AST_CONTROL)) {
+                    if (ast->actionType != AST_FUNC_CALL
+                        && ast->actionType != AST_ID
+                        && ast->actionType != AST_CONST_BOOL
+                        && !(ast->actionType >= AST_LOGIC && ast->actionType < AST_CONTROL)) {
                         cf_error = CF_ERROR_INVALID_AST_TYPE;
                         return;
                     }
-                    activeStat->data.forData->conditionalAst = activeAst;
+                    activeStat->data.forData->conditionalAst = ast;
                     break;
                 case CF_FOR_AFTERTHOUGHT:
-                    if (activeAst->actionType != AST_ASSIGN) {
+                    if (ast->actionType != AST_ASSIGN) {
                         cf_error = CF_ERROR_INVALID_AST_TYPE;
                         return;
                     }
-                    activeStat->data.forData->afterthoughtAst = activeAst;
+                    activeStat->data.forData->afterthoughtAst = ast;
                     break;
                 default:
                     cf_error = CF_ERROR_INVALID_AST_TARGET;
@@ -280,12 +284,12 @@ void cf_use_ast(CFASTTarget target) {
                 return;
             }
 
-            if (activeAst->actionType != AST_LIST) {
+            if (ast->actionType != AST_LIST) {
                 cf_error = CF_ERROR_INVALID_AST_TYPE;
                 return;
             }
 
-            activeStat->data.bodyAst = activeAst;
+            activeStat->data.bodyAst = ast;
             break;
     }
 }
@@ -480,21 +484,10 @@ ASTNode *cf_ast_parent() {
 ASTNode *cf_ast_list_root() {
     CF_ACT_AST_CHECK_RN();
 
-    ASTNode *n = activeAst;
-    while (n != NULL) {
-        if (n->parent->actionType == AST_LIST) {
-            for (unsigned i = 0; i < n->parent->dataCount; i++) {
-                if (n->parent->data[i].astPtr == n) {
-                    activeAst = n->parent;
-                    return activeAst;
-                }
-            }
-        }
+    ASTNode *n = ast_get_list_root(activeAst);
+    activeAst = n;
 
-        n = n->parent;
-    }
-
-    return NULL;
+    return n;
 }
 
 bool cf_ast_is_root() {
