@@ -10,6 +10,8 @@
 #ifndef _AST_H
 #define _AST_H 1
 
+#define AST_DEBUG 1
+
 #include <stdint.h>
 #include "symtable.h"
 
@@ -182,6 +184,8 @@ bool ast_infer_leaf_type(ASTNode *node);
  *  - All significant children must have their inferred type equal to CF_BOOL.
  * For arithmetic nodes:
  *  - All significant children must have their inferred type equal either to CF_INT or to CF_FLOAT.
+ * For comparison nodes:
+ *  - The inferred type is set to CF_BOOL if types of significant children match.
  * AST_ASSIGN or AST_DEFINE node's type is set to CF_NIL and true is returned.
  * AST_FUNC_CALL node's type is set to its AST_ID child's type.
  * For AST_LIST nodes:
@@ -194,5 +198,9 @@ bool ast_infer_leaf_type(ASTNode *node);
 bool ast_infer_node_type(ASTNode *node);
 
 ASTDataType ast_data_type_for_node_type(ASTNodeType nodeType);
+
+#if AST_DEBUG
+void ast_print(ASTNode *node);
+#endif
 
 #endif // _AST_H

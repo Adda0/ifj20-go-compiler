@@ -41,7 +41,7 @@ int main() {
     b->id = NULL; // empty return val name
     (b + 1)->type = CF_INT;
     (b + 1)->id = "x";
-    globFunIt->data.data.func_data = (STFunctionData) {.defined = true, .params = (b + 1), .ret_types = b};
+    globFun2It->data.data.func_data = (STFunctionData) {.defined = true, .params = (b + 1), .ret_types = b};
 
     STItem *funIIt = symtable_add(funSt, "i", ST_SYMBOL_VAR);
     STSymbol *funI = &funIIt->data;

@@ -260,6 +260,8 @@ bool check_binary_node_children(ASTNode *node) {
     }
 
 bool ast_infer_node_type(ASTNode *node) {
+    if (node == NULL) return false;
+
     if (node->inheritedDataType == CF_UNKNOWN_UNINFERRABLE) {
         return false;
     }
@@ -270,41 +272,70 @@ bool ast_infer_node_type(ASTNode *node) {
 
     switch (node->actionType) {
         case AST_ADD:
+            if (!check_binary_node_children(node)) return false;
+            // Strings can be added together using + as well.
+            if (node->inheritedDataType != CF_INT && node->inheritedDataType != CF_FLOAT
+                && node->inheritedDataType != CF_STRING) {
+                ast_error = AST_ERROR_INVALID_CHILDREN_TYPE_FOR_OP;
+                return false;
+            }
+            return true;
         case AST_SUBTRACT:
         case AST_MULTIPLY:
         case AST_DIVIDE:
             if (!check_binary_node_children(node)) return false;
             ast_check_arithmetic(node);
             return true;
+
         case AST_AR_NEGATE:
             if (!check_unary_node_children(node)) return false;
             ast_check_arithmetic(node);
             return true;
-        case AST_LOG_NOT:
-            if (!check_unary_node_children(node)) return false;
-            ast_check_logic(node);
-            return true;
-        case AST_LOG_AND:
-        case AST_LOG_OR:
-        case AST_LOG_EQ:
+
         case AST_LOG_LT:
         case AST_LOG_GT:
         case AST_LOG_LTE:
         case AST_LOG_GTE:
             if (!check_binary_node_children(node)) return false;
+            ast_check_arithmetic(node); // Comparisons may only be done on ints or floats
+            node->inheritedDataType = CF_BOOL; // but the result is BOOL
+            return true;
+
+        case AST_LOG_NOT:
+            if (!check_unary_node_children(node)) return false;
             ast_check_logic(node);
             return true;
+
+        case AST_LOG_AND:
+        case AST_LOG_OR:
+            if (!check_binary_node_children(node)) return false;
+            ast_check_logic(node);
+            return true;
+
+        case AST_LOG_EQ:
+            if (!check_binary_node_children(node)) return false;
+            node->inheritedDataType = CF_BOOL; //
+            return true;
+
         case AST_ASSIGN:
         case AST_DEFINE:
             // ASSIGN and DEFINE nodes don't represent values, so they don't have a data type.
+            // Run inference for subtrees.
+            ast_infer_node_type(node->left);
+            ast_infer_node_type(node->right);
+
             node->inheritedDataType = CF_NIL;
             return true;
+
         case AST_FUNC_CALL:
             // AST_FUNC_CALL node is represented as a binary node with an AST_ID node as the left child
             // and AST_LIST as the right child. Its type can thus be inferred from the corresponding AST_ID
             // node, which will be inferred from the symbol table using ast_infer_leaf_type().
             // The right child is not important in this case, so calling check_unary_node_children() is sufficient.
+            // We'll run inference for the right subtree nevertheless.
+            ast_infer_node_type(node->right);
             return check_unary_node_children(node);
+
         case AST_LIST:
             if (node->dataCount == 0) {
                 node->inheritedDataType = CF_NIL;
@@ -321,6 +352,7 @@ bool ast_infer_node_type(ASTNode *node) {
                 node->inheritedDataType = CF_MULTIPLE;
             }
             return true;
+
         case AST_ID:
         case AST_CONST_INT:
         case AST_CONST_FLOAT:
@@ -352,3 +384,131 @@ ASTDataType ast_data_type_for_node_type(ASTNodeType nodeType) {
             return CF_UNKNOWN;
     }
 }
+
+#if AST_DEBUG
+
+#include <stdio.h>
+
+const char *atname(ASTNodeType t) {
+    switch (t) {
+        case AST_ADD:
+            return "ADD";
+        case AST_SUBTRACT:
+            return "SUB";
+        case AST_MULTIPLY:
+            return "MUL";
+        case AST_DIVIDE:
+            return "DIV";
+        case AST_AR_NEGATE:
+            return "NEG";
+        case AST_LOG_NOT:
+            return "NOT";
+        case AST_LOG_AND:
+            return "AND";
+        case AST_LOG_OR:
+            return "OR";
+        case AST_LOG_EQ:
+            return "EQ";
+        case AST_LOG_LT:
+            return "LT";
+        case AST_LOG_GT:
+            return "GT";
+        case AST_LOG_LTE:
+            return "LTE";
+        case AST_LOG_GTE:
+            return "GTE";
+        case AST_ASSIGN:
+            return "ASG";
+        case AST_DEFINE:
+            return "DEF";
+        case AST_FUNC_CALL:
+            return "FUN";
+        case AST_LIST:
+            return "LST";
+        case AST_ID:
+            return "ID:";
+        case AST_CONST_INT:
+            return "INT";
+        case AST_CONST_FLOAT:
+            return "FLO";
+        case AST_CONST_STRING:
+            return "STR";
+        case AST_CONST_BOOL:
+            return "BOL";
+    }
+}
+
+const char *tname(ASTDataType d) {
+    switch (d) {
+        case CF_UNKNOWN:
+            return "?";
+        case CF_UNKNOWN_UNINFERRABLE:
+            return "?!";
+        case CF_INT:
+            return "int";
+        case CF_FLOAT:
+            return "float";
+        case CF_STRING:
+            return "string";
+        case CF_BOOL:
+            return "bool";
+        case CF_MULTIPLE:
+            return "**";
+        case CF_NIL:
+            return "nil";
+    }
+}
+
+void print_node_data(ASTNode *node) {
+    if (node->dataCount == 0) return;
+
+    switch (node->actionType) {
+        case AST_ID:
+            printf("%s", node->data[0].symbolTableItemPtr->identifier);
+            break;
+        case AST_CONST_INT:
+            printf("%li", node->data[0].intConstantValue);
+            break;
+        case AST_CONST_FLOAT:
+            printf("%f", node->data[0].floatConstantValue);
+            break;
+        case AST_CONST_STRING:
+            printf("%s", node->data[0].stringConstantValue);
+            break;
+        case AST_CONST_BOOL:
+            printf("%s", (node->data[0].boolConstantValue ? "true" : "false"));
+            break;
+    }
+}
+
+void print_ast_int(ASTNode *node, char *sufix, char fromdir) {
+    if (node != NULL) {
+        char *suf2 = (char *) malloc(strlen(sufix) + 4);
+        strcpy(suf2, sufix);
+        if (fromdir == 'L') {
+            suf2 = strcat(suf2, "  |");
+            printf("%s\n", suf2);
+        } else
+            suf2 = strcat(suf2, "   ");
+        print_ast_int(node->right, suf2, 'R');
+
+        printf("%s  +-[%s %s", sufix, tname(node->inheritedDataType), atname(node->actionType));
+        print_node_data(node);
+        printf("]\n");
+
+        strcpy(suf2, sufix);
+        if (fromdir == 'R')
+            suf2 = strcat(suf2, "  |");
+        else
+            suf2 = strcat(suf2, "   ");
+        print_ast_int(node->left, suf2, 'L');
+        if (fromdir == 'R') printf("%s\n", suf2);
+        free(suf2);
+    }
+}
+
+void ast_print(ASTNode *node) {
+    print_ast_int(node, " ", 'X');
+}
+
+#endif
