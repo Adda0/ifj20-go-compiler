@@ -129,6 +129,8 @@ typedef struct cfgraph_function {
     struct cfgraph_variable_list_node *returnValues;
     CFStatement *rootStatement;
 
+    SymbolTable *symbolTable;
+
     bool terminated;
 } CFFunction;
 
@@ -172,7 +174,9 @@ typedef enum cfgraph_error {
     CF_ERROR_NO_ACTIVE_AST,
     CF_ERROR_NO_ACTIVE_STATEMENT,
     CF_ERROR_NO_ACTIVE_FUNCTION,
-    CF_ERROR_MAIN_NO_ARGUMENTS_OR_RETURN_VALUES
+    CF_ERROR_MAIN_NO_ARGUMENTS_OR_RETURN_VALUES,
+    CF_ERROR_SYMTABLE_ALREADY_ASSIGNED,
+    CF_ERROR_SYMTABLE_TARGET_HAS_CHILDREN
 } CFError;
 
 struct program_structure *get_program();
@@ -185,6 +189,7 @@ extern CFError cf_error;
 void cf_init();
 
 // Assigns a pointer to the global symbol table.
+// This can only be done ONCE!
 void cf_assign_global_symtable(SymbolTable *symbolTable);
 
 // Finds a function, that is already present in the CF graph, and returns a pointer to it.
@@ -194,6 +199,10 @@ CFFunction *cf_get_function(const char *name, bool setActive);
 // Creates a function and sets it as the active function.
 // Clears the active statement.
 CFFunction *cf_make_function(const char *name);
+
+// Assigns a pointer to a symbol table to the active function.
+// This can only be on a function with NO root statement!
+void cf_assign_function_symtable(SymbolTable *symbolTable);
 
 // Adds an argument to the active function.
 void cf_add_argument(const char *name, CFDataType type);
@@ -205,13 +214,15 @@ void cf_add_return_value(const char *name, CFDataType type);
 
 // Creates a statement in the current function and sets it as the active statement.
 // Links it with the function and the previous active statement.
+// The created statement inherits its parent's symbol table. If this is a root statement of the active function,
+// or when its parent has no symbol table assigned, it inherits the function's top-most global table.
 // If the statementType is RETURN, creates a new AST_LIST type AST with the amount of data nodes
 // equal to the number of arguments of the current function.
 CFStatement *cf_make_next_statement(CFStatementType statementType);
 
 // Assigns a pointer to a symbol table to the active statement.
-// If the statement is a root statement of a function, assigns this symbol table to the function as well.
-void cf_assign_symtable(SymbolTable *symbolTable);
+// This can only be done on a statement with NO following statement!
+void cf_assign_statement_symtable(SymbolTable *symbolTable);
 
 /* Uses the active AST as the AST of the active statement.
  * If the active statement is a basic statement:

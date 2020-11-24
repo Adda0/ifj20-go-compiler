@@ -40,6 +40,11 @@ void cf_init() {
 }
 
 void cf_assign_global_symtable(SymbolTable *symbolTable) {
+    if (program->globalSymtable != NULL) {
+        cf_error = CF_ERROR_SYMTABLE_ALREADY_ASSIGNED;
+        return;
+    }
+
     program->globalSymtable = symbolTable;
 }
 
@@ -146,6 +151,12 @@ CFStatement *cf_make_next_statement(CFStatementType statementType) {
     newStat->parentStatement = activeStat;
     newStat->statementType = statementType;
 
+    if (activeStat != NULL && activeStat->localSymbolTable != NULL) {
+        newStat->localSymbolTable = activeStat->localSymbolTable;
+    } else {
+        newStat->localSymbolTable = activeFunc->symbolTable;
+    };
+
     if (activeFunc->rootStatement == NULL) {
         activeFunc->rootStatement = newStat;
     }
@@ -175,8 +186,23 @@ CFStatement *cf_make_next_statement(CFStatementType statementType) {
     return newStat;
 }
 
-void cf_assign_symtable(SymbolTable *symbolTable) {
+void cf_assign_function_symtable(SymbolTable *symbolTable) {
+    CF_ACT_FUN_CHECK();
+    if (activeFunc->rootStatement != NULL) {
+        cf_error = CF_ERROR_SYMTABLE_TARGET_HAS_CHILDREN;
+        return;
+    }
+
+    activeFunc->symbolTable = symbolTable;
+}
+
+void cf_assign_statement_symtable(SymbolTable *symbolTable) {
     CF_ACT_STAT_CHECK();
+    if (activeStat->followingStatement != NULL) {
+        cf_error = CF_ERROR_SYMTABLE_TARGET_HAS_CHILDREN;
+        return;
+    }
+
     activeStat->localSymbolTable = symbolTable;
 }
 
