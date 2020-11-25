@@ -184,6 +184,11 @@ int params_n(STItem *current_function, bool ret_type) {
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
             }
+            STItem *var = symtable_add(symtable_stack_top(&symtable_stack)->table, mstr_content(&id), ST_SYMBOL_VAR);
+            if (var == NULL) {
+                return COMPILER_RESULT_ERROR_INTERNAL;
+            }
+            var->data.data.var_data.type = data_type;
             mstr_free(&id);
             return params_n(current_function, ret_type);
         default:
@@ -213,6 +218,11 @@ int params(STItem *current_function, bool ret_type) {
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
             }
+            STItem *var = symtable_add(symtable_stack_top(&symtable_stack)->table, mstr_content(&id), ST_SYMBOL_VAR);
+            if (var == NULL) {
+                return COMPILER_RESULT_ERROR_INTERNAL;
+            }
+            var->data.data.var_data.type = data_type;
             mstr_free(&id);
             return params_n(current_function, ret_type);
         default:
@@ -624,6 +634,10 @@ int execution() {
             syntax_error();
         }
 
+        SymbolTable *body_table = symtable_init(TABLE_SIZE);
+        if (body_table == NULL || symtable_stack_push(&symtable_stack, body_table) == NULL) {
+            return COMPILER_RESULT_ERROR_INTERNAL;
+        }
         check_new_token(EOL_FORBIDDEN);
         check_nonterminal(params(new_function, false));
 
@@ -640,10 +654,6 @@ int execution() {
             syntax_error();
         }
 
-        SymbolTable *body_table = symtable_init(TABLE_SIZE);
-        if (body_table == NULL || symtable_stack_push(&symtable_stack, function_table) == NULL) {
-            return COMPILER_RESULT_ERROR_INTERNAL;
-        }
         check_new_token(EOL_REQUIRED);
         check_nonterminal(body());
         symtable_stack_pop(&symtable_stack);
