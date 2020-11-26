@@ -321,6 +321,51 @@ bool reduce_or(PrecedenceStack *stack, PrecedenceNode *start) {
     return precedence_stack_push(stack, new_nonterminal);
 }
 
+bool reduce_assign(PrecedenceStack *stack, PrecedenceNode *start) {
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL};
+    precedence_stack_pop_from(stack, start);
+    return precedence_stack_push(stack, new_nonterminal);
+}
+
+bool reduce_define(PrecedenceStack *stack, PrecedenceNode *start) {
+    SymbolTable *table = symtable_stack_top(&symtable_stack)->table;
+    symtable_add(table, mstr_content(&start->rptr->data.data.str_val), ST_SYMBOL_VAR);
+    PrecedenceNode *current = start;
+    while (current->data.type != TOKEN_DEFINE) {
+        if (current->data.type == SYMB_NONTERMINAL) {
+            symtable_add(table, mstr_content(&current->data.data.str_val), ST_SYMBOL_VAR);
+        }
+        current = current->rptr;
+    }
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL};
+    precedence_stack_pop_from(stack, start);
+    return precedence_stack_push(stack, new_nonterminal);
+}
+
+bool reduce_plus_assign(PrecedenceStack *stack, PrecedenceNode *start) {
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL};
+    precedence_stack_pop_from(stack, start);
+    return precedence_stack_push(stack, new_nonterminal);
+}
+
+bool reduce_minus_assign(PrecedenceStack *stack, PrecedenceNode *start) {
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL};
+    precedence_stack_pop_from(stack, start);
+    return precedence_stack_push(stack, new_nonterminal);
+}
+
+bool reduce_multiply_assign(PrecedenceStack *stack, PrecedenceNode *start) {
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL};
+    precedence_stack_pop_from(stack, start);
+    return precedence_stack_push(stack, new_nonterminal);
+}
+
+bool reduce_divide_assign(PrecedenceStack *stack, PrecedenceNode *start) {
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL};
+    precedence_stack_pop_from(stack, start);
+    return precedence_stack_push(stack, new_nonterminal);
+}
+
 bool reduce_brackets(PrecedenceStack *stack, PrecedenceNode *start) {
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->rptr->data.data_type};
     precedence_stack_pop_from(stack, start);
@@ -385,16 +430,16 @@ bool (*semantic_actions[NUMBER_OF_RULES])(PrecedenceStack *stack, PrecedenceNode
     reduce_not_equal_to,
     reduce_and,
     reduce_or,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
+    reduce_assign,
+    reduce_assign,
+    reduce_assign,
+    reduce_define,
+    reduce_define,
+    reduce_define,
+    reduce_plus_assign,
+    reduce_minus_assign,
+    reduce_multiply_assign,
+    reduce_divide_assign,
     reduce_brackets,
     reduce_id,
     reduce_int,
