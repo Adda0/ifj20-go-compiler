@@ -22,6 +22,8 @@ void precedence_stack_init(PrecedenceStack *stack) {
 bool precedence_stack_push(PrecedenceStack *stack, StackSymbol data) {
     PrecedenceNode *node = malloc(sizeof(PrecedenceNode));
     if (node == NULL) {
+        stderr_message("stacks", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
+                       "Malloc of new item in precedence stack failed.\n");
         return false;
     }
     if (stack->top != NULL) {
@@ -37,6 +39,8 @@ bool precedence_stack_push(PrecedenceStack *stack, StackSymbol data) {
 bool precedence_stack_post_insert(PrecedenceStack *stack, PrecedenceNode *node, StackSymbol data) {
     PrecedenceNode *new_node = malloc(sizeof(PrecedenceNode));
     if (new_node == NULL) {
+        stderr_message("stacks", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
+                       "Malloc of new item in precedence stack failed.\n");
         return false;
     }
     new_node->data = data;

@@ -124,8 +124,7 @@ bool reduce_not(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL};
     precedence_stack_pop_from(stack, start);
-    precedence_stack_push(stack, new_nonterminal);
-    return true;
+    return precedence_stack_push(stack, new_nonterminal);
 }
 
 bool reduce_unary_plus(PrecedenceStack *stack, PrecedenceNode *start) {
@@ -135,8 +134,7 @@ bool reduce_unary_plus(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->rptr->data.data_type};
     precedence_stack_pop_from(stack, start);
-    precedence_stack_push(stack, new_nonterminal);
-    return true;
+    return precedence_stack_push(stack, new_nonterminal);
 }
 
 bool reduce_unary_minus(PrecedenceStack *stack, PrecedenceNode *start) {
@@ -146,8 +144,7 @@ bool reduce_unary_minus(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->rptr->data.data_type};
     precedence_stack_pop_from(stack, start);
-    precedence_stack_push(stack, new_nonterminal);
-    return true;
+    return precedence_stack_push(stack, new_nonterminal);
 }
 
 bool reduce_multiply(PrecedenceStack *stack, PrecedenceNode *start) {
@@ -159,8 +156,7 @@ bool reduce_multiply(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->data.data_type};
     precedence_stack_pop_from(stack, start);
-    precedence_stack_push(stack, new_nonterminal);
-    return true;
+    return precedence_stack_push(stack, new_nonterminal);
 }
 
 double dabs(double x) {
@@ -192,8 +188,7 @@ bool reduce_divide(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->data.data_type};
     precedence_stack_pop_from(stack, start);
-    precedence_stack_push(stack, new_nonterminal);
-    return true;
+    return precedence_stack_push(stack, new_nonterminal);
 }
 
 bool reduce_plus(PrecedenceStack *stack, PrecedenceNode *start) {
@@ -206,8 +201,7 @@ bool reduce_plus(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->data.data_type};
     precedence_stack_pop_from(stack, start);
-    precedence_stack_push(stack, new_nonterminal);
-    return true;
+    return precedence_stack_push(stack, new_nonterminal);
 }
 
 bool reduce_minus(PrecedenceStack *stack, PrecedenceNode *start) {
@@ -219,8 +213,7 @@ bool reduce_minus(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->data.data_type};
     precedence_stack_pop_from(stack, start);
-    precedence_stack_push(stack, new_nonterminal);
-    return true;
+    return precedence_stack_push(stack, new_nonterminal);
 }
 
 bool reduce_less_than(PrecedenceStack *stack, PrecedenceNode *start) {
@@ -233,8 +226,7 @@ bool reduce_less_than(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL};
     precedence_stack_pop_from(stack, start);
-    precedence_stack_push(stack, new_nonterminal);
-    return true;
+    return precedence_stack_push(stack, new_nonterminal);
 }
 
 bool reduce_greater_than(PrecedenceStack *stack, PrecedenceNode *start) {
@@ -247,8 +239,7 @@ bool reduce_greater_than(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL};
     precedence_stack_pop_from(stack, start);
-    precedence_stack_push(stack, new_nonterminal);
-    return true;
+    return precedence_stack_push(stack, new_nonterminal);
 }
 
 bool reduce_less_or_equal(PrecedenceStack *stack, PrecedenceNode *start) {
@@ -261,8 +252,7 @@ bool reduce_less_or_equal(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL};
     precedence_stack_pop_from(stack, start);
-    precedence_stack_push(stack, new_nonterminal);
-    return true;
+    return precedence_stack_push(stack, new_nonterminal);
 }
 
 bool reduce_greater_or_equal(PrecedenceStack *stack, PrecedenceNode *start) {
@@ -275,8 +265,7 @@ bool reduce_greater_or_equal(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL};
     precedence_stack_pop_from(stack, start);
-    precedence_stack_push(stack, new_nonterminal);
-    return true;
+    return precedence_stack_push(stack, new_nonterminal);
 }
 
 bool reduce_equal_to(PrecedenceStack *stack, PrecedenceNode *start) {
@@ -289,8 +278,7 @@ bool reduce_equal_to(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL};
     precedence_stack_pop_from(stack, start);
-    precedence_stack_push(stack, new_nonterminal);
-    return true;
+    return precedence_stack_push(stack, new_nonterminal);
 }
 
 bool reduce_not_equal_to(PrecedenceStack *stack, PrecedenceNode *start) {
@@ -303,8 +291,7 @@ bool reduce_not_equal_to(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL};
     precedence_stack_pop_from(stack, start);
-    precedence_stack_push(stack, new_nonterminal);
-    return true;
+    return precedence_stack_push(stack, new_nonterminal);
 }
 
 bool reduce_and(PrecedenceStack *stack, PrecedenceNode *start) {
@@ -316,8 +303,7 @@ bool reduce_and(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL};
     precedence_stack_pop_from(stack, start);
-    precedence_stack_push(stack, new_nonterminal);
-    return true;
+    return precedence_stack_push(stack, new_nonterminal);
 }
 
 bool reduce_or(PrecedenceStack *stack, PrecedenceNode *start) {
@@ -329,8 +315,7 @@ bool reduce_or(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL};
     precedence_stack_pop_from(stack, start);
-    precedence_stack_push(stack, new_nonterminal);
-    return true;
+    return precedence_stack_push(stack, new_nonterminal);
 }
 
 bool (*semantic_actions[])(PrecedenceStack *stack, PrecedenceNode *start) = {
@@ -590,8 +575,6 @@ int parse_expression(AssignRule assign_rule, bool eol_before_allowed) {
     StackSymbol terminal_symb = {.type=SYMB_END};
     StackSymbol start_symb = {.type=SYMB_BEGIN};
     if (!precedence_stack_push(&stack, terminal_symb)) {
-        stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
-                       "no memory when pushing onto stack\n");
         return COMPILER_RESULT_ERROR_INTERNAL;
     }
 
@@ -626,8 +609,6 @@ int parse_expression(AssignRule assign_rule, bool eol_before_allowed) {
         switch (precedence_table[top_index][symbol_index]) {
             case '=':
                 if (!precedence_stack_push(&stack, current_symbol)) {
-                    stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
-                                   "no memory when pushing onto stack\n");
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
                 update_token_counters(current_symbol.type, &definitions, &assignments, &function_calls, &other_tokens,
@@ -637,13 +618,9 @@ int parse_expression(AssignRule assign_rule, bool eol_before_allowed) {
                 break;
             case '<':
                 if (!precedence_stack_post_insert(&stack, top, start_symb)) {
-                    stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
-                                   "no memory when pushing onto stack\n");
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
                 if (!precedence_stack_push(&stack, current_symbol)) {
-                    stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
-                                   "no memory when pushing onto stack\n");
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
                 update_token_counters(current_symbol.type, &definitions, &assignments, &function_calls, &other_tokens,
