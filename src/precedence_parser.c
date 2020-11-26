@@ -117,6 +117,110 @@ int rules[NUMBER_OF_RULES][RULE_LENGTH] = {
     {SYMB_NONTERMINAL, SYMB_NONTERMINAL, TOKEN_COMMA, SYMB_MULTI_NONTERMINAL, SYMB_UNDEF},
 };
 
+bool reduce_unary_plus(PrecedenceStack *stack, PrecedenceNode *start) {
+    if (start->rptr->rptr->data.data_type != CF_INT && start->rptr->rptr->data.data_type != CF_FLOAT) {
+        type_error("expected int or float as operand for unary plus\n");
+        return false;
+    }
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->rptr->data.data_type};
+    precedence_stack_pop_from(stack, start);
+    precedence_stack_push(stack, new_nonterminal);
+    return true;
+}
+
+bool reduce_unary_minus(PrecedenceStack *stack, PrecedenceNode *start) {
+    if (start->rptr->rptr->data.data_type != CF_INT && start->rptr->rptr->data.data_type != CF_FLOAT) {
+        type_error("expected int or float as operand for unary minus\n");
+        return false;
+    }
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->rptr->data.data_type};
+    precedence_stack_pop_from(stack, start);
+    precedence_stack_push(stack, new_nonterminal);
+    return true;
+}
+
+bool reduce_multiply(PrecedenceStack *stack, PrecedenceNode *start) {
+    STDataType type1 = start->rptr->data.data_type;
+    STDataType type2 = start->rptr->rptr->rptr->data.data_type;
+    if ((type1 != CF_INT || type2 != CF_INT) && (type1 != CF_FLOAT || type2 != CF_FLOAT)) {
+        type_error("expected int or float operands for multiplication\n");
+        return false;
+    }
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->data.data_type};
+    precedence_stack_pop_from(stack, start);
+    precedence_stack_push(stack, new_nonterminal);
+    return true;
+}
+
+double dabs(double x) {
+    return x > 0 ? x : -x;
+}
+
+bool reduce_divide(PrecedenceStack *stack, PrecedenceNode *start) {
+    STDataType type1 = start->rptr->data.data_type;
+    STDataType type2 = start->rptr->rptr->rptr->data.data_type;
+    if ((type1 != CF_INT || type2 != CF_INT) && (type1 != CF_FLOAT || type2 != CF_FLOAT)) {
+        type_error("expected int or float operands for division\n");
+        return false;
+    }
+    if (type2 == CF_INT) {
+        int64_t divider = start->rptr->rptr->rptr->data.data.num_int_val;
+        if (divider == 0) {
+            stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_DIVISION_BY_ZERO,
+                           "Line %u: division by zero constant\n", start->rptr->rptr->rptr->data.context.line_num);
+            return false;
+        }
+
+    } else if (type2 == CF_FLOAT) {
+        double divider = start->rptr->rptr->rptr->data.data.num_float_val;
+        if (dabs(divider) < 1e-7) {
+            stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_DIVISION_BY_ZERO,
+                           "Line %u: division by zero constant\n", start->rptr->rptr->rptr->data.context.line_num);
+            return false;
+        }
+    }
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->data.data_type};
+    precedence_stack_pop_from(stack, start);
+    precedence_stack_push(stack, new_nonterminal);
+    return true;
+}
+
+bool reduce_plus(PrecedenceStack *stack, PrecedenceNode *start) {
+    STDataType type1 = start->rptr->data.data_type;
+    STDataType type2 = start->rptr->rptr->rptr->data.data_type;
+    if ((type1 != CF_INT || type2 != CF_INT) && (type1 != CF_FLOAT || type2 != CF_FLOAT) &&
+            (type1 != CF_STRING || type2 != CF_STRING)) {
+        type_error("expected int, float or string operands for addition\n");
+        return false;
+    }
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->data.data_type};
+    precedence_stack_pop_from(stack, start);
+    precedence_stack_push(stack, new_nonterminal);
+    return true;
+}
+
+bool reduce_minus(PrecedenceStack *stack, PrecedenceNode *start) {
+    STDataType type1 = start->rptr->data.data_type;
+    STDataType type2 = start->rptr->rptr->rptr->data.data_type;
+    if ((type1 != CF_INT || type2 != CF_INT) && (type1 != CF_FLOAT || type2 != CF_FLOAT)) {
+        type_error("expected int or float operands for subtraction\n");
+        return false;
+    }
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->data.data_type};
+    precedence_stack_pop_from(stack, start);
+    precedence_stack_push(stack, new_nonterminal);
+    return true;
+}
+
+bool (*semantic_actions[])(PrecedenceStack *stack, PrecedenceNode *start) = {
+    reduce_unary_plus,
+    reduce_unary_minus,
+    reduce_multiply,
+    reduce_divide,
+    reduce_plus,
+    reduce_minus,
+};
+
 int get_table_index(int type, bool eol_allowed, bool eol_read) {
     if (!eol_allowed && eol_read) {
         return INDEX_END;

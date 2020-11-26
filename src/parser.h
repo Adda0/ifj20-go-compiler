@@ -17,6 +17,10 @@
 
 #define TABLE_SIZE 100
 
+#define type_error(message)                                                                     \
+    stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION,   \
+                   "Line %u" message, token.context.line_num)
+
 #define token_error(message)                                                                    \
     stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL,                  \
                    "Line %u, col %u: " message, token.context.line_num,                         \
