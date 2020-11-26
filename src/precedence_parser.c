@@ -117,6 +117,9 @@ int rules[NUMBER_OF_RULES][RULE_LENGTH] = {
     {SYMB_NONTERMINAL, SYMB_NONTERMINAL, TOKEN_COMMA, SYMB_MULTI_NONTERMINAL, SYMB_UNDEF},
 };
 
+// Keep track if we are on the right hand side of the expression for id reductions.
+bool right_hand_side = false;
+
 bool reduce_not(PrecedenceStack *stack, PrecedenceNode *start) {
     if (start->rptr->data.data_type != CF_BOOL) {
         type_error("expected bool as operand for negation\n");
@@ -318,7 +321,55 @@ bool reduce_or(PrecedenceStack *stack, PrecedenceNode *start) {
     return precedence_stack_push(stack, new_nonterminal);
 }
 
-bool (*semantic_actions[])(PrecedenceStack *stack, PrecedenceNode *start) = {
+bool reduce_brackets(PrecedenceStack *stack, PrecedenceNode *start) {
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->rptr->data.data_type};
+    precedence_stack_pop_from(stack, start);
+    return precedence_stack_push(stack, new_nonterminal);
+}
+
+bool reduce_id(PrecedenceStack *stack, PrecedenceNode *start) {
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_UNKNOWN, .data=start->rptr->data.data};
+    if (right_hand_side) {
+        // Variables on RHS must be already defined
+        STItem *item = symtable_stack_find_symbol(&symtable_stack, mstr_content(&start->rptr->data.data.str_val));
+        if (item == NULL) {
+            stderr_message("precedence_parser", ERROR,
+                           COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE, "Line %u: "
+                            "undefined variable %s\n", start->rptr->data.context.line_num,
+                            mstr_content(&start->rptr->data.data.str_val));
+            return false;
+        }
+        new_nonterminal.data_type = item->data.data.var_data.type;
+    }
+    precedence_stack_pop_from(stack, start);
+    return precedence_stack_push(stack, new_nonterminal);
+}
+
+bool reduce_int(PrecedenceStack *stack, PrecedenceNode *start) {
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_INT, .data=start->rptr->data.data};
+    precedence_stack_pop_from(stack, start);
+    return precedence_stack_push(stack, new_nonterminal);
+}
+
+bool reduce_float(PrecedenceStack *stack, PrecedenceNode *start) {
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_FLOAT, .data=start->rptr->data.data};
+    precedence_stack_pop_from(stack, start);
+    return precedence_stack_push(stack, new_nonterminal);
+}
+
+bool reduce_string(PrecedenceStack *stack, PrecedenceNode *start) {
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_STRING, .data=start->rptr->data.data};
+    precedence_stack_pop_from(stack, start);
+    return precedence_stack_push(stack, new_nonterminal);
+}
+
+bool reduce_bool(PrecedenceStack *stack, PrecedenceNode *start) {
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL, .data=start->rptr->data.data};
+    precedence_stack_pop_from(stack, start);
+    return precedence_stack_push(stack, new_nonterminal);
+}
+
+bool (*semantic_actions[NUMBER_OF_RULES])(PrecedenceStack *stack, PrecedenceNode *start) = {
     reduce_not,
     reduce_unary_plus,
     reduce_unary_minus,
@@ -333,7 +384,27 @@ bool (*semantic_actions[])(PrecedenceStack *stack, PrecedenceNode *start) = {
     reduce_equal_to,
     reduce_not_equal_to,
     reduce_and,
-    reduce_or
+    reduce_or,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    reduce_brackets,
+    reduce_id,
+    reduce_int,
+    reduce_float,
+    reduce_string,
+    reduce_bool,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
 };
 
 int get_table_index(int type, bool eol_allowed, bool eol_read) {
@@ -531,6 +602,7 @@ void update_token_counters(int type, int *definitions, int *assignments, int *fu
     switch (type) {
         case TOKEN_DEFINE:
             (*definitions)++;
+            right_hand_side = true;
             return;
         case TOKEN_ASSIGN:
         case TOKEN_PLUS_ASSIGN:
@@ -538,6 +610,7 @@ void update_token_counters(int type, int *definitions, int *assignments, int *fu
         case TOKEN_MULTIPLY_ASSIGN:
         case TOKEN_DIVIDE_ASSIGN:
             (*assignments)++;
+            right_hand_side = true;
             return;
         case SYMB_FUNCTION:
             // We only care about the number of top-level function calls
@@ -545,6 +618,7 @@ void update_token_counters(int type, int *definitions, int *assignments, int *fu
                 (*function_calls)++;
             }
             (*function_level)++;
+            right_hand_side = true;
             return;
         default:
             // We only care about tokens outside of functions
