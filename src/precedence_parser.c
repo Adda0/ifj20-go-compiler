@@ -414,6 +414,51 @@ bool reduce_bool(PrecedenceStack *stack, PrecedenceNode *start) {
     return precedence_stack_push(stack, new_nonterminal);
 }
 
+bool reduce_function(PrecedenceStack *stack, PrecedenceNode *start) {
+    char *func_name = mstr_content(&start->rptr->data.data.str_val);
+    STItem *function = symtable_find(function_table, func_name);
+    if (function == NULL) {
+        function = symtable_add(function_table, func_name, ST_SYMBOL_FUNC);
+        PrecedenceNode *current = start;
+        while (current->data.type != TOKEN_RIGHT_BRACKET) {
+            if (current->data.type == SYMB_NONTERMINAL) {
+                symtable_add_param(function, NULL, current->data.data_type);
+            }
+            current = current->rptr;
+        }
+    } else if (strcmp(func_name, "print") != 0){
+        // Ignore the print function
+        PrecedenceNode *current = start;
+        STParam *param = function->data.data.func_data.params;
+        while (current->data.type != TOKEN_RIGHT_BRACKET) {
+            if (current->data.type == SYMB_NONTERMINAL) {
+                if (param == NULL) {
+                    stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
+                                   "Line %u: too many params to function call %s\n", token.context.line_num, func_name);
+                    return false;
+                }
+                if (param->type != CF_UNKNOWN && current->data.data_type != CF_UNKNOWN &&
+                    current->data.data_type != param->type) {
+                    stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
+                                   "Line %u: wrong param type for function %s\n", token.context.line_num, func_name);
+                    return false;
+                }
+                param = param->next;
+            }
+            current = current->rptr;
+        }
+    }
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL};
+    precedence_stack_pop_from(stack, start);
+    return precedence_stack_push(stack, new_nonterminal);
+}
+
+bool reduce_multi_expression(PrecedenceStack *stack, PrecedenceNode *start) {
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL};
+    precedence_stack_pop_from(stack, start);
+    return precedence_stack_push(stack, new_nonterminal);
+}
+
 bool (*semantic_actions[NUMBER_OF_RULES])(PrecedenceStack *stack, PrecedenceNode *start) = {
     reduce_not,
     reduce_unary_plus,
@@ -446,10 +491,10 @@ bool (*semantic_actions[NUMBER_OF_RULES])(PrecedenceStack *stack, PrecedenceNode
     reduce_float,
     reduce_string,
     reduce_bool,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
+    reduce_function,
+    reduce_function,
+    reduce_function,
+    reduce_multi_expression,
 };
 
 int get_table_index(int type, bool eol_allowed, bool eol_read) {
