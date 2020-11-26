@@ -19,7 +19,7 @@ void precedence_stack_init(PrecedenceStack *stack) {
     stack->top = NULL;
 }
 
-bool precedence_stack_push(PrecedenceStack *stack, Token token) {
+bool precedence_stack_push(PrecedenceStack *stack, StackSymbol data) {
     PrecedenceNode *node = malloc(sizeof(PrecedenceNode));
     if (node == NULL) {
         return false;
@@ -27,19 +27,19 @@ bool precedence_stack_push(PrecedenceStack *stack, Token token) {
     if (stack->top != NULL) {
         stack->top->rptr = node;
     }
-    node->data = token;
+    node->data = data;
     node->lptr = stack->top;
     node->rptr = NULL;
     stack->top = node;
     return true;
 }
 
-bool precedence_stack_post_insert(PrecedenceStack *stack, PrecedenceNode *node, Token token) {
+bool precedence_stack_post_insert(PrecedenceStack *stack, PrecedenceNode *node, StackSymbol data) {
     PrecedenceNode *new_node = malloc(sizeof(PrecedenceNode));
     if (new_node == NULL) {
         return false;
     }
-    new_node->data = token;
+    new_node->data = data;
     new_node->lptr = node;
     new_node->rptr = node->rptr;
     node ->rptr = new_node;

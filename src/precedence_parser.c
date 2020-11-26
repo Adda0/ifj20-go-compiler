@@ -257,7 +257,7 @@ bool reduce(PrecedenceStack *stack, PrecedenceNode *start, int *function_level) 
                 (*function_level)--;
             }
             precedence_stack_pop_from(stack, start);
-            Token nonterminal = {.type = rules[i][0]};
+            StackSymbol nonterminal = {.type = rules[i][0]};
             precedence_stack_push(stack, nonterminal);
             return true;
         }
@@ -272,7 +272,7 @@ bool matches_assign_rule(AssignRule assign_rule, int definitions, int assignment
             // A statement can only contain one definition or assignment (and the rest is irrelevant)
             // or only a single function call which isn't assigned anywhere.
             if (definitions + assignments == 1 || \
-                        function_calls == 1 && (definitions + assignments + other_tokens) == 0) {
+                        (function_calls == 1 && (definitions + assignments + other_tokens) == 0)) {
                 return true;
             } else {
                 stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL,
@@ -339,6 +339,14 @@ void update_token_counters(int type, int *definitions, int *assignments, int *fu
     }
 }
 
+StackSymbol copy_token_to_symbol() {
+    StackSymbol result;
+    result.type = token.type;
+    result.data = token.data;
+    result.context = token.context;
+    return result;
+}
+
 int parse_expression(AssignRule assign_rule, bool eol_before_allowed) {
     // Check if there is any expression to read
     if (get_table_index(token.type, eol_before_allowed, token.context.eol_read) == INDEX_END) {
@@ -348,8 +356,8 @@ int parse_expression(AssignRule assign_rule, bool eol_before_allowed) {
 
     PrecedenceStack stack;
     precedence_stack_init(&stack);
-    Token terminal_symb = {.type=SYMB_END};
-    Token start_symb = {.type=SYMB_BEGIN};
+    StackSymbol terminal_symb = {.type=SYMB_END};
+    StackSymbol start_symb = {.type=SYMB_BEGIN};
     if (!precedence_stack_push(&stack, terminal_symb)) {
         stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
                        "no memory when pushing onto stack\n");
@@ -365,6 +373,7 @@ int parse_expression(AssignRule assign_rule, bool eol_before_allowed) {
     bool eol_allowed = true;
     bool done = false;
     while (!done) {
+        StackSymbol current_symbol = copy_token_to_symbol();
         PrecedenceNode *top = precedence_stack_top(&stack);
         PrecedenceNode *to_reduce;
         if (top == NULL) {
@@ -372,25 +381,25 @@ int parse_expression(AssignRule assign_rule, bool eol_before_allowed) {
             return COMPILER_RESULT_ERROR_INTERNAL;
         }
         int top_index = get_table_index(top->data.type, true, true); // we don't care about EOLs in the stack
-        int token_index = get_table_index(token.type, eol_allowed, token.context.eol_read);
-        if (top_index == -1 || token_index == -1) {
+        int symbol_index = get_table_index(current_symbol.type, eol_allowed, current_symbol.context.eol_read);
+        if (top_index == -1 || symbol_index == -1) {
             syntax_error();
         }
-        if (token.type == TOKEN_ID && token_index == INDEX_F) {
+        if (current_symbol.type == TOKEN_ID && symbol_index == INDEX_F) {
             // Found function, push it to the stack as function so that we don't have to
             // check next token again when reading from stack
-            token.type = SYMB_FUNCTION;
-        } else if (token.type == TOKEN_ID && token_index == INDEX_I) {
-            token.type = SYMB_ID;
+            current_symbol.type = SYMB_FUNCTION;
+        } else if (current_symbol.type == TOKEN_ID && symbol_index == INDEX_I) {
+            current_symbol.type = SYMB_ID;
         }
-        switch (precedence_table[top_index][token_index]) {
+        switch (precedence_table[top_index][symbol_index]) {
             case '=':
-                if (!precedence_stack_push(&stack, token)) {
+                if (!precedence_stack_push(&stack, current_symbol)) {
                     stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
                                    "no memory when pushing onto stack\n");
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
-                update_token_counters(token.type, &definitions, &assignments, &function_calls, &other_tokens,
+                update_token_counters(current_symbol.type, &definitions, &assignments, &function_calls, &other_tokens,
                                       &function_level);
                 check_new_token(EOL_OPTIONAL);
                 eol_allowed = eol_allowed_after(prev_token.type);
@@ -401,12 +410,12 @@ int parse_expression(AssignRule assign_rule, bool eol_before_allowed) {
                                    "no memory when pushing onto stack\n");
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
-                if (!precedence_stack_push(&stack, token)) {
+                if (!precedence_stack_push(&stack, current_symbol)) {
                     stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
                                    "no memory when pushing onto stack\n");
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
-                update_token_counters(token.type, &definitions, &assignments, &function_calls, &other_tokens,
+                update_token_counters(current_symbol.type, &definitions, &assignments, &function_calls, &other_tokens,
                                       &function_level);
                 check_new_token(EOL_OPTIONAL);
                 eol_allowed = eol_allowed_after(prev_token.type);

@@ -13,9 +13,10 @@
 #include <stdbool.h>
 #include "scanner.h"
 #include "symtable.h"
+#include "precedence_parser.h"
 
 typedef struct precedence_node {
-    Token data;
+    StackSymbol data;
     struct precedence_node *lptr;
     struct precedence_node *rptr;
 } PrecedenceNode;
@@ -30,19 +31,19 @@ void precedence_stack_init(PrecedenceStack *stack);
 /** @brief Pushes a new node onto a precedence stack.
  *
  * @param stack Stack to push onto.
- * @param token Data for the new node.
+ * @param data Data for the new node.
  * @return Whether the push was successful.
  */
-bool precedence_stack_push(PrecedenceStack *stack, Token token);
+bool precedence_stack_push(PrecedenceStack *stack, StackSymbol data);
 
 /** @brief Inserts a new token after the given node.
  * 
  * @param stack Stack to insert into.
  * @param node Node to insert after.
- * @param token Data for the new node.
+ * @param data Data for the new node.
  * @return Whether the insert was successful.
  */
-bool precedence_stack_post_insert(PrecedenceStack *stack, PrecedenceNode *node, Token token);
+bool precedence_stack_post_insert(PrecedenceStack *stack, PrecedenceNode *node, StackSymbol data);
 
 /** @brief Returns the top of the stack. */
 PrecedenceNode *precedence_stack_top(PrecedenceStack *stack);
