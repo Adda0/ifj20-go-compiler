@@ -10,13 +10,16 @@
 #include "ast.h"
 #include "stderr_message.h"
 #include <stdlib.h>
-#include <signal.h>
 
 #define AST_ALLOC_CHECK(ptr) do { if ((ptr) == NULL) { ast_error = AST_ERROR_INTERNAL; return; } } while(0)
 #define AST_ALLOC_CHECK_RN(ptr) do { if ((ptr) == NULL) { ast_error = AST_ERROR_INTERNAL; return NULL; } } while(0)
 
+#if AST_DEBUG
+#include <signal.h>
 #define print_error(result, msg, ...) stderr_message("ast", ERROR, (result), (msg),##__VA_ARGS__); raise(SIGTRAP)
-
+#else
+#define print_error(result, msg, ...) stderr_message("ast", ERROR, (result), (msg),##__VA_ARGS__)
+#endif
 
 ASTError ast_error = AST_NO_ERROR;
 

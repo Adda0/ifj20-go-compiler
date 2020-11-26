@@ -46,7 +46,9 @@ typedef struct st_function_data {
 
 /** A structure representing data for a symbol of type variable. */
 typedef struct st_variable_data {
-    STDataType type;  /**< Type of the variable. */
+    STDataType type;             /**< Type of the variable. */
+    bool is_argument_variable;   /**< Whether this symbol corresponds to a function's parameter. */
+    bool is_return_val_variable; /**< Whether this symbol corresponds to a function's return value. */
 } STVariableData;
 
 /** A union containing symbol data. */
@@ -72,9 +74,10 @@ typedef struct st_item {
 
 /** A structure representing a symbol table. */
 typedef struct symbol_table {
-    unsigned size;      /**< Number of items in the symbol table. */
-    unsigned arr_size;  /**< Number of elements in arr. */
-    STItem *arr[];      /**< An array of pointers to entries in the table. */
+    unsigned size;          /**< Number of items in the symbol table. */
+    unsigned arr_size;      /**< Number of elements in arr. */
+    unsigned symbol_prefix; /**< Codegen helper counter. */
+    STItem *arr[];          /**< An array of pointers to entries in the table. */
 } SymbolTable;
 
 /** @brief Hashing function.

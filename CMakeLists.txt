@@ -44,15 +44,16 @@ add_executable(Compiler
         src/stacks.h src/stacks.c
         src/control_flow.h src/control_flow.c
         src/optimiser.h src/optimiser.c
-        src/code_generator.h src/code_generator_simple.c)
+        src/code_generator.h src/code_generator.c)
 
 add_executable(ControlFlowTester
         src/symtable.h src/symtable.c
         src/ast.h src/ast.c
         src/control_flow.h src/control_flow.c
-        src/code_generator.h src/code_generator_simple.c
+        src/code_generator.h src/code_generator.c
         src/optimiser.h src/optimiser.c
         src/stderr_message.h src/stderr_message.c
+        src/mutable_string.h src/mutable_string.c
         src/cftest.c)
 
 # ------- Tests -------
