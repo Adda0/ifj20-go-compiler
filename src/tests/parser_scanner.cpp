@@ -4362,3 +4362,49 @@ TEST_F(ParserScannerTest, ChangeDataType4) {
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION);
 }
+
+// === Undefined variable ===
+
+TEST_F(ParserScannerTest, UndefinedVariable1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a = 5\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
+}
+
+TEST_F(ParserScannerTest, UndefinedVariable2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a = 4.2\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
+}
+
+TEST_F(ParserScannerTest, UndefinedVariable3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a = \"test string\"\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
+}
+
+TEST_F(ParserScannerTest, UndefinedVariable4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a = false\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
+}
