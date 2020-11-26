@@ -8,10 +8,15 @@
  */
 
 #include "ast.h"
+#include "stderr_message.h"
 #include <stdlib.h>
+#include <signal.h>
 
 #define AST_ALLOC_CHECK(ptr) do { if ((ptr) == NULL) { ast_error = AST_ERROR_INTERNAL; return; } } while(0)
 #define AST_ALLOC_CHECK_RN(ptr) do { if ((ptr) == NULL) { ast_error = AST_ERROR_INTERNAL; return NULL; } } while(0)
+
+#define print_error(result, msg, ...) stderr_message("ast", ERROR, (result), (msg),##__VA_ARGS__); raise(SIGTRAP)
+
 
 ASTError ast_error = AST_NO_ERROR;
 
@@ -228,10 +233,22 @@ bool check_binary_node_children(ASTNode *node) {
             return true;
         } else {
             node->inheritedDataType = node->right->inheritedDataType;
+
+            if (node->left->actionType == AST_ID
+                && node->left->data[0].symbolTableItemPtr->type == ST_SYMBOL_VAR) {
+                node->left->data[0].symbolTableItemPtr->data.var_data.type = node->right->inheritedDataType;
+            }
+
             return true;
         }
     } else if (node->right->inheritedDataType == CF_UNKNOWN) {
         node->inheritedDataType = node->left->inheritedDataType;
+
+        if (node->right->actionType == AST_ID
+            && node->right->data[0].symbolTableItemPtr->type == ST_SYMBOL_VAR) {
+            node->right->data[0].symbolTableItemPtr->data.var_data.type = node->left->inheritedDataType;
+        }
+
         return true;
     }
 
@@ -245,27 +262,229 @@ bool check_binary_node_children(ASTNode *node) {
     return true;
 }
 
-#define ast_check_arithmetic(node) \
-    if ((node)->inheritedDataType != CF_INT && (node)->inheritedDataType != CF_FLOAT) { \
-        (node)->inheritedDataType = CF_UNKNOWN_UNINFERRABLE; \
-        ast_error = AST_ERROR_INVALID_CHILDREN_TYPE_FOR_OP; \
-        return false; \
+ASTDataType check_nodes_matching(ASTNode *left, ASTNode *right, ASTNodeType rootType) {
+    ASTNode *tmpNode = ast_node(rootType);
+    tmpNode->left = left;
+    tmpNode->right = right;
+    if (!check_binary_node_children(tmpNode)) {
+        free(tmpNode);
+        return CF_UNKNOWN_UNINFERRABLE;
     }
+
+    ASTDataType type = tmpNode->inheritedDataType;
+    free(tmpNode);
+    return type;
+}
+
+#define ast_uninferrable(node) (node)->inheritedDataType = CF_UNKNOWN_UNINFERRABLE; return false
+
+#define ast_check_arithmetic(node) \
+    if ((node)->inheritedDataType != CF_INT && (node)->inheritedDataType != CF_FLOAT && (node)->inheritedDataType != CF_UNKNOWN) { \
+        ast_error = AST_ERROR_INVALID_CHILDREN_TYPE_FOR_OP; \
+        ast_uninferrable(node); \
+}
 
 #define ast_check_arithmetic_or_str(node) \
     if ((node)->inheritedDataType != CF_INT && (node)->inheritedDataType != CF_FLOAT \
-            && (node)->inheritedDataType != CF_STRING) { \
-        (node)->inheritedDataType = CF_UNKNOWN_UNINFERRABLE; \
+            && (node)->inheritedDataType != CF_STRING && (node)->inheritedDataType != CF_UNKNOWN) { \
         ast_error = AST_ERROR_INVALID_CHILDREN_TYPE_FOR_OP; \
-        return false; \
-    }
+        ast_uninferrable(node); \
+}
 
 #define ast_check_logic(node) \
-    if ((node)->inheritedDataType != CF_BOOL) { \
-        (node)->inheritedDataType = CF_UNKNOWN_UNINFERRABLE; \
+    if ((node)->inheritedDataType != CF_BOOL && (node)->inheritedDataType != CF_UNKNOWN) { \
         ast_error = AST_ERROR_INVALID_CHILDREN_TYPE_FOR_OP; \
-        return false; \
+        ast_uninferrable(node); \
+}
+
+bool assignment_inference_semantic_checks(ASTNode *node) {
+    if (node->left->actionType == AST_LIST) {
+        if (node->right->actionType != AST_LIST || node->right->dataCount != node->left->dataCount) {
+            print_error(COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+                        "Number of variables and assigned values don't match.\n");
+            // TODO: error code
+            ast_uninferrable(node);
+        }
+
+        for (unsigned i = 0; i < node->left->dataCount; i++) {
+            ASTNode *leftIdNode = node->left->data[i].astPtr;
+            ASTNode *rightValueNode = node->right->data[i].astPtr;
+
+            if (!ast_infer_node_type(leftIdNode)
+                || !ast_infer_node_type(rightValueNode)) {
+                print_error(COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+                            "Error deducing type for variable '%s'.\n",
+                            leftIdNode->data[0].symbolTableItemPtr->identifier);
+                // TODO: error code
+                ast_uninferrable(node);
+            }
+
+            if (!check_nodes_matching(leftIdNode, rightValueNode, node->actionType)) {
+                print_error(COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+                            "Type of left-hand side variable '%s' doesn't match its corresponding right-hand side.\n",
+                            leftIdNode->data[0].symbolTableItemPtr->identifier);
+                // TODO: error code
+                ast_uninferrable(node);
+            }
+        }
+    } else {
+        if (node->left->actionType != AST_ID) {
+            print_error(COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+                        "Expected identifier on the left-hand side.\n");
+            // TODO: error code
+            ast_uninferrable(node);
+        }
+
+        if (!ast_infer_node_type(node->left) || !ast_infer_node_type(node->right)) {
+            print_error(COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+                        "Error deducing type for variable '%s'.\n", node->left->data[0].symbolTableItemPtr->identifier);
+            // TODO: error code
+            ast_uninferrable(node);
+        }
+
+        if (!check_binary_node_children(node)) {
+            print_error(COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+                        "Type of left-hand side variable '%s' doesn't match its corresponding right-hand side.\n",
+                        node->left->data[0].symbolTableItemPtr->identifier);
+            // TODO: error code
+            ast_uninferrable(node);
+        }
     }
+
+    node->inheritedDataType = CF_NIL;
+    return true;
+}
+
+bool func_call_inference_semantic_checks(ASTNode *node) {
+    ASTNode *leftFuncIdNode = node->left;
+    ASTNode *rightFuncParamsNode = node->right;
+
+    STSymbol *funcSymbol = leftFuncIdNode->data[0].symbolTableItemPtr;
+    STFunctionData *funcData = &funcSymbol->data.func_data;
+
+    if (funcSymbol == NULL || funcSymbol->type != ST_SYMBOL_FUNC) {
+        print_error(COMPILER_RESULT_ERROR_INTERNAL, "Invalid symbol assigned to function call node.\n");
+        // TODO: error code
+        ast_uninferrable(node);
+    }
+
+    if (!funcData->defined) {
+        // Function is not defined, that's ok.
+        // Run inference for its parameters.
+        node->inheritedDataType = CF_UNKNOWN;
+        leftFuncIdNode->inheritedDataType = CF_UNKNOWN;
+        if (rightFuncParamsNode != NULL) {
+            return ast_infer_node_type(rightFuncParamsNode);
+        }
+
+        return true;
+    }
+
+    if (!ast_infer_node_type(leftFuncIdNode)) {
+        print_error(COMPILER_RESULT_ERROR_INTERNAL, "Couldn't infer function '%s' return value.\n", funcSymbol->identifier);
+        // TODO: error code
+        ast_uninferrable(node);
+    }
+
+    node->inheritedDataType = leftFuncIdNode->inheritedDataType;
+
+    if (rightFuncParamsNode != NULL && rightFuncParamsNode->actionType == AST_LIST) {
+        STParam *par = funcData->params;
+        for (unsigned i = 0; i < rightFuncParamsNode->dataCount; i++) {
+            if (par == NULL) {
+                print_error(COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
+                            "Too many arguments in function '%s' call.\n", funcSymbol->identifier);
+                // TODO: error code
+                ast_uninferrable(node);
+            }
+
+            ASTNode *parAst = rightFuncParamsNode->data[i].astPtr;
+            if (!ast_infer_node_type(parAst)) {
+                print_error(COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+                            "Error deducing type for the argument number %u of function '%s'.\n", i,
+                            funcSymbol->identifier);
+                // TODO: error code
+                ast_uninferrable(node);
+            }
+
+            if (par->type == CF_UNKNOWN) {
+                par->type = parAst->inheritedDataType;
+                return true;
+            } else {
+                if (par->type != parAst->inheritedDataType) {
+                    print_error(COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
+                                "Invalid type of the argument number %u in function '%s' call.\n", i,
+                                funcSymbol->identifier);
+                    // TODO: error code
+                    ast_uninferrable(node);
+                }
+            }
+
+            par = par->next;
+        }
+
+        if (par != NULL) {
+            print_error(COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
+                        "Not enough arguments in function '%s' call.\n", funcSymbol->identifier);
+            // TODO: error code
+            ast_uninferrable(node);
+        }
+
+        return true;
+    } else {
+        STParam *par = funcData->params;
+
+        if (rightFuncParamsNode == NULL && par == NULL) {
+            // Call has no arguments, function expects none
+            return true;
+        }
+
+        if (rightFuncParamsNode != NULL && par == NULL) {
+            // Call has arguments, function does not
+            print_error(COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
+                        "Expected no arguments in function '%s' call.\n", funcSymbol->identifier);
+            // TODO: error code
+            ast_uninferrable(node);
+        }
+
+        if (rightFuncParamsNode == NULL && par != NULL) {
+            // Call has no arguments, function has some
+            print_error(COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
+                        "Expected an argument in function '%s' call.\n", funcSymbol->identifier);
+            // TODO: error code
+            ast_uninferrable(node);
+        }
+
+        if (par != NULL && par->next != NULL) {
+            // Call has one argument, function has more
+            print_error(COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
+                        "Unexpected number of arguments in function '%s' call.\n", funcSymbol->identifier);
+            // TODO: error code
+            ast_uninferrable(node);
+        }
+
+        if (!ast_infer_node_type(rightFuncParamsNode)) {
+            print_error(COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+                        "Error deducing type for an argument of function '%s'.\n", funcSymbol->identifier);
+            // TODO: error code
+            ast_uninferrable(node);
+        }
+
+        if (par->type == CF_UNKNOWN) {
+            par->type = rightFuncParamsNode->inheritedDataType;
+            return true;
+        } else {
+            if (par->type != rightFuncParamsNode->inheritedDataType) {
+                print_error(COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
+                            "Invalid argument type in function '%s' call.\n", funcSymbol->identifier);
+                // TODO: error code
+                ast_uninferrable(node);
+            }
+        }
+    }
+
+    return true;
+}
 
 bool ast_infer_node_type(ASTNode *node) {
     if (node == NULL) return false;
@@ -274,7 +493,7 @@ bool ast_infer_node_type(ASTNode *node) {
         return false;
     }
 
-    if (node->inheritedDataType != CF_UNKNOWN) {
+    if (node->inheritedDataType != CF_UNKNOWN && node->inheritedDataType != CF_NIL) {
         return true;
     }
 
@@ -318,18 +537,14 @@ bool ast_infer_node_type(ASTNode *node) {
 
         case AST_LOG_EQ:
             if (!check_binary_node_children(node)) return false;
-            node->inheritedDataType = CF_BOOL; //
+            node->inheritedDataType = CF_BOOL;
             return true;
 
         case AST_ASSIGN:
         case AST_DEFINE:
             // ASSIGN and DEFINE nodes don't represent values, so they don't have a data type.
-            // Run inference for subtrees.
-            ast_infer_node_type(node->left);
-            ast_infer_node_type(node->right);
-
-            node->inheritedDataType = CF_NIL;
-            return true;
+            // Run semantic checks for corresponding left and right sides, including running inference on subtrees
+            return assignment_inference_semantic_checks(node);
 
         case AST_FUNC_CALL:
             // AST_FUNC_CALL node is represented as a binary node with an AST_ID node as the left child
@@ -337,8 +552,7 @@ bool ast_infer_node_type(ASTNode *node) {
             // node, which will be inferred from the symbol table using ast_infer_leaf_type().
             // The right child is not important in this case, so calling check_unary_node_children() is sufficient.
             // We'll run inference for the right subtree nevertheless.
-            ast_infer_node_type(node->right);
-            return check_unary_node_children(node);
+            return func_call_inference_semantic_checks(node);
 
         case AST_LIST:
             if (node->dataCount == 0) {
@@ -347,8 +561,8 @@ bool ast_infer_node_type(ASTNode *node) {
                 ASTNode *innerNode = node->data[0].astPtr;
                 if (innerNode == NULL ||
                     (innerNode->inheritedDataType == CF_UNKNOWN && !ast_infer_node_type(innerNode))) {
-                    node->inheritedDataType = CF_UNKNOWN_UNINFERRABLE;
-                    return false;
+                    // TODO: error code
+                    ast_uninferrable(node);
                 } else {
                     node->inheritedDataType = innerNode->inheritedDataType;
                 }
