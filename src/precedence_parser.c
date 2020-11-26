@@ -329,7 +329,6 @@ bool reduce_assign(PrecedenceStack *stack, PrecedenceNode *start) {
 
 bool reduce_define(PrecedenceStack *stack, PrecedenceNode *start) {
     SymbolTable *table = symtable_stack_top(&symtable_stack)->table;
-    symtable_add(table, mstr_content(&start->rptr->data.data.str_val), ST_SYMBOL_VAR);
     PrecedenceNode *current = start;
     while (current->data.type != TOKEN_DEFINE) {
         if (current->data.type == SYMB_NONTERMINAL) {
@@ -729,6 +728,7 @@ StackSymbol copy_token_to_symbol() {
 
 int parse_expression(AssignRule assign_rule, bool eol_before_allowed) {
     // Check if there is any expression to read
+    right_hand_side = false;
     if (get_table_index(token.type, eol_before_allowed, token.context.eol_read) == INDEX_END) {
         token_error("expected expression, got %s");
         syntax_error();
