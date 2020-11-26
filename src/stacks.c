@@ -113,6 +113,18 @@ SymtableNode *symtable_stack_top(SymtableStack *stack) {
     return stack->top;
 }
 
+STItem *symtable_stack_find_symbol(SymtableStack *stack, const char *symbol) {
+    SymtableNode *curr = stack->top;
+    while (curr != NULL) {
+        STItem *found = symtable_find(curr->table, symbol);
+        if (found != NULL) {
+            return found;
+        }
+        curr = curr->next;
+    }
+    return NULL;
+}
+
 void symtable_stack_pop(SymtableStack *stack) {
     SymtableNode *tmp = stack->top;
     stack->top = stack->top->next;
