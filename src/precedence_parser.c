@@ -121,7 +121,7 @@ int rules[NUMBER_OF_RULES][RULE_LENGTH] = {
 bool right_hand_side = false;
 
 bool reduce_not(PrecedenceStack *stack, PrecedenceNode *start) {
-    if (start->rptr->data.data_type != CF_BOOL && start->rptr->data.data_type != CF_UNKNOWN) {
+    if (start->rptr->rptr->data.data_type != CF_BOOL && start->rptr->rptr->data.data_type != CF_UNKNOWN) {
         type_error("expected bool as operand for negation\n");
         return false;
     }
@@ -280,7 +280,8 @@ bool reduce_equal_to(PrecedenceStack *stack, PrecedenceNode *start) {
     STDataType type1 = start->rptr->data.data_type;
     STDataType type2 = start->rptr->rptr->rptr->data.data_type;
     if (type1 != CF_UNKNOWN && type2 != CF_UNKNOWN && (type1 != CF_INT || type2 != CF_INT) &&
-        (type1 != CF_FLOAT || type2 != CF_FLOAT) && (type1 != CF_STRING || type2 != CF_STRING)) {
+        (type1 != CF_FLOAT || type2 != CF_FLOAT) && (type1 != CF_STRING || type2 != CF_STRING) &&
+        (type1 != CF_BOOL || type2 != CF_BOOL)) {
         type_error("expected int, float or string operands for ==\n");
         return false;
     }
@@ -293,7 +294,8 @@ bool reduce_not_equal_to(PrecedenceStack *stack, PrecedenceNode *start) {
     STDataType type1 = start->rptr->data.data_type;
     STDataType type2 = start->rptr->rptr->rptr->data.data_type;
     if (type1 != CF_UNKNOWN && type2 != CF_UNKNOWN && (type1 != CF_INT || type2 != CF_INT) &&
-        (type1 != CF_FLOAT || type2 != CF_FLOAT) && (type1 != CF_STRING || type2 != CF_STRING)) {
+        (type1 != CF_FLOAT || type2 != CF_FLOAT) && (type1 != CF_STRING || type2 != CF_STRING) &&
+        (type1 != CF_BOOL || type2 != CF_BOOL)) {
         type_error("expected int, float or string operands for !=\n");
         return false;
     }
