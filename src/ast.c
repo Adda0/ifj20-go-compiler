@@ -252,6 +252,14 @@ bool check_binary_node_children(ASTNode *node) {
         return false; \
     }
 
+#define ast_check_arithmetic_or_str(node) \
+    if ((node)->inheritedDataType != CF_INT && (node)->inheritedDataType != CF_FLOAT \
+            && (node)->inheritedDataType != CF_STRING) { \
+        (node)->inheritedDataType = CF_UNKNOWN_UNINFERRABLE; \
+        ast_error = AST_ERROR_INVALID_CHILDREN_TYPE_FOR_OP; \
+        return false; \
+    }
+
 #define ast_check_logic(node) \
     if ((node)->inheritedDataType != CF_BOOL) { \
         (node)->inheritedDataType = CF_UNKNOWN_UNINFERRABLE; \
@@ -274,11 +282,7 @@ bool ast_infer_node_type(ASTNode *node) {
         case AST_ADD:
             if (!check_binary_node_children(node)) return false;
             // Strings can be added together using + as well.
-            if (node->inheritedDataType != CF_INT && node->inheritedDataType != CF_FLOAT
-                && node->inheritedDataType != CF_STRING) {
-                ast_error = AST_ERROR_INVALID_CHILDREN_TYPE_FOR_OP;
-                return false;
-            }
+            ast_check_arithmetic_or_str(node);
             return true;
         case AST_SUBTRACT:
         case AST_MULTIPLY:
@@ -297,7 +301,7 @@ bool ast_infer_node_type(ASTNode *node) {
         case AST_LOG_LTE:
         case AST_LOG_GTE:
             if (!check_binary_node_children(node)) return false;
-            ast_check_arithmetic(node); // Comparisons may only be done on ints or floats
+            ast_check_arithmetic_or_str(node); // Comparisons may only be done on ints, floats or strings
             node->inheritedDataType = CF_BOOL; // but the result is BOOL
             return true;
 
@@ -350,6 +354,10 @@ bool ast_infer_node_type(ASTNode *node) {
                 }
             } else {
                 node->inheritedDataType = CF_MULTIPLE;
+                // Run inference for the inner trees
+                for (unsigned i = 0; i < node->dataCount; i++) {
+                    ast_infer_node_type(node->data[i].astPtr);
+                }
             }
             return true;
 
