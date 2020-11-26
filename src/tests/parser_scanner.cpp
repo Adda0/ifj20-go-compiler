@@ -4261,3 +4261,54 @@ TEST_F(ParserScannerTest, ExpressionInIfStatements18) {
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
+
+
+// === Test redefinition of variable ===
+
+TEST_F(ParserScannerTest, RedefinitionOfVariable1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := 4\n"
+        "    a := 5\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
+}
+
+TEST_F(ParserScannerTest, RedefinitionOfVariable2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := 5.2\n"
+        "    a := 4.2\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
+}
+
+TEST_F(ParserScannerTest, RedefinitionOfVariable3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := \"Test string\\n\"\n"
+        "    a := \"Another test string\\n\"\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
+}
+
+TEST_F(ParserScannerTest, RedefinitionOfVariable4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := true\n"
+        "    a := false\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
+}
