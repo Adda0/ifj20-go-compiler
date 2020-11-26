@@ -117,6 +117,17 @@ int rules[NUMBER_OF_RULES][RULE_LENGTH] = {
     {SYMB_NONTERMINAL, SYMB_NONTERMINAL, TOKEN_COMMA, SYMB_MULTI_NONTERMINAL, SYMB_UNDEF},
 };
 
+bool reduce_not(PrecedenceStack *stack, PrecedenceNode *start) {
+    if (start->rptr->data.data_type != CF_BOOL) {
+        type_error("expected bool as operand for negation\n");
+        return false;
+    }
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL};
+    precedence_stack_pop_from(stack, start);
+    precedence_stack_push(stack, new_nonterminal);
+    return true;
+}
+
 bool reduce_unary_plus(PrecedenceStack *stack, PrecedenceNode *start) {
     if (start->rptr->rptr->data.data_type != CF_INT && start->rptr->rptr->data.data_type != CF_FLOAT) {
         type_error("expected int or float as operand for unary plus\n");
@@ -212,13 +223,132 @@ bool reduce_minus(PrecedenceStack *stack, PrecedenceNode *start) {
     return true;
 }
 
+bool reduce_less_than(PrecedenceStack *stack, PrecedenceNode *start) {
+    STDataType type1 = start->rptr->data.data_type;
+    STDataType type2 = start->rptr->rptr->rptr->data.data_type;
+    if ((type1 != CF_INT || type2 != CF_INT) && (type1 != CF_FLOAT || type2 != CF_FLOAT) &&
+        (type1 != CF_STRING || type2 != CF_STRING)) {
+        type_error("expected int, float or string operands for <\n");
+        return false;
+    }
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL};
+    precedence_stack_pop_from(stack, start);
+    precedence_stack_push(stack, new_nonterminal);
+    return true;
+}
+
+bool reduce_greater_than(PrecedenceStack *stack, PrecedenceNode *start) {
+    STDataType type1 = start->rptr->data.data_type;
+    STDataType type2 = start->rptr->rptr->rptr->data.data_type;
+    if ((type1 != CF_INT || type2 != CF_INT) && (type1 != CF_FLOAT || type2 != CF_FLOAT) &&
+        (type1 != CF_STRING || type2 != CF_STRING)) {
+        type_error("expected int, float or string operands for >\n");
+        return false;
+    }
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL};
+    precedence_stack_pop_from(stack, start);
+    precedence_stack_push(stack, new_nonterminal);
+    return true;
+}
+
+bool reduce_less_or_equal(PrecedenceStack *stack, PrecedenceNode *start) {
+    STDataType type1 = start->rptr->data.data_type;
+    STDataType type2 = start->rptr->rptr->rptr->data.data_type;
+    if ((type1 != CF_INT || type2 != CF_INT) && (type1 != CF_FLOAT || type2 != CF_FLOAT) &&
+        (type1 != CF_STRING || type2 != CF_STRING)) {
+        type_error("expected int, float or string operands for <=\n");
+        return false;
+    }
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL};
+    precedence_stack_pop_from(stack, start);
+    precedence_stack_push(stack, new_nonterminal);
+    return true;
+}
+
+bool reduce_greater_or_equal(PrecedenceStack *stack, PrecedenceNode *start) {
+    STDataType type1 = start->rptr->data.data_type;
+    STDataType type2 = start->rptr->rptr->rptr->data.data_type;
+    if ((type1 != CF_INT || type2 != CF_INT) && (type1 != CF_FLOAT || type2 != CF_FLOAT) &&
+        (type1 != CF_STRING || type2 != CF_STRING)) {
+        type_error("expected int, float or string operands for >=\n");
+        return false;
+    }
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL};
+    precedence_stack_pop_from(stack, start);
+    precedence_stack_push(stack, new_nonterminal);
+    return true;
+}
+
+bool reduce_equal_to(PrecedenceStack *stack, PrecedenceNode *start) {
+    STDataType type1 = start->rptr->data.data_type;
+    STDataType type2 = start->rptr->rptr->rptr->data.data_type;
+    if ((type1 != CF_INT || type2 != CF_INT) && (type1 != CF_FLOAT || type2 != CF_FLOAT) &&
+        (type1 != CF_STRING || type2 != CF_STRING)) {
+        type_error("expected int, float or string operands for ==\n");
+        return false;
+    }
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL};
+    precedence_stack_pop_from(stack, start);
+    precedence_stack_push(stack, new_nonterminal);
+    return true;
+}
+
+bool reduce_not_equal_to(PrecedenceStack *stack, PrecedenceNode *start) {
+    STDataType type1 = start->rptr->data.data_type;
+    STDataType type2 = start->rptr->rptr->rptr->data.data_type;
+    if ((type1 != CF_INT || type2 != CF_INT) && (type1 != CF_FLOAT || type2 != CF_FLOAT) &&
+        (type1 != CF_STRING || type2 != CF_STRING)) {
+        type_error("expected int, float or string operands for !=\n");
+        return false;
+    }
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL};
+    precedence_stack_pop_from(stack, start);
+    precedence_stack_push(stack, new_nonterminal);
+    return true;
+}
+
+bool reduce_and(PrecedenceStack *stack, PrecedenceNode *start) {
+    STDataType type1 = start->rptr->data.data_type;
+    STDataType type2 = start->rptr->rptr->rptr->data.data_type;
+    if (type1 != CF_BOOL || type2 != CF_BOOL) {
+        type_error("expected bool operands for and\n");
+        return false;
+    }
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL};
+    precedence_stack_pop_from(stack, start);
+    precedence_stack_push(stack, new_nonterminal);
+    return true;
+}
+
+bool reduce_or(PrecedenceStack *stack, PrecedenceNode *start) {
+    STDataType type1 = start->rptr->data.data_type;
+    STDataType type2 = start->rptr->rptr->rptr->data.data_type;
+    if (type1 != CF_BOOL || type2 != CF_BOOL) {
+        type_error("expected bool operands for or\n");
+        return false;
+    }
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL};
+    precedence_stack_pop_from(stack, start);
+    precedence_stack_push(stack, new_nonterminal);
+    return true;
+}
+
 bool (*semantic_actions[])(PrecedenceStack *stack, PrecedenceNode *start) = {
+    reduce_not,
     reduce_unary_plus,
     reduce_unary_minus,
     reduce_multiply,
     reduce_divide,
     reduce_plus,
     reduce_minus,
+    reduce_less_than,
+    reduce_greater_than,
+    reduce_less_or_equal,
+    reduce_greater_or_equal,
+    reduce_equal_to,
+    reduce_not_equal_to,
+    reduce_and,
+    reduce_or
 };
 
 int get_table_index(int type, bool eol_allowed, bool eol_read) {
@@ -360,10 +490,7 @@ bool reduce(PrecedenceStack *stack, PrecedenceNode *start, int *function_level) 
                 // Function call reduced, decrease function nesting level
                 (*function_level)--;
             }
-            precedence_stack_pop_from(stack, start);
-            StackSymbol nonterminal = {.type = rules[i][0]};
-            precedence_stack_push(stack, nonterminal);
-            return true;
+            return semantic_actions[i](stack, start);
         }
     }
     return false;
