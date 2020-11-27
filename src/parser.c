@@ -176,45 +176,47 @@ int params_n(STItem *current_function, bool ret_type, bool already_found, STPara
             STDataType data_type;
             check_nonterminal(type(&data_type));
             STParam *next_param = NULL;
-            if (ret_type) {
-                if (!symtable_add_ret_type(current_function, mstr_content(&id), data_type)) {
+            if (semantic_enabled) {
+                if (ret_type) {
+                    if (!symtable_add_ret_type(current_function, mstr_content(&id), data_type)) {
+                        return COMPILER_RESULT_ERROR_INTERNAL;
+                    }
+                } else {
+                    if (already_found) {
+                        if (current_param == NULL) {
+                            stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
+                                           "Line %u, col %u: unexpected parameter to function\n",
+                                           prev_token.context.line_num, prev_token.context.char_num);
+                            return COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE;
+                        }
+                        if (current_param->type != CF_UNKNOWN && current_param->type != data_type) {
+                            stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
+                                           "Line %u, col %u: wrong param type to function\n",
+                                           prev_token.context.line_num, prev_token.context.char_num);
+                            return COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE;
+                        }
+                        // Update the information
+                        char *new_buffer = malloc(sizeof(char) * (strlen(mstr_content(&id)) + 1));
+                        if (new_buffer == NULL) {
+                            return COMPILER_RESULT_ERROR_INTERNAL;
+                        }
+                        strcpy(new_buffer, mstr_content(&id));
+                        current_param->id = new_buffer;
+                        current_param->type = data_type;
+                        next_param = current_param->next;
+
+                    } else {
+                        if (!symtable_add_param(current_function, mstr_content(&id), data_type)) {
+                            return COMPILER_RESULT_ERROR_INTERNAL;
+                        }
+                    }
+                }
+                STItem *var = symtable_add(symtable_stack_top(&symtable_stack)->table, mstr_content(&id), ST_SYMBOL_VAR);
+                if (var == NULL) {
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
-            } else {
-                if (already_found) {
-                    if (current_param == NULL) {
-                        stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
-                                       "Line %u, col %u: unexpected parameter to function\n",
-                                       prev_token.context.line_num, prev_token.context.char_num);
-                        return COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE;
-                    }
-                    if (current_param->type != CF_UNKNOWN && current_param->type != data_type) {
-                        stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
-                                       "Line %u, col %u: wrong param type to function\n",
-                                       prev_token.context.line_num, prev_token.context.char_num);
-                        return COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE;
-                    }
-                    // Update the information
-                    char *new_buffer = malloc(sizeof(char) * (strlen(mstr_content(&id)) + 1));
-                    if (new_buffer == NULL) {
-                        return COMPILER_RESULT_ERROR_INTERNAL;
-                    }
-                    strcpy(new_buffer, mstr_content(&id));
-                    current_param->id = new_buffer;
-                    current_param->type = data_type;
-                    next_param = current_param->next;
-
-                } else {
-                    if (!symtable_add_param(current_function, mstr_content(&id), data_type)) {
-                        return COMPILER_RESULT_ERROR_INTERNAL;
-                    }
-                }
+                var->data.data.var_data.type = data_type;
             }
-            STItem *var = symtable_add(symtable_stack_top(&symtable_stack)->table, mstr_content(&id), ST_SYMBOL_VAR);
-            if (var == NULL) {
-                return COMPILER_RESULT_ERROR_INTERNAL;
-            }
-            var->data.data.var_data.type = data_type;
             mstr_free(&id);
             return params_n(current_function, ret_type, already_found, next_param);
         default:
@@ -236,46 +238,48 @@ int params(STItem *current_function, bool ret_type, bool already_found) {
             STDataType data_type;
             check_nonterminal(type(&data_type));
             STParam *next_param = NULL;
-            if (ret_type) {
-                if (!symtable_add_ret_type(current_function, mstr_content(&id), data_type)) {
+            if (semantic_enabled) {
+                if (ret_type) {
+                    if (!symtable_add_ret_type(current_function, mstr_content(&id), data_type)) {
+                        return COMPILER_RESULT_ERROR_INTERNAL;
+                    }
+                } else {
+                    if (already_found) {
+                        // Check the type of the first param if we predicted arguments in an expression
+                        STParam *first_param = current_function->data.data.func_data.params;
+                        if (first_param == NULL) {
+                            stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
+                                           "Line %u, col %u: unexpected parameter to function\n",
+                                           prev_token.context.line_num, prev_token.context.char_num);
+                            return COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE;
+                        }
+                        if (first_param->type != CF_UNKNOWN && first_param->type != data_type) {
+                            stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
+                                           "Line %u, col %u: wrong param type to function\n",
+                                           prev_token.context.line_num, prev_token.context.char_num);
+                            return COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE;
+                        }
+                        // UPdate the information
+                        char *new_buffer = malloc(sizeof(char) * (strlen(mstr_content(&id)) + 1));
+                        if (new_buffer == NULL) {
+                            return COMPILER_RESULT_ERROR_INTERNAL;
+                        }
+                        strcpy(new_buffer, mstr_content(&id));
+                        first_param->id = new_buffer;
+                        first_param->type = data_type;
+                        next_param = first_param->next;
+                    } else {
+                        if (!symtable_add_param(current_function, mstr_content(&id), data_type)) {
+                            return COMPILER_RESULT_ERROR_INTERNAL;
+                        }
+                    }
+                }
+                STItem *var = symtable_add(symtable_stack_top(&symtable_stack)->table, mstr_content(&id), ST_SYMBOL_VAR);
+                if (var == NULL) {
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
-            } else {
-                if (already_found) {
-                    // Check the type of the first param if we predicted arguments in an expression
-                    STParam *first_param = current_function->data.data.func_data.params;
-                    if (first_param == NULL) {
-                        stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
-                                       "Line %u, col %u: unexpected parameter to function\n",
-                                       prev_token.context.line_num, prev_token.context.char_num);
-                        return COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE;
-                    }
-                    if (first_param->type != CF_UNKNOWN && first_param->type != data_type) {
-                        stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
-                                       "Line %u, col %u: wrong param type to function\n",
-                                       prev_token.context.line_num, prev_token.context.char_num);
-                        return COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE;
-                    }
-                    // UPdate the information
-                    char *new_buffer = malloc(sizeof(char) * (strlen(mstr_content(&id)) + 1));
-                    if (new_buffer == NULL) {
-                        return COMPILER_RESULT_ERROR_INTERNAL;
-                    }
-                    strcpy(new_buffer, mstr_content(&id));
-                    first_param->id = new_buffer;
-                    first_param->type = data_type;
-                    next_param = first_param->next;
-                } else {
-                    if (!symtable_add_param(current_function, mstr_content(&id), data_type)) {
-                        return COMPILER_RESULT_ERROR_INTERNAL;
-                    }
-                }
+                var->data.data.var_data.type = data_type;
             }
-            STItem *var = symtable_add(symtable_stack_top(&symtable_stack)->table, mstr_content(&id), ST_SYMBOL_VAR);
-            if (var == NULL) {
-                return COMPILER_RESULT_ERROR_INTERNAL;
-            }
-            var->data.data.var_data.type = data_type;
             mstr_free(&id);
             return params_n(current_function, ret_type, already_found, next_param);
         default:
@@ -294,17 +298,21 @@ int else_n() {
                 syntax_error();
             }
             check_new_token(EOL_REQUIRED);
-            if ((new_body_table = symtable_init(TABLE_SIZE)) == NULL) {
-                return COMPILER_RESULT_ERROR_INTERNAL;
-            }
-            if (symtable_stack_push(&symtable_stack, new_body_table) == NULL) {
-                return COMPILER_RESULT_ERROR_INTERNAL;
+            if (semantic_enabled) {
+                if ((new_body_table = symtable_init(TABLE_SIZE)) == NULL) {
+                    return COMPILER_RESULT_ERROR_INTERNAL;
+                }
+                if (symtable_stack_push(&symtable_stack, new_body_table) == NULL) {
+                    return COMPILER_RESULT_ERROR_INTERNAL;
+                }
             }
             check_nonterminal(body());
-            symtable_stack_pop(&symtable_stack);
             if (token.type != TOKEN_CURLY_RIGHT_BRACKET) {
                 token_error("expected } after else body, got %s\n");
                 syntax_error();
+            }
+            if (semantic_enabled) {
+                symtable_stack_pop(&symtable_stack);
             }
             check_new_token(EOL_REQUIRED);
             syntax_ok();
@@ -470,17 +478,21 @@ int statement() {
                         syntax_error();
                     }
                     check_new_token(EOL_REQUIRED);
-                    if ((new_body_table = symtable_init(TABLE_SIZE)) == NULL) {
-                        return COMPILER_RESULT_ERROR_INTERNAL;
-                    }
-                    if (symtable_stack_push(&symtable_stack, new_body_table) == NULL) {
-                        return COMPILER_RESULT_ERROR_INTERNAL;
+                    if (semantic_enabled) {
+                        if ((new_body_table = symtable_init(TABLE_SIZE)) == NULL) {
+                            return COMPILER_RESULT_ERROR_INTERNAL;
+                        }
+                        if (symtable_stack_push(&symtable_stack, new_body_table) == NULL) {
+                            return COMPILER_RESULT_ERROR_INTERNAL;
+                        }
                     }
                     check_nonterminal(body());
-                    symtable_stack_pop(&symtable_stack);
                     if (token.type != TOKEN_CURLY_RIGHT_BRACKET) {
                         token_error("expected } after if body, got %s\n");
                         syntax_error();
+                    }
+                    if (semantic_enabled) {
+                        symtable_stack_pop(&symtable_stack);
                     }
                     check_new_token(EOL_OPTIONAL);
                     return else_();
@@ -488,11 +500,13 @@ int statement() {
                     // rule <statement> -> for <for_definition> ; expression ; <for_assignment> { <body> }
                     check_new_token(EOL_OPTIONAL);
                     // For definition needs a separate level of symtable.
-                    if ((new_body_table = symtable_init(TABLE_SIZE)) == NULL) {
-                        return COMPILER_RESULT_ERROR_INTERNAL;
-                    }
-                    if (symtable_stack_push(&symtable_stack, new_body_table) == NULL) {
-                        return COMPILER_RESULT_ERROR_INTERNAL;
+                    if (semantic_enabled) {
+                        if ((new_body_table = symtable_init(TABLE_SIZE)) == NULL) {
+                            return COMPILER_RESULT_ERROR_INTERNAL;
+                        }
+                        if (symtable_stack_push(&symtable_stack, new_body_table) == NULL) {
+                            return COMPILER_RESULT_ERROR_INTERNAL;
+                        }
                     }
                     check_nonterminal(for_definition());
                     if (token.type != TOKEN_SEMICOLON) {
@@ -516,18 +530,22 @@ int statement() {
                         syntax_error();
                     }
                     check_new_token(EOL_REQUIRED);
-                    if ((new_body_table = symtable_init(TABLE_SIZE)) == NULL) {
-                        return COMPILER_RESULT_ERROR_INTERNAL;
+                    if (semantic_enabled) {
+                        if ((new_body_table = symtable_init(TABLE_SIZE)) == NULL) {
+                            return COMPILER_RESULT_ERROR_INTERNAL;
+                        }
+                        if (symtable_stack_push(&symtable_stack, new_body_table) == NULL) {
+                            return COMPILER_RESULT_ERROR_INTERNAL;
+                        }
                     }
-                    if (symtable_stack_push(&symtable_stack, new_body_table) == NULL) {
-                        return COMPILER_RESULT_ERROR_INTERNAL;
-                    }
-                    symtable_stack_pop(&symtable_stack);
-                    symtable_stack_pop(&symtable_stack);
                     check_nonterminal(body());
                     if (token.type != TOKEN_CURLY_RIGHT_BRACKET) {
                         token_error("expected } after for body, got %s\n");
                         syntax_error();
+                    }
+                    if (semantic_enabled) {
+                        symtable_stack_pop(&symtable_stack);
+                        symtable_stack_pop(&symtable_stack);
                     }
                     check_new_token(EOL_REQUIRED);
                     syntax_ok();
@@ -586,8 +604,10 @@ int ret_type_n(STItem *current_function) {
             // rule <ret_type_n> -> , <type> <ret_type_n>
             check_new_token(EOL_OPTIONAL);
             check_nonterminal(type(&data_type));
-            if (!symtable_add_ret_type(current_function, NULL, data_type)) {
-                return COMPILER_RESULT_ERROR_INTERNAL;
+            if (semantic_enabled) {
+                if (!symtable_add_ret_type(current_function, NULL, data_type)) {
+                    return COMPILER_RESULT_ERROR_INTERNAL;
+                }
             }
             return ret_type_n(current_function);
         default:
@@ -611,8 +631,10 @@ int ret_type_inner(STItem *current_function) {
                 case KEYWORD_BOOL:
                     // rule <ret_type_inner> -> <type> <ret_type_n>
                     check_nonterminal(type(&data_type));
-                    if (!symtable_add_ret_type(current_function, NULL, data_type)) {
-                        return COMPILER_RESULT_ERROR_INTERNAL;
+                    if (semantic_enabled) {
+                        if (!symtable_add_ret_type(current_function, NULL, data_type)) {
+                            return COMPILER_RESULT_ERROR_INTERNAL;
+                        }
                     }
                     return ret_type_n(current_function);
                 default:
@@ -636,8 +658,10 @@ int ret_type(STItem *current_function) {
                 case KEYWORD_BOOL:
                     // rule <ret_type> -> <type>
                     check_nonterminal(type(&data_type));
-                    if (!symtable_add_ret_type(current_function, NULL, data_type)) {
-                        return COMPILER_RESULT_ERROR_INTERNAL;
+                    if (semantic_enabled) {
+                        if (!symtable_add_ret_type(current_function, NULL, data_type)) {
+                            return COMPILER_RESULT_ERROR_INTERNAL;
+                        }
                     }
                     syntax_ok();
                 default:
@@ -681,20 +705,22 @@ int execution() {
         }
         STItem *function = symtable_find(function_table, mstr_content(&token.data.str_val));
         bool already_found = false;
-        if (function) {
-            if (function->data.data.func_data.defined) {
-                redefine_error("redefinition of function %s\n");
-                semantic_error_redefine();
+        if (semantic_enabled) {
+            if (function) {
+                if (function->data.data.func_data.defined) {
+                    redefine_error("redefinition of function %s\n");
+                    semantic_error_redefine();
+                } else {
+                    already_found = true;
+                }
             } else {
-                already_found = true;
+                function = symtable_add(function_table, mstr_content(&token.data.str_val), ST_SYMBOL_FUNC);
+                if (function == NULL) {
+                    return COMPILER_RESULT_ERROR_INTERNAL;
+                }
             }
-        } else {
-            function = symtable_add(function_table, mstr_content(&token.data.str_val), ST_SYMBOL_FUNC);
-            if (function == NULL) {
-                return COMPILER_RESULT_ERROR_INTERNAL;
-            }
+            function->data.data.func_data.defined = true;
         }
-        function->data.data.func_data.defined = true;
         clear_token();
 
         check_new_token(EOL_FORBIDDEN);
@@ -703,9 +729,11 @@ int execution() {
             syntax_error();
         }
 
-        SymbolTable *body_table = symtable_init(TABLE_SIZE);
-        if (body_table == NULL || symtable_stack_push(&symtable_stack, body_table) == NULL) {
-            return COMPILER_RESULT_ERROR_INTERNAL;
+        if (semantic_enabled) {
+            SymbolTable *body_table = symtable_init(TABLE_SIZE);
+            if (body_table == NULL || symtable_stack_push(&symtable_stack, body_table) == NULL) {
+                return COMPILER_RESULT_ERROR_INTERNAL;
+            }
         }
         check_new_token(EOL_FORBIDDEN);
         check_nonterminal(params(function, false, already_found));
@@ -725,7 +753,9 @@ int execution() {
 
         check_new_token(EOL_REQUIRED);
         check_nonterminal(body());
-        symtable_stack_pop(&symtable_stack);
+        if (semantic_enabled) {
+            symtable_stack_pop(&symtable_stack);
+        }
 
         if (token.type != TOKEN_CURLY_RIGHT_BRACKET) {
             token_error("expected } after function body, got %s\n");
@@ -757,17 +787,18 @@ int program() {
     clear_token();
     check_new_token(EOL_REQUIRED);
     check_nonterminal(execution());
-    STItem *main = symtable_find(function_table, "main");
-    if (main == NULL || !main->data.data.func_data.defined) {
-        stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE,
-                       "missing function main\n");
-        semantic_error_redefine();
-    } else if (main->data.data.func_data.ret_types != NULL || main->data.data.func_data.params != NULL) {
-        stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
-                       "incorrect prototype of function main\n");
-        return COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE;
+    if (semantic_enabled) {
+        STItem *main = symtable_find(function_table, "main");
+        if (main == NULL || !main->data.data.func_data.defined) {
+            stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE,
+                           "missing function main\n");
+            semantic_error_redefine();
+        } else if (main->data.data.func_data.ret_types != NULL || main->data.data.func_data.params != NULL) {
+            stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
+                           "incorrect prototype of function main\n");
+            return COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE;
+        }
     }
-
     syntax_ok();
 }
 

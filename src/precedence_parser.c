@@ -697,7 +697,14 @@ bool reduce(PrecedenceStack *stack, PrecedenceNode *start, int *function_level) 
                 // Function call reduced, decrease function nesting level
                 (*function_level)--;
             }
-            return semantic_actions[i](stack, start);
+            if (semantic_enabled) {
+                return semantic_actions[i](stack, start);
+            } else {
+                // semantics not enabled, simply pop and check syntax
+                StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL};
+                precedence_stack_pop_from(stack, start);
+                return precedence_stack_push(stack, new_nonterminal);
+            }
         }
     }
     return false;

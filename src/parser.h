@@ -17,6 +17,8 @@
 
 #define TABLE_SIZE 100
 
+#define semantic_enabled compiler_result == COMPILER_RESULT_SUCCESS
+
 #define type_error(message)                                                                     \
     stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION,   \
                    "Line %u: " message, token.context.line_num)
