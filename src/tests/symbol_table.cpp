@@ -356,3 +356,79 @@ TEST(SymTable, STAddRetType3) {
 
     symtable_free(table);
 }
+
+TEST(SymTable, IterateThroughItems) {
+    SymbolTable *table = symtable_init(ARR_SIZE);
+
+    STItem *item_a = symtable_add(table, "a", ST_SYMBOL_VAR);
+    STItem *first = symtable_get_first_item(table);
+    ASSERT_TRUE(item_a == first);
+    first = symtable_get_next_item(table, item_a);
+    ASSERT_TRUE(first == NULL);
+
+    STItem *item_ab = symtable_add(table, "ab", ST_SYMBOL_VAR);
+    first = symtable_get_first_item(table);
+    ASSERT_TRUE(item_ab == first);
+    STItem *next = symtable_get_next_item(table, first);
+    ASSERT_TRUE(next == item_a);
+    next = symtable_get_next_item(table, next);
+    ASSERT_TRUE(next == NULL);
+
+    STItem *item = symtable_add(table, "abc", ST_SYMBOL_VAR);
+    first = symtable_get_first_item(table);
+    ASSERT_TRUE(item_ab == first);
+    next = symtable_get_next_item(table, item);
+    ASSERT_TRUE(next == item_a);
+    next = symtable_get_next_item(table, next);
+    ASSERT_TRUE(next == NULL);
+
+    item = symtable_add(table, "abcd", ST_SYMBOL_VAR);
+    first = symtable_get_first_item(table);
+    ASSERT_TRUE(item_ab == first);
+    next = symtable_get_next_item(table, item);
+    next = symtable_get_next_item(table, next);
+    next = symtable_get_next_item(table, next);
+    ASSERT_TRUE(next == NULL);
+
+    symtable_free(table);
+}
+
+TEST(SymTable, IterateThroughItems2) {
+    SymbolTable *table = symtable_init(1);
+
+    STItem *item_a = symtable_add(table, "a", ST_SYMBOL_VAR);
+    STItem *first = symtable_get_first_item(table);
+    ASSERT_TRUE(item_a == first);
+    first = symtable_get_next_item(table, item_a);
+    ASSERT_TRUE(first == NULL);
+
+    STItem *item_ab = symtable_add(table, "ab", ST_SYMBOL_VAR);
+    first = symtable_get_first_item(table);
+    ASSERT_TRUE(item_ab == first);
+    STItem *next = symtable_get_next_item(table, first);
+    ASSERT_TRUE(next == item_a);
+    next = symtable_get_next_item(table, next);
+    ASSERT_TRUE(next == NULL);
+
+    STItem *item = symtable_add(table, "abc", ST_SYMBOL_VAR);
+    first = symtable_get_first_item(table);
+    ASSERT_TRUE(item == first);
+    next = symtable_get_next_item(table, item);
+    ASSERT_TRUE(next == item_ab);
+    next = symtable_get_next_item(table, next);
+    ASSERT_TRUE(next == item_a);
+    next = symtable_get_next_item(table, next);
+    ASSERT_TRUE(next == NULL);
+
+    item = symtable_add(table, "abcd", ST_SYMBOL_VAR);
+    first = symtable_get_first_item(table);
+    ASSERT_TRUE(item == first);
+    next = symtable_get_next_item(table, item);
+    next = symtable_get_next_item(table, next);
+    next = symtable_get_next_item(table, next);
+    ASSERT_TRUE(next == item_a);
+    next = symtable_get_next_item(table, next);
+    ASSERT_TRUE(next == NULL);
+
+    symtable_free(table);
+}
