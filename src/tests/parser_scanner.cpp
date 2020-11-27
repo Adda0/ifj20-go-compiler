@@ -4995,3 +4995,56 @@ TEST_F(ParserScannerTest, FunctionMain6) {
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
 }
+
+// === Zero division ===
+
+TEST_F(ParserScannerTest, ZeroDivision1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := 4 / 0\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_DIVISION_BY_ZERO);
+}
+
+TEST_F(ParserScannerTest, ZeroDivision2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := 4 / (5 - 5)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_DIVISION_BY_ZERO);
+}
+
+TEST_F(ParserScannerTest, ZeroDivision3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := 4 / foo()\n"
+        "}\n"
+        "func foo() int {\n"
+        "    return 0\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_DIVISION_BY_ZERO);
+}
+
+TEST_F(ParserScannerTest, ZeroDivision4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    b := 7\n"
+        "    a := 4 / (b - foo(5))\n"
+        "}\n"
+        "func foo(i int) int {\n"
+        "    return i + 2\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_DIVISION_BY_ZERO);
+}
