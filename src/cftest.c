@@ -124,11 +124,14 @@ void test1() {
     globFunFIt->data.data.func_data = (STFunctionData) {.defined = true, .params = funFparB, .ret_types = funFret,
             .params_count = 1, .ret_types_count = 1};
 
+    ast_set_strict_inference_state(true);
     ast_infer_node_type(defStat); // run type inference for the define statement again
     ast_infer_node_type(asgStat); // run type inference for the assign statement again
 }
 
 void test2() {
+    ast_set_strict_inference_state(true);
+
     SymbolTable *globSt = symtable_init(32);
     SymbolTable *mainSt = symtable_init(32);
     SymbolTable *funSt = symtable_init(32);
@@ -398,7 +401,7 @@ void test2() {
 }
 
 int main() {
-    test1();
+    test2();
     tcg_generate();
 
     return compiler_result;

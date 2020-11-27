@@ -201,6 +201,10 @@ bool ast_infer_leaf_type(ASTNode *node);
  */
 bool ast_infer_node_type(ASTNode *node);
 
+// Turns strict inference on or off. When strict inference is on, CF_UNKNOWN inference result is considered erroneous.
+// This is used in the second pass of semantic checks, when all function definitions are available.
+void ast_set_strict_inference_state(bool state);
+
 ASTDataType ast_data_type_for_node_type(ASTNodeType nodeType);
 
 #if AST_DEBUG

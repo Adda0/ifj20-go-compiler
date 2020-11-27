@@ -154,6 +154,14 @@ unsigned ast_push_to_list(ASTNode *astList, ASTNode *node) {
     return astList->dataPointerIndex++;
 }
 
+static bool strictInference = false;
+
+#define ast_uninferrable(node) (node)->inheritedDataType = CF_UNKNOWN_UNINFERRABLE; return false
+
+void ast_set_strict_inference_state(bool state) {
+    strictInference = state;
+}
+
 bool ast_infer_leaf_type(ASTNode *node) {
     // Only ID and CONSTs should be leaf nodes
     if (node->inheritedDataType == CF_UNKNOWN_UNINFERRABLE) {
@@ -169,17 +177,17 @@ bool ast_infer_leaf_type(ASTNode *node) {
 
         if (symb == NULL) {
             ast_error = AST_ERROR_SYMBOL_NOT_ASSIGNED;
-            node->inheritedDataType = CF_UNKNOWN_UNINFERRABLE;
-            return false;
+            ast_uninferrable(node);
         }
 
         if (symb->type == ST_SYMBOL_VAR) {
             node->inheritedDataType = symb->data.var_data.type;
         } else {
             if (!symb->data.func_data.defined) {
-                // Function not yet defined: set ID type to UNKNOWN and return true
-                node->inheritedDataType = CF_UNKNOWN;
-                return true;
+                // Function not yet defined: set ID type to UNKNOWN
+                node->inheritedDataType = strictInference ? CF_UNKNOWN_UNINFERRABLE : CF_UNKNOWN;
+                // If strict inference is on, return false; otherwise, this is ok, return true
+                return !strictInference;
             }
 
             STParam *retType = symb->data.func_data.ret_types;
@@ -193,9 +201,17 @@ bool ast_infer_leaf_type(ASTNode *node) {
             }
         }
 
+        // If strict inference is on, we can't have any unknowns for identifiers
+        if (strictInference && node->inheritedDataType == CF_UNKNOWN) {
+            print_error(COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+                        "Couldn't infer type for identifier '%s'.", symb->identifier);
+            ast_uninferrable(node);
+        }
+
         return true;
     }
 
+    // In this case, the result must never be UNKNOWN (this node is either CONST or not a valid leaf node)
     node->inheritedDataType = ast_data_type_for_node_type(node->actionType);
     return node->inheritedDataType != CF_UNKNOWN;
 }
@@ -254,6 +270,11 @@ bool check_binary_node_children(ASTNode *node) {
     if (node->right->inheritedDataType == CF_BLACK_HOLE) {
         node->inheritedDataType = CF_UNKNOWN_UNINFERRABLE;
         return false;
+    }
+
+    if (strictInference &&
+        (node->left->inheritedDataType == CF_UNKNOWN || node->right->inheritedDataType == CF_UNKNOWN)) {
+        ast_uninferrable(node);
     }
 
     // If we got to a FUNC_CALL for a func that hasn't been yet defined,
@@ -316,8 +337,6 @@ ASTDataType check_nodes_matching(ASTNode *left, ASTNode *right, ASTNodeType root
     free(tmpNode);
     return type;
 }
-
-#define ast_uninferrable(node) (node)->inheritedDataType = CF_UNKNOWN_UNINFERRABLE; return false
 
 #define ast_check_arithmetic(node) \
     if ((node)->inheritedDataType != CF_INT && (node)->inheritedDataType != CF_FLOAT && (node)->inheritedDataType != CF_UNKNOWN) { \
@@ -477,11 +496,34 @@ bool func_call_inference_semantic_checks(ASTNode *node) {
         ast_uninferrable(node);
     }
 
+    if (strcmp(funcSymbol->identifier, "print") == 0) {
+        // print is kinda unique with its variable argument count
+        // let's just infer the arguments and call it a day
+
+        if (rightFuncParamsNode != NULL) {
+            if(!ast_infer_node_type(rightFuncParamsNode)) {
+                ast_uninferrable(node);
+            }
+        }
+
+        node->inheritedDataType = CF_NIL;
+        return true;
+    }
+
     if (!funcData->defined) {
-        // Function is not defined, that's ok.
+        // Function is not defined, that's ok, if strict inference is off.
+        if (strictInference) {
+            leftFuncIdNode->inheritedDataType = CF_UNKNOWN_UNINFERRABLE;
+            print_error(COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE,
+                        "Function '%s' isn't defined.\n", funcSymbol->identifier);
+
+            ast_uninferrable(node);
+        }
+
         // Run inference for its parameters.
         node->inheritedDataType = CF_UNKNOWN;
         leftFuncIdNode->inheritedDataType = CF_UNKNOWN;
+
         if (rightFuncParamsNode != NULL) {
             return ast_infer_node_type(rightFuncParamsNode);
         }
@@ -707,6 +749,8 @@ bool ast_infer_node_type(ASTNode *node) {
         case AST_CONST_BOOL:
             return ast_infer_leaf_type(node);
     }
+
+    return false;
 }
 
 ASTDataType ast_data_type_for_node_type(ASTNodeType nodeType) {
@@ -782,6 +826,8 @@ const char *atname(ASTNodeType t) {
             return "STR";
         case AST_CONST_BOOL:
             return "BOL";
+        default:
+            return "???";
     }
 }
 
@@ -801,8 +847,12 @@ const char *tname(ASTDataType d) {
             return "bool";
         case CF_MULTIPLE:
             return "**";
+        case CF_BLACK_HOLE:
+            return "_";
         case CF_NIL:
             return "nil";
+        default:
+            return "???";
     }
 }
 
@@ -824,6 +874,9 @@ void print_node_data(ASTNode *node) {
             break;
         case AST_CONST_BOOL:
             printf("%s", (node->data[0].boolConstantValue ? "true" : "false"));
+            break;
+        default:
+            printf("wtf");
             break;
     }
 }

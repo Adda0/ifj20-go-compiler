@@ -82,7 +82,10 @@ void print_ast(ASTNode *root) {
                     else print_ast(d.astPtr);
                     break;
                 case AST_ID:
-                    printf("$%s", d.symbolTableItemPtr->identifier);
+                    if(root->inheritedDataType == CF_BLACK_HOLE)
+                        putchar('_');
+                    else
+                        printf("$%s", d.symbolTableItemPtr->identifier);
                     break;
                 case AST_CONST_INT:
                     printf("int@%li", d.intConstantValue);
@@ -174,7 +177,7 @@ void print_fun(CFFunction *fun) {
 }
 
 void tcg_generate() {
-    struct program_structure *prog = get_program();
+    CFProgram *prog = get_program();
     CFFuncListNode *n = prog->functionList;
     printf("-- Start --\n");
     while (n != NULL) {
