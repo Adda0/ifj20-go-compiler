@@ -31,6 +31,7 @@ typedef enum ast_node_action_type {
     AST_LOG_AND,
     AST_LOG_OR,
     AST_LOG_EQ,
+    AST_LOG_NEQ,
     AST_LOG_LT,
     AST_LOG_GT,
     AST_LOG_LTE,

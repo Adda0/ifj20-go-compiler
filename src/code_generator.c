@@ -585,6 +585,7 @@ void generate_expression_ast(ASTNode *exprAst, CFStatement *stat) {
         case AST_LOG_AND:
         case AST_LOG_OR:
         case AST_LOG_EQ:
+        case AST_LOG_NEQ:
         case AST_LOG_LT:
         case AST_LOG_GT:
         case AST_LOG_LTE:
@@ -741,8 +742,8 @@ bool generate_simple_logic_expression(ASTNode *exprAst, CFStatement *stat, char 
     }
 
     if (is_direct_ast(left) && is_direct_ast(right)) {
-        if (t == AST_LOG_EQ) {
-            out_nnl("JUMPIFEQ %s ", trueLabel);
+        if (t == AST_LOG_EQ || t == AST_LOG_NEQ) {
+            out_nnl("%s %s ", t == AST_LOG_EQ ? "JUMPIFEQ": "JUMPIFNEQ", trueLabel);
             print_var_name_or_const(left, stat);
             out_nnl(" ");
             print_var_name_or_const(right, stat);
@@ -784,6 +785,11 @@ bool generate_simple_logic_expression(ASTNode *exprAst, CFStatement *stat, char 
             out("EQS");
             out("PUSHS bool@true");
             out("JUMPIFEQS %s", trueLabel);
+        } else if (t == AST_LOG_NEQ) {
+            out("EQS");
+            out("NOTS");
+            out("PUSHS bool@true");
+            out("JUMPIFNEQS %s", trueLabel);
         } else if (t == AST_LOG_LT) {
             out("LTS");
             out("PUSHS bool@true");
@@ -1129,22 +1135,21 @@ void generate_basic_statement(CFStatement *stat) {
 void generate_statement(CFStatement *stat) {
     if (is_statement_empty(stat)) {
         dbg("Omitting empty statement");
-        return;
-    }
-
-    switch (stat->statementType) {
-        case CF_BASIC:
-            generate_basic_statement(stat);
-            break;
-        case CF_IF:
-            generate_if_statement(stat);
-            break;
-        case CF_FOR:
-            generate_for_statement(stat);
-            break;
-        case CF_RETURN:
-            generate_return_statement(stat);
-            break;
+    } else {
+        switch (stat->statementType) {
+            case CF_BASIC:
+                generate_basic_statement(stat);
+                break;
+            case CF_IF:
+                generate_if_statement(stat);
+                break;
+            case CF_FOR:
+                generate_for_statement(stat);
+                break;
+            case CF_RETURN:
+                generate_return_statement(stat);
+                break;
+        }
     }
 
     if (stat->followingStatement != NULL) {

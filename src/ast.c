@@ -688,6 +688,7 @@ bool ast_infer_node_type(ASTNode *node) {
             return true;
 
         case AST_LOG_EQ:
+        case AST_LOG_NEQ:
             if (!check_binary_node_children(node)) return false;
             node->inheritedDataType = CF_BOOL;
             return true;
@@ -759,6 +760,7 @@ ASTDataType ast_data_type_for_node_type(ASTNodeType nodeType) {
         case AST_LOG_AND:
         case AST_LOG_OR:
         case AST_LOG_EQ:
+        case AST_LOG_NEQ:
         case AST_LOG_LT:
         case AST_LOG_GT:
         case AST_LOG_LTE:
@@ -800,6 +802,8 @@ const char *atname(ASTNodeType t) {
             return "OR";
         case AST_LOG_EQ:
             return "EQ";
+        case AST_LOG_NEQ:
+            return "NEQ";
         case AST_LOG_LT:
             return "LT";
         case AST_LOG_GT:
