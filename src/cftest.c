@@ -73,6 +73,21 @@ void test1() {
 
     ast_infer_node_type(defStat); // explicitly run type inference for the define statement
 
+    // _ = f(1)
+    cf_make_next_statement(CF_BASIC);
+    ASTNode *asgStat = cf_ast_init(AST_ROOT, AST_ASSIGN);
+    cf_use_ast(CF_STATEMENT_BODY);
+    ASTNode *n = cf_ast_add_leaf(AST_LEFT_OPERAND, AST_ID, (ASTNodeData) {.symbolTableItemPtr = NULL});
+    n->inheritedDataType = CF_BLACK_HOLE;
+
+    // f(1)
+    cf_ast_init(AST_RIGHT_OPERAND, AST_FUNC_CALL);
+    cf_ast_add_leaf(AST_LEFT_OPERAND, AST_ID, (ASTNodeData) {.symbolTableItemPtr = &globFunFIt->data});
+    cf_ast_init_with_data(AST_RIGHT_OPERAND, AST_LIST, 1);
+    cf_ast_add_leaf_for_list(AST_CONST_INT, (ASTNodeData) {.intConstantValue = 1}, 0);
+
+    ast_infer_node_type(asgStat); // explicitly run type inference for the assign statement
+
     // func g(a int) int
     cf_make_function("g");
     cf_add_argument("a", CF_INT);
@@ -110,6 +125,7 @@ void test1() {
             .params_count = 1, .ret_types_count = 1};
 
     ast_infer_node_type(defStat); // run type inference for the define statement again
+    ast_infer_node_type(asgStat); // run type inference for the assign statement again
 }
 
 void test2() {
@@ -382,7 +398,7 @@ void test2() {
 }
 
 int main() {
-    test2();
+    test1();
     tcg_generate();
 
     return compiler_result;

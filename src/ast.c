@@ -61,6 +61,15 @@ ASTNode *ast_leaf_id(STSymbol *idSymbolPtr) {
     return ast_leaf_single_data(AST_ID, (ASTNodeData) {.symbolTableItemPtr = idSymbolPtr});
 }
 
+ASTNode *ast_leaf_black_hole() {
+    ASTNode *node = ast_node_data(AST_ID, 1);
+    AST_ALLOC_CHECK_RN(node);
+    node->data[0] = (ASTNodeData) {.symbolTableItemPtr = NULL};
+    node->inheritedDataType = CF_BLACK_HOLE;
+
+    return node;
+}
+
 ASTNode *ast_node_func_call(STSymbol *funcIdSymbolPtr, ASTNode *paramListNode) {
     ASTNode *idNode = ast_leaf_id(funcIdSymbolPtr);
     ASTNode *callNode = ast_node(AST_FUNC_CALL);
@@ -211,12 +220,14 @@ bool check_unary_node_children(ASTNode *node) {
 bool check_binary_node_children(ASTNode *node) {
     if (node->left == NULL || node->right == NULL) {
         ast_error = AST_ERROR_BINARY_OP_CHILDREN_NOT_ASSIGNED;
+        // TODO: error code
         return false;
     }
 
     if (node->left->inheritedDataType == CF_UNKNOWN) {
         if (!ast_infer_node_type(node->left)) {
             node->inheritedDataType = CF_UNKNOWN_UNINFERRABLE;
+            // TODO: error code
             return false;
         }
     }
@@ -224,8 +235,25 @@ bool check_binary_node_children(ASTNode *node) {
     if (node->right->inheritedDataType == CF_UNKNOWN) {
         if (!ast_infer_node_type(node->right)) {
             node->inheritedDataType = CF_UNKNOWN_UNINFERRABLE;
+            // TODO: error code
             return false;
         }
+    }
+
+    if (node->left->inheritedDataType == CF_BLACK_HOLE) {
+        if (node->actionType == AST_ASSIGN || node->actionType == AST_DEFINE) {
+            node->inheritedDataType = node->right->inheritedDataType;
+            return true;
+        } else {
+            node->inheritedDataType = CF_UNKNOWN_UNINFERRABLE;
+            // TODO: error code
+            return false;
+        }
+    }
+
+    if (node->right->inheritedDataType == CF_BLACK_HOLE) {
+        node->inheritedDataType = CF_UNKNOWN_UNINFERRABLE;
+        return false;
     }
 
     // If we got to a FUNC_CALL for a func that hasn't been yet defined,
@@ -268,6 +296,14 @@ bool check_binary_node_children(ASTNode *node) {
 }
 
 ASTDataType check_nodes_matching(ASTNode *left, ASTNode *right, ASTNodeType rootType) {
+    if (left->inheritedDataType == CF_BLACK_HOLE) {
+        if (!ast_infer_node_type(right)) {
+            return CF_UNKNOWN_UNINFERRABLE;
+        }
+
+        return right->inheritedDataType;
+    }
+
     ASTNode *tmpNode = ast_node(rootType);
     tmpNode->left = left;
     tmpNode->right = right;
@@ -338,6 +374,10 @@ bool assignment_inference_list_func_call(ASTNode *node) {
                         leftIdNode->data[0].symbolTableItemPtr->identifier);
             // TODO: error code
             ast_uninferrable(node);
+        }
+
+        if (leftIdNode->inheritedDataType == CF_BLACK_HOLE) {
+            continue;
         }
 
         if (leftIdNode->inheritedDataType != CF_UNKNOWN && funcRetType->type != CF_UNKNOWN) {
@@ -610,10 +650,25 @@ bool ast_infer_node_type(ASTNode *node) {
             node->inheritedDataType = CF_BOOL;
             return true;
 
-        case AST_ASSIGN:
         case AST_DEFINE:
-            // ASSIGN and DEFINE nodes don't represent values, so they don't have a data type.
-            // Run semantic checks for corresponding left and right sides, including running inference on subtrees
+            if (node->left->actionType != AST_LIST && node->left->inheritedDataType == CF_BLACK_HOLE) {
+                print_error(COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+                            "Expected a name of variable on the left-hand side of a definition statement.\n");
+                // TODO: error code
+                ast_uninferrable(node);
+            } else if (node->left->actionType == AST_LIST) {
+                for (unsigned i = 0; i < node->left->dataCount; i++) {
+                    if (node->left->data[i].astPtr->inheritedDataType != CF_BLACK_HOLE) {
+                        goto case_ast_assign;
+                    }
+                }
+                print_error(COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+                            "Expected at least one new variable on the left-hand side of a definition statement.\n");
+                // TODO: error code
+                ast_uninferrable(node);
+            }
+        case_ast_assign:
+        case AST_ASSIGN:
             return assignment_inference_semantic_checks(node);
 
         case AST_FUNC_CALL:

@@ -32,6 +32,7 @@
 #define COND_RES_VAR "GF@$cond_res"
 #define COND_LHS_VAR "GF@$cond_lhs"
 #define COND_RHS_VAR "GF@$cond_rhs"
+#define THROWAWAY_VAR "GF@$throwaway"
 #define PRINT_VAR "GF@$print"
 
 struct {
@@ -581,6 +582,18 @@ bool generate_logic_expression_assignment(ASTNode *exprAst, CFStatement *stat, c
 void generate_assignment_for_varname(const char *varName, CFStatement *stat, ASTNode *value) {
     ASTNodeData data = value->data[0];
 
+    if (varName == NULL) {
+        if (value->actionType >= AST_LOGIC && value->actionType < AST_CONTROL) {
+            generate_logic_expression_assignment(value, stat, THROWAWAY_VAR);
+        } else {
+            // The right side is not a CONST or ID, evaluate expression on stack and pop it.
+            generate_expression_ast_result(value, stat);
+            out("POPS %s", THROWAWAY_VAR);
+        }
+
+        return;
+    }
+
     switch (value->actionType) {
         // If the right side is a CONST or ID, generate a simple MOVE
         case AST_CONST_INT:
@@ -604,7 +617,7 @@ void generate_assignment_for_varname(const char *varName, CFStatement *stat, AST
             out_nl();
             break;
         default:
-            if (value->actionType >= AST_LOGIC) {
+            if (value->actionType >= AST_LOGIC && value->actionType < AST_CONTROL) {
                 generate_logic_expression_assignment(value, stat, varName);
             } else {
                 // The right side is not a CONST or ID, evaluate expression on stack and pop it.
@@ -628,6 +641,10 @@ void generate_assignment(ASTNode *asgAst, CFStatement *stat) {
             generate_func_call(asgAst->right, stat);
             for (unsigned i = 0; i < asgAst->left->dataCount; i++) {
                 unsigned parI = asgAst->left->dataCount - i - 1;
+
+                if(asgAst->left->data[parI].astPtr->inheritedDataType == CF_BLACK_HOLE) {
+                    continue;
+                }
 
                 MutableString varName = make_var_name(asgAst->left->data[parI].astPtr->data[0].symbolTableItemPtr->identifier, stat, false);
                 out("POPS %s", mstr_content(&varName));
@@ -655,9 +672,13 @@ void generate_assignment(ASTNode *asgAst, CFStatement *stat) {
         return;
     }
 
-    MutableString varName = make_var_name(asgAst->left->data[0].symbolTableItemPtr->identifier, stat, false);
-    generate_assignment_for_varname(mstr_content(&varName), stat, asgAst->right);
-    mstr_free(&varName);
+    if (asgAst->left->inheritedDataType == CF_BLACK_HOLE) {
+        generate_assignment_for_varname(NULL, stat, asgAst->right);
+    } else {
+        MutableString varName = make_var_name(asgAst->left->data[0].symbolTableItemPtr->identifier, stat, false);
+        generate_assignment_for_varname(mstr_content(&varName), stat, asgAst->right);
+        mstr_free(&varName);
+    }
 }
 
 void generate_definition(ASTNode *defAst, CFStatement *stat) {
@@ -969,6 +990,7 @@ void tcg_generate() {
     out("DEFVAR %s", COND_RES_VAR);
     out("DEFVAR %s", COND_LHS_VAR);
     out("DEFVAR %s", COND_RHS_VAR);
+    out("DEFVAR %s", THROWAWAY_VAR);
 
     STItem *printSym = symtable_find(prog->globalSymtable, "print");
     if (printSym != NULL) {

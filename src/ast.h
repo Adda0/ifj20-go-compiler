@@ -107,10 +107,14 @@ ASTNode *ast_leaf_single_data(ASTNodeType nodeType, ASTNodeData data);
 // Does NOT run type inference.
 ASTNode *ast_node_list(unsigned dataCount);
 
-// Allocates and returns a new AST (leaf) node with the AST_ID type and assigns the specified symbol table pointer
+// Allocates and returns a new AST (leaf) node with the AST_ID type and assigns the specified symbol pointer
 // to its data.
 // Runs type inference.
 ASTNode *ast_leaf_id(STSymbol *idSymbolPtr);
+
+// Allocates and returns a new AST (leaf) node with the AST_ID type and sets it to the CF_BLACK_HOLE type with no
+// assigned symbol.
+ASTNode *ast_leaf_black_hole();
 
 // Allocates and returns a new AST node with the AST_FUNC_CALL type and assigns
 // the specified AST_LIST node as its parameters list (the RIGHT child).

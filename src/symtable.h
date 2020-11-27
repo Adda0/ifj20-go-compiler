@@ -22,7 +22,8 @@ typedef enum cfgraph_data_type {
     CF_STRING,
     CF_BOOL,
     CF_MULTIPLE,
-    CF_NIL
+    CF_NIL,
+    CF_BLACK_HOLE
 } STDataType;
 
 typedef enum st_type {
