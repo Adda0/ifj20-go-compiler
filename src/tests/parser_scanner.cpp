@@ -4553,3 +4553,221 @@ TEST_F(ParserScannerTest, RedefinedFunction5) {
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
 }
 
+// === Data type compatibility ===
+
+TEST_F(ParserScannerTest, DataTypeCompatibility1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := 5 + foo()\n"
+        "}\n"
+        "func foo() int {\n"
+        "    return 3\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, DataTypeCompatibility2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(4, 7, true)\n"
+        "}\n"
+        "func foo(f float64, i2 int, b bool) {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION);
+}
+
+TEST_F(ParserScannerTest, DataTypeCompatibility3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := foo() + 5.7\n"
+        "}\n"
+        "func foo() int {\n"
+        "    return 8\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION);
+}
+
+TEST_F(ParserScannerTest, DataTypeCompatibility4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := 4 / foo(5.6)\n"
+        "}\n"
+        "func foo(i int) int {\n"
+        "    return 8\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION);
+}
+
+TEST_F(ParserScannerTest, DataTypeCompatibility5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    bar(4, foo())\n"
+        "}\n"
+        "func bar(i int, b bool) {\n"
+        "}\n"
+        "func foo() string {\n"
+        "   return \"str\\n\"\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION);
+}
+
+// === Data type compatibility in expression ===
+
+TEST_F(ParserScannerTest, DataTypeCompatibilityInExpression1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := 5 - 5.5\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION);
+}
+
+TEST_F(ParserScannerTest, DataTypeCompatibilityInExpression2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    bar(4 || true, foo())\n"
+        "}\n"
+        "func bar(i int, b bool) {\n"
+        "}\n"
+        "func foo() bool {\n"
+        "   return true\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION);
+}
+
+TEST_F(ParserScannerTest, DataTypeCompatibilityInExpression3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    bar(4, true && foo())\n"
+        "}\n"
+        "func bar(i int, b bool) {\n"
+        "}\n"
+        "func foo() string {\n"
+        "   return \"str\\n\"\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION);
+}
+
+TEST_F(ParserScannerTest, DataTypeCompatibilityInExpression4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := \"str1 \" + \"str2\\n\"\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, DataTypeCompatibilityInExpression5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := \"str1 \" - \"str2\\n\"\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, DataTypeCompatibilityInExpression6) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := 4.6 + \"str2\\n\"\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION);
+}
+
+TEST_F(ParserScannerTest, DataTypeCompatibilityInExpression7) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := \"str1 \" + true\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION);
+}
+
+TEST_F(ParserScannerTest, DataTypeCompatibilityInExpression8) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := 3 / float64\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, DataTypeCompatibilityInExpression9) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := 3 / 6.4\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION);
+}
+
+TEST_F(ParserScannerTest, DataTypeCompatibilityInExpression10) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := 3 / float2int(6.4)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, DataTypeCompatibilityInExpression11) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    if 5.4 > 2 {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION);
+}
+
+TEST_F(ParserScannerTest, DataTypeCompatibilityInExpression12) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for i := 0; i < 10; i += 1.2\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION);
+}
+
