@@ -157,7 +157,7 @@ int type(STDataType *data_type) {
     syntax_ok();
 }
 
-int params_n(STItem *current_function, bool ret_type) {
+int params_n(STItem *current_function, bool ret_type, bool already_found, STParam *current_param) {
     MutableString id;
     switch (token.type) {
         case TOKEN_RIGHT_BRACKET:
@@ -175,13 +175,39 @@ int params_n(STItem *current_function, bool ret_type) {
             check_new_token(EOL_FORBIDDEN);
             STDataType data_type;
             check_nonterminal(type(&data_type));
+            STParam *next_param = NULL;
             if (ret_type) {
                 if (!symtable_add_ret_type(current_function, mstr_content(&id), data_type)) {
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
             } else {
-                if (!symtable_add_param(current_function, mstr_content(&id), data_type)) {
-                    return COMPILER_RESULT_ERROR_INTERNAL;
+                if (already_found) {
+                    if (current_param == NULL) {
+                        stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
+                                       "Line %u, col %u: unexpected parameter to function\n",
+                                       prev_token.context.line_num, prev_token.context.char_num);
+                        return COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE;
+                    }
+                    if (current_param->type != CF_UNKNOWN && current_param->type != data_type) {
+                        stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
+                                       "Line %u, col %u: wrong param type to function\n",
+                                       prev_token.context.line_num, prev_token.context.char_num);
+                        return COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE;
+                    }
+                    // Update the information
+                    char *new_buffer = malloc(sizeof(char) * (strlen(mstr_content(&id)) + 1));
+                    if (new_buffer == NULL) {
+                        return COMPILER_RESULT_ERROR_INTERNAL;
+                    }
+                    strcpy(new_buffer, mstr_content(&id));
+                    current_param->id = new_buffer;
+                    current_param->type = data_type;
+                    next_param = current_param->next;
+
+                } else {
+                    if (!symtable_add_param(current_function, mstr_content(&id), data_type)) {
+                        return COMPILER_RESULT_ERROR_INTERNAL;
+                    }
                 }
             }
             STItem *var = symtable_add(symtable_stack_top(&symtable_stack)->table, mstr_content(&id), ST_SYMBOL_VAR);
@@ -190,14 +216,14 @@ int params_n(STItem *current_function, bool ret_type) {
             }
             var->data.data.var_data.type = data_type;
             mstr_free(&id);
-            return params_n(current_function, ret_type);
+            return params_n(current_function, ret_type, already_found, next_param);
         default:
             token_error("expected ) or , when parsing parameters, got %s\n");
             syntax_error();
     }
 }
 
-int params(STItem *current_function, bool ret_type) {
+int params(STItem *current_function, bool ret_type, bool already_found) {
     MutableString id;
     switch (token.type) {
         case TOKEN_RIGHT_BRACKET:
@@ -209,13 +235,40 @@ int params(STItem *current_function, bool ret_type) {
             check_new_token(EOL_FORBIDDEN);
             STDataType data_type;
             check_nonterminal(type(&data_type));
+            STParam *next_param = NULL;
             if (ret_type) {
                 if (!symtable_add_ret_type(current_function, mstr_content(&id), data_type)) {
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
             } else {
-                if (!symtable_add_param(current_function, mstr_content(&id), data_type)) {
-                    return COMPILER_RESULT_ERROR_INTERNAL;
+                if (already_found) {
+                    // Check the type of the first param if we predicted arguments in an expression
+                    STParam *first_param = current_function->data.data.func_data.params;
+                    if (first_param == NULL) {
+                        stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
+                                       "Line %u, col %u: unexpected parameter to function\n",
+                                       prev_token.context.line_num, prev_token.context.char_num);
+                        return COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE;
+                    }
+                    if (first_param->type != CF_UNKNOWN && first_param->type != data_type) {
+                        stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
+                                       "Line %u, col %u: wrong param type to function\n",
+                                       prev_token.context.line_num, prev_token.context.char_num);
+                        return COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE;
+                    }
+                    // UPdate the information
+                    char *new_buffer = malloc(sizeof(char) * (strlen(mstr_content(&id)) + 1));
+                    if (new_buffer == NULL) {
+                        return COMPILER_RESULT_ERROR_INTERNAL;
+                    }
+                    strcpy(new_buffer, mstr_content(&id));
+                    first_param->id = new_buffer;
+                    first_param->type = data_type;
+                    next_param = first_param->next;
+                } else {
+                    if (!symtable_add_param(current_function, mstr_content(&id), data_type)) {
+                        return COMPILER_RESULT_ERROR_INTERNAL;
+                    }
                 }
             }
             STItem *var = symtable_add(symtable_stack_top(&symtable_stack)->table, mstr_content(&id), ST_SYMBOL_VAR);
@@ -224,7 +277,7 @@ int params(STItem *current_function, bool ret_type) {
             }
             var->data.data.var_data.type = data_type;
             mstr_free(&id);
-            return params_n(current_function, ret_type);
+            return params_n(current_function, ret_type, already_found, next_param);
         default:
             token_error("expected ) or identifier when parsing parameters, got %s\n");
             syntax_error();
@@ -541,7 +594,7 @@ int ret_type_inner(STItem *current_function) {
         case TOKEN_ID:
         case TOKEN_RIGHT_BRACKET:
             // rule <ret_type_inner> -> <params>
-            return params(current_function, true);
+            return params(current_function, true, false);
         case TOKEN_KEYWORD:
             switch (token.data.keyword_type) {
                 case KEYWORD_FLOAT64:
@@ -618,14 +671,22 @@ int execution() {
             token_error("expected function identifier after func keyword, got %s\n");
             syntax_error();
         }
-        if (symtable_find(function_table, mstr_content(&token.data.str_val)) != NULL) {
-            redefine_error("redefinition of function %s\n");
-            semantic_error_redefine();
+        STItem *function = symtable_find(function_table, mstr_content(&token.data.str_val));
+        bool already_found = false;
+        if (function) {
+            if (function->data.data.func_data.defined) {
+                redefine_error("redefinition of function %s\n");
+                semantic_error_redefine();
+            } else {
+                already_found = true;
+            }
+        } else {
+            function = symtable_add(function_table, mstr_content(&token.data.str_val), ST_SYMBOL_FUNC);
+            if (function == NULL) {
+                return COMPILER_RESULT_ERROR_INTERNAL;
+            }
         }
-        STItem *new_function = symtable_add(function_table, mstr_content(&token.data.str_val), ST_SYMBOL_FUNC);
-        if (new_function == NULL) {
-            return COMPILER_RESULT_ERROR_INTERNAL;
-        }
+        function->data.data.func_data.defined = true;
         clear_token();
 
         check_new_token(EOL_FORBIDDEN);
@@ -639,7 +700,7 @@ int execution() {
             return COMPILER_RESULT_ERROR_INTERNAL;
         }
         check_new_token(EOL_FORBIDDEN);
-        check_nonterminal(params(new_function, false));
+        check_nonterminal(params(function, false, already_found));
 
         if (token.type != TOKEN_RIGHT_BRACKET) {
             token_error("expected ) after function parameters, got %s\n");
@@ -647,7 +708,7 @@ int execution() {
         }
 
         check_new_token(EOL_FORBIDDEN);
-        check_nonterminal(ret_type(new_function));
+        check_nonterminal(ret_type(function));
 
         if (token.type != TOKEN_CURLY_LEFT_BRACKET) {
             token_error("expected { after function return type, got %s\n");
@@ -688,10 +749,15 @@ int program() {
     clear_token();
     check_new_token(EOL_REQUIRED);
     check_nonterminal(execution());
-    if (symtable_find(function_table, "main") == NULL) {
+    STItem *main = symtable_find(function_table, "main");
+    if (main == NULL || !main->data.data.func_data.defined) {
         stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE,
                        "missing function main\n");
         semantic_error_redefine();
+    } else if (main->data.data.func_data.ret_types != NULL || main->data.data.func_data.params != NULL) {
+        stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
+                       "incorrect prototype of function main\n");
+        return COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE;
     }
     syntax_ok();
 }
