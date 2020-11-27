@@ -329,6 +329,20 @@ bool reduce_or(PrecedenceStack *stack, PrecedenceNode *start) {
 }
 
 bool reduce_assign(PrecedenceStack *stack, PrecedenceNode *start) {
+    PrecedenceNode *current = start;
+    while (current->data.type != TOKEN_ASSIGN) {
+        if (current->data.type == SYMB_NONTERMINAL) {
+            char *id = mstr_content(&current->data.data.str_val);
+            if (strcmp(id, "_") != 0 && symtable_stack_find_symbol(&symtable_stack, id) == NULL) {
+                stderr_message("precedence_parser", ERROR,
+                               COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE, "Line %u "
+                                "assignment to undefined variable %s\n", current->data.context.line_num, id);
+                return false;
+            }
+        }
+        current = current->rptr;
+    }
+
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
@@ -341,36 +355,73 @@ bool reduce_define(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     SymbolTable *table = node->table;
     PrecedenceNode *current = start;
+    int newly_defined = 0;
     while (current->data.type != TOKEN_DEFINE) {
         if (current->data.type == SYMB_NONTERMINAL) {
-            symtable_add(table, mstr_content(&current->data.data.str_val), ST_SYMBOL_VAR);
+            char *id = mstr_content(&current->data.data.str_val);
+            if (symtable_find(table, id) == NULL) {
+                if (strcmp("_", id) != 0) {
+                    symtable_add(table, mstr_content(&current->data.data.str_val), ST_SYMBOL_VAR);
+                    newly_defined++;
+                }
+            }
         }
         current = current->rptr;
     }
+    if (newly_defined == 0) {
+        stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE,
+                       "Line %u: no new variable defined\n", start->rptr->data.context.line_num);
+        return false;
+    }
+
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
 
 bool reduce_plus_assign(PrecedenceStack *stack, PrecedenceNode *start) {
+    if (symtable_stack_find_symbol(&symtable_stack, mstr_content(&start->rptr->data.data.str_val)) == NULL) {
+        stderr_message("precedence_parser", ERROR,
+                       COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE, "Line %u: "
+                       "assignment to undefined variable \n", start->rptr->data.context.line_num);
+        return false;
+    }
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
 
 bool reduce_minus_assign(PrecedenceStack *stack, PrecedenceNode *start) {
+    if (symtable_stack_find_symbol(&symtable_stack, mstr_content(&start->rptr->data.data.str_val)) == NULL) {
+        stderr_message("precedence_parser", ERROR,
+                       COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE, "Line %u: "
+                       "assignment to undefined variable \n", start->rptr->data.context.line_num);
+        return false;
+    }
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
 
 bool reduce_multiply_assign(PrecedenceStack *stack, PrecedenceNode *start) {
+    if (symtable_stack_find_symbol(&symtable_stack, mstr_content(&start->rptr->data.data.str_val)) == NULL) {
+        stderr_message("precedence_parser", ERROR,
+                       COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE, "Line %u: "
+                       "assignment to undefined variable \n", start->rptr->data.context.line_num);
+        return false;
+    }
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
 
 bool reduce_divide_assign(PrecedenceStack *stack, PrecedenceNode *start) {
+    if (symtable_stack_find_symbol(&symtable_stack, mstr_content(&start->rptr->data.data.str_val)) == NULL) {
+        stderr_message("precedence_parser", ERROR,
+                       COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE, "Line %u: "
+                       "assignment to undefined variable \n", start->rptr->data.context.line_num);
+        return false;
+    }
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
