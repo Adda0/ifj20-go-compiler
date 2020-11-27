@@ -1021,6 +1021,12 @@ void generate_if_statement(CFStatement *stat) {
     currentFunction.ifCounter++;
 
     ast_infer_node_type(stat->data.ifData->conditionalAst);
+    if (stat->data.ifData->conditionalAst->inheritedDataType != CF_BOOL) {
+        stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+                       "Unexpected non-logical expression in if statement.\n");
+        return;
+    }
+
     bool hasElse = !is_statement_empty(stat->data.ifData->elseStatement);
 
     char i[11];
@@ -1065,6 +1071,11 @@ void generate_for_statement(CFStatement *stat) {
 
     if (stat->data.forData->conditionalAst != NULL) {
         ast_infer_node_type(stat->data.forData->conditionalAst);
+        if (stat->data.forData->conditionalAst->inheritedDataType != CF_BOOL) {
+            stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+                           "Unexpected non-logical expression in for definition.\n");
+            return;
+        }
 
         char i[11];
         sprintf(i, "%i", counter);
