@@ -44,7 +44,9 @@ add_executable(Compiler
         src/stacks.h src/stacks.c
         src/control_flow.h src/control_flow.c
         src/optimiser.h src/optimiser.c
-        src/code_generator.h src/code_generator.c)
+        src/code_generator.h src/code_generator.c
+        src/ast.h src/ast.c
+        src/symtable.h src/symtable.c)
 
 add_executable(ControlFlowTester
         src/symtable.h src/symtable.c
@@ -76,7 +78,10 @@ add_executable(Test_parser_scanner
         src/tests/tests_common.h src/tests/stdin_mock_test.h
         src/tests/parser_scanner.cpp
         src/precedence_parser.h src/precedence_parser.c
-        src/stacks.h src/stacks.c)
+        src/stacks.h src/stacks.c
+        src/control_flow.h src/control_flow.c
+        src/ast.h src/ast.c
+        src/symtable.h src/symtable.c)
 target_link_libraries(Test_parser_scanner gtest gtest_main)
 
 add_executable(Test_symbol_table
