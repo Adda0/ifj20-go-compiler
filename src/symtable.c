@@ -193,6 +193,8 @@ bool symtable_add_param(STItem *item, const char *id, STDataType type) {
         }
         tmp->next = new;
     }
+
+    item->data.data.func_data.params_count++;
     return true;
 }
 
@@ -228,5 +230,7 @@ bool symtable_add_ret_type(STItem *item, const char *id, STDataType type) {
         }
         tmp->next = new;
     }
+
+    item->data.data.func_data.ret_types_count++;
     return true;
 }

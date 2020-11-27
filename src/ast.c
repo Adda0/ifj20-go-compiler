@@ -15,7 +15,9 @@
 #define AST_ALLOC_CHECK_RN(ptr) do { if ((ptr) == NULL) { ast_error = AST_ERROR_INTERNAL; return NULL; } } while(0)
 
 #if AST_DEBUG
+
 #include <signal.h>
+
 #define print_error(result, msg, ...) stderr_message("ast", ERROR, (result), (msg),##__VA_ARGS__); raise(SIGTRAP)
 #else
 #define print_error(result, msg, ...) stderr_message("ast", ERROR, (result), (msg),##__VA_ARGS__)
@@ -300,8 +302,72 @@ ASTDataType check_nodes_matching(ASTNode *left, ASTNode *right, ASTNodeType root
         ast_uninferrable(node); \
 }
 
+bool assignment_inference_list_func_call(ASTNode *node) {
+    ASTNode *leftIdListNode = node->left;
+    ASTNode *rightFuncCallNode = node->right;
+    ASTNode *funcCallIdNode = node->right->left;
+
+    if (!ast_infer_node_type(rightFuncCallNode)) {
+        // TODO: error code
+        ast_uninferrable(node);
+    }
+
+    STSymbol *funcSymb = funcCallIdNode->data[0].symbolTableItemPtr;
+    if (!funcSymb->data.func_data.defined) {
+        // Let it be… the node's type will be unknown, if this is an assignment,
+        // we could infer the lhs IDs' types from their previous usage – or not
+        node->inheritedDataType = CF_UNKNOWN;
+        return ast_infer_node_type(leftIdListNode);
+    }
+
+    if (leftIdListNode->dataCount != funcSymb->data.func_data.ret_types_count) {
+        print_error(COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+                    "Assignment left-hand side variables don't match return values of the right-hand side function '%s'.\n",
+                    funcSymb->identifier);
+        // TODO: error code
+        ast_uninferrable(node);
+    }
+
+    STParam *funcRetType = funcSymb->data.func_data.ret_types;
+    for (unsigned i = 0; i < leftIdListNode->dataCount; i++) {
+        ASTNode *leftIdNode = leftIdListNode->data[i].astPtr;
+
+        if (!ast_infer_node_type(leftIdNode)) {
+            print_error(COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+                        "Error deducing type for variable '%s'.\n",
+                        leftIdNode->data[0].symbolTableItemPtr->identifier);
+            // TODO: error code
+            ast_uninferrable(node);
+        }
+
+        if (leftIdNode->inheritedDataType != CF_UNKNOWN && funcRetType->type != CF_UNKNOWN) {
+            if (leftIdNode->inheritedDataType != funcRetType->type) {
+                print_error(COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+                            "Type of left-hand side variable '%s' doesn't match its corresponding right-hand side.\n",
+                            leftIdNode->data[0].symbolTableItemPtr->identifier);
+                // TODO: error code
+                ast_uninferrable(node);
+            }
+        } else if (leftIdNode->inheritedDataType == CF_UNKNOWN && funcRetType->type != CF_UNKNOWN) {
+            leftIdNode->inheritedDataType = funcRetType->type;
+            leftIdNode->data[0].symbolTableItemPtr->data.var_data.type = funcRetType->type;
+        } else if (leftIdNode->inheritedDataType != CF_UNKNOWN && funcRetType->type == CF_UNKNOWN) {
+            funcRetType->type = leftIdNode->inheritedDataType;
+        } // if both are unknown, move on
+
+        funcRetType = funcRetType->next;
+    }
+
+    node->inheritedDataType = CF_NIL;
+    return true;
+}
+
 bool assignment_inference_semantic_checks(ASTNode *node) {
     if (node->left->actionType == AST_LIST) {
+        if (node->right->actionType == AST_FUNC_CALL) {
+            return assignment_inference_list_func_call(node);
+        }
+
         if (node->right->actionType != AST_LIST || node->right->dataCount != node->left->dataCount) {
             print_error(COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
                         "Number of variables and assigned values don't match.\n");
@@ -384,7 +450,8 @@ bool func_call_inference_semantic_checks(ASTNode *node) {
     }
 
     if (!ast_infer_node_type(leftFuncIdNode)) {
-        print_error(COMPILER_RESULT_ERROR_INTERNAL, "Couldn't infer function '%s' return value.\n", funcSymbol->identifier);
+        print_error(COMPILER_RESULT_ERROR_INTERNAL, "Couldn't infer function '%s' return value.\n",
+                    funcSymbol->identifier);
         // TODO: error code
         ast_uninferrable(node);
     }

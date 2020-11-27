@@ -39,9 +39,11 @@ typedef struct st_param {
 
 /** A structure representing data for a symbol of type function. */
 typedef struct st_function_data {
-    STParam *params;     /**< Pointer to first param. */
-    STParam *ret_types;  /**< Pointer to first return type. */
-    bool defined;        /**< Whether the function has been defined */
+    unsigned params_count;       /**< Number of params. */
+    STParam *params;             /**< Pointer to first param. */
+    unsigned ret_types_count;    /**< Number of return types. */
+    STParam *ret_types;          /**< Pointer to first return type. */
+    bool defined;                /**< Whether the function has been defined */
 } STFunctionData;
 
 /** A structure representing data for a symbol of type variable. */

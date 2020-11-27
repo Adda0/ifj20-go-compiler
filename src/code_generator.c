@@ -617,6 +617,26 @@ void generate_assignment_for_varname(const char *varName, CFStatement *stat, AST
 
 void generate_assignment(ASTNode *asgAst, CFStatement *stat) {
     if (asgAst->left->actionType == AST_LIST) {
+        if (asgAst->right->actionType == AST_FUNC_CALL) {
+            STSymbol *funcSymb = asgAst->right->left->data[0].symbolTableItemPtr;
+            if (asgAst->left->dataCount != funcSymb->data.func_data.ret_types_count) {
+                stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+                               "Assignment left-hand side variables don't match the right-hand side function's return values.\n");
+                return;
+            }
+
+            generate_func_call(asgAst->right, stat);
+            for (unsigned i = 0; i < asgAst->left->dataCount; i++) {
+                unsigned parI = asgAst->left->dataCount - i - 1;
+
+                MutableString varName = make_var_name(asgAst->left->data[parI].astPtr->data[0].symbolTableItemPtr->identifier, stat, false);
+                out("POPS %s", mstr_content(&varName));
+                mstr_free(&varName);
+            }
+
+            return;
+        }
+
         if (asgAst->right->actionType != AST_LIST) {
             stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
                            "Expected AST_LIST on the right side, got %i instead.\n", asgAst->right->actionType);

@@ -104,8 +104,10 @@ void test1() {
     funGret->type = CF_INT;
     funFret->type = CF_INT;
 
-    globFunGIt->data.data.func_data = (STFunctionData) {.defined = true, .params = funGparA, .ret_types = funGret};
-    globFunFIt->data.data.func_data = (STFunctionData) {.defined = true, .params = funFparB, .ret_types = funFret};
+    globFunGIt->data.data.func_data = (STFunctionData) {.defined = true, .params = funGparA, .ret_types = funGret,
+            .params_count = 1, .ret_types_count = 1};
+    globFunFIt->data.data.func_data = (STFunctionData) {.defined = true, .params = funFparB, .ret_types = funFret,
+            .params_count = 1, .ret_types_count = 1};
 
     ast_infer_node_type(defStat); // run type inference for the define statement again
 }
@@ -137,14 +139,26 @@ void test2() {
     a->next = (a + 1);
     a->next->type = CF_INT;
     a->next->id = "b";
-    globFunIt->data.data.func_data = (STFunctionData) {.defined = true, .params = NULL, .ret_types = a};
+    globFunIt->data.data.func_data = (STFunctionData) {.defined = true, .params = NULL, .ret_types = a,
+            .ret_types_count = 2, .params_count = 0};
 
     STParam *b = calloc(2, sizeof(STParam));
     b->type = CF_INT;
     b->id = NULL; // empty return val name
     (b + 1)->type = CF_INT;
     (b + 1)->id = "x";
-    globFun2It->data.data.func_data = (STFunctionData) {.defined = true, .params = (b + 1), .ret_types = b};
+    globFun2It->data.data.func_data = (STFunctionData) {.defined = true, .params = (b + 1), .ret_types = b,
+            .ret_types_count = 1, .params_count= 1};
+
+    // main() local variables
+    STItem *mainPIt = symtable_add(mainSt, "p", ST_SYMBOL_VAR);
+    STSymbol *mainP = &mainPIt->data;
+    mainP->data.var_data.type = CF_INT;
+    mainP->reference_counter = 1;
+    STItem *mainQIt = symtable_add(mainSt, "q", ST_SYMBOL_VAR);
+    STSymbol *mainQ = &mainQIt->data;
+    mainQ->data.var_data.type = CF_INT;
+    mainQ->reference_counter = 1;
 
     // fun() (a int, b int) local variables
     STItem *funIIt = symtable_add(funSt, "i", ST_SYMBOL_VAR);
@@ -357,8 +371,13 @@ void test2() {
     cf_make_function("main");
     cf_assign_function_symtable(mainSt);
     cf_make_next_statement(CF_BASIC);
-    cf_ast_init(AST_ROOT, AST_FUNC_CALL);
+    cf_ast_init(AST_ROOT, AST_DEFINE);
     cf_use_ast(CF_STATEMENT_BODY);
+    cf_ast_init_with_data(AST_LEFT_OPERAND, AST_LIST, 2);
+    cf_ast_add_leaf_for_list(AST_ID, (ASTNodeData) {.symbolTableItemPtr = mainP}, 0);
+    cf_ast_add_leaf_for_list(AST_ID, (ASTNodeData) {.symbolTableItemPtr = mainQ}, 1);
+    cf_ast_parent();
+    cf_ast_init(AST_RIGHT_OPERAND, AST_FUNC_CALL);
     cf_ast_add_leaf(AST_UNARY_OPERAND, AST_ID, (ASTNodeData) {.symbolTableItemPtr = &globFunIt->data});
 }
 
