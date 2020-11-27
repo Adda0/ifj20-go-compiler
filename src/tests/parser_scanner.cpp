@@ -4771,3 +4771,159 @@ TEST_F(ParserScannerTest, DataTypeCompatibilityInExpression12) {
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION);
 }
 
+// === Parameters in function call ===
+
+TEST_F(ParserScannerTest, ParametersInFunctionCall1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo()\n"
+        "}\n"
+        "func foo(i int) {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE);
+}
+
+TEST_F(ParserScannerTest, ParametersInFunctionCall2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(4, 7, true)\n"
+        "}\n"
+        "func foo(i int, i2 int, b bool) bool {\n"
+        "    return true\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ParametersInFunctionCall3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(4, 7, true)\n"
+        "}\n"
+        "func foo(i int, i2 int, b bool) bool {\n"
+        "    return 0\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE);
+}
+
+TEST_F(ParserScannerTest, ParametersInFunctionCall4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(4, 7, true)\n"
+        "}\n"
+        "func foo(i int, b bool) bool {\n"
+        "    return true\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE);
+}
+
+TEST_F(ParserScannerTest, ParametersInFunctionCall5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(4, true)\n"
+        "}\n"
+        "func foo(i int, i2 int, b bool) bool {\n"
+        "    return true\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE);
+}
+
+TEST_F(ParserScannerTest, ParametersInFunctionCall6) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo()\n"
+        "}\n"
+        "func foo(i int, i2 int, b bool) bool {\n"
+        "    return true\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE);
+}
+
+TEST_F(ParserScannerTest, ParametersInFunctionCall7) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(4, 7, true)\n"
+        "}\n"
+        "func foo(i int, i2 int, b bool) (bool, int) {\n"
+        "    return true\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE);
+}
+
+TEST_F(ParserScannerTest, ParametersInFunctionCall8) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(4, 7, true)\n"
+        "}\n"
+        "func foo(i int, i2 int, b bool) (bool, int) {\n"
+        "    return true, 0\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, ParametersInFunctionCall9) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := foo()\n"
+        "}\n"
+        "func foo(str string) string {\n"
+        "    return \"\"\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE);
+}
+
+TEST_F(ParserScannerTest, ParametersInFunctionCall10) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := 4 / foo()\n"
+        "}\n"
+        "func foo() int {\n"
+        "   return 5.8\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE);
+}
+
+TEST_F(ParserScannerTest, ParametersInFunctionCall11) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    bar(4, foo())\n"
+        "}\n"
+        "func bar(i int, b bool) {\n"
+        "}\n"
+        "func foo() int {\n"
+        "    return 1\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE);
+}
