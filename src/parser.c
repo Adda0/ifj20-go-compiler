@@ -769,12 +769,102 @@ int execution() {
     syntax_error();
 }
 
+bool prepare_builtins() {
+    STItem *inputs = symtable_add(function_table, "inputs", ST_SYMBOL_FUNC);
+    if (inputs == NULL) {
+        return false;
+    }
+    inputs->data.data.func_data.defined = true;
+    if (!symtable_add_ret_type(inputs, NULL, CF_STRING) || !symtable_add_ret_type(inputs, NULL, CF_INT)) {
+        return false;
+    }
+    STItem *inputi = symtable_add(function_table, "inputi", ST_SYMBOL_FUNC);
+    if (inputi == NULL) {
+        return false;
+    }
+    inputi->data.data.func_data.defined = true;
+    if (!symtable_add_ret_type(inputi, NULL, CF_INT) || !symtable_add_ret_type(inputi, NULL, CF_INT)) {
+        return false;
+    }
+    STItem *inputf = symtable_add(function_table, "inputf", ST_SYMBOL_FUNC);
+    if (inputf == NULL) {
+        return false;
+    }
+    inputf->data.data.func_data.defined = true;
+    if (!symtable_add_ret_type(inputf, NULL, CF_FLOAT) || !symtable_add_ret_type(inputf, NULL, CF_INT)) {
+        return false;
+    }
+    STItem *print = symtable_add(function_table, "print", ST_SYMBOL_FUNC);
+    if (print == NULL) {
+        return false;
+    }
+    print->data.data.func_data.defined = true;
+    // Do not add any print arguments, this will be taken care of by AST.
+    STItem *int2float = symtable_add(function_table, "int2float", ST_SYMBOL_FUNC);
+    if (int2float == NULL) {
+        return false;
+    }
+    int2float->data.data.func_data.defined = true;
+    if (!symtable_add_param(int2float, "i", CF_INT) || !symtable_add_ret_type(int2float, NULL, CF_FLOAT)) {
+        return false;
+    }
+    STItem *float2int = symtable_add(function_table, "float2int", ST_SYMBOL_FUNC);
+    if (float2int == NULL) {
+        return false;
+    }
+    float2int->data.data.func_data.defined = true;
+    if (!symtable_add_param(float2int, "i", CF_FLOAT) || !symtable_add_ret_type(float2int, NULL, CF_INT)) {
+        return false;
+    }
+    STItem *len = symtable_add(function_table, "len", ST_SYMBOL_FUNC);
+    if (len == NULL) {
+        return false;
+    }
+    len->data.data.func_data.defined = true;
+    if (!symtable_add_param(len, "s", CF_STRING) || !symtable_add_ret_type(len, NULL, CF_INT)) {
+        return false;
+    }
+    STItem *substr = symtable_add(function_table, "substr", ST_SYMBOL_FUNC);
+    if (substr == NULL) {
+        return false;
+    }
+    substr->data.data.func_data.defined = true;
+    if (!symtable_add_param(substr, "s", CF_STRING) || !symtable_add_param(substr, "i", CF_INT) ||
+            !symtable_add_param(substr, "n", CF_INT) || !symtable_add_ret_type(substr, NULL, CF_STRING) ||
+            !symtable_add_ret_type(substr, NULL, CF_INT)) {
+        return false;
+    }
+    STItem *ord = symtable_add(function_table, "ord", ST_SYMBOL_FUNC);
+    if (ord == NULL) {
+        return false;
+    }
+    ord->data.data.func_data.defined = true;
+    if (!symtable_add_param(ord, "s", CF_STRING) || !symtable_add_param(ord, "i", CF_INT) ||
+        !symtable_add_ret_type(ord, NULL, CF_INT) || !symtable_add_ret_type(ord, NULL, CF_INT)) {
+        return false;
+    }
+    STItem *chr = symtable_add(function_table, "chr", ST_SYMBOL_FUNC);
+    if (chr == NULL) {
+        return false;
+    }
+    chr->data.data.func_data.defined = true;
+    if (!symtable_add_param(chr, "i", CF_INT) || !symtable_add_ret_type(chr, NULL, CF_STRING) ||
+            !symtable_add_ret_type(chr, NULL, CF_INT)) {
+        return false;
+    }
+    return true;
+}
+
 int program() {
     // rule <program> -> package id <execution>
     function_table = symtable_init(TABLE_SIZE);
     if (function_table == NULL) {
         return COMPILER_RESULT_ERROR_INTERNAL;
     }
+    if (!prepare_builtins()) {
+        return COMPILER_RESULT_ERROR_INTERNAL;
+    }
+
     if (token.type != TOKEN_KEYWORD || token.data.keyword_type != KEYWORD_PACKAGE) {
         token_error("expected package keyword at the beginning of file, got %s\n");
         syntax_error();
