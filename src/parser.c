@@ -888,6 +888,14 @@ int program() {
                            "incorrect prototype of function main\n");
             return COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE;
         }
+        for (STItem *function=symtable_get_first_item(function_table); function != NULL;
+                function=symtable_get_next_item(function_table, function)) {
+            if (!function->data.data.func_data.defined) {
+                stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE,
+                               "undefined function %s\n", function->key);
+                return COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE;
+            }
+        }
     }
     syntax_ok();
 }
