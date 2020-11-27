@@ -4927,3 +4927,71 @@ TEST_F(ParserScannerTest, ParametersInFunctionCall11) {
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE);
 }
+
+// === Test function main definition ===
+
+TEST_F(ParserScannerTest, FunctionMain1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := 6\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, FunctionMain2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main(i int) {\n"
+        "    a := 6\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE);
+}
+
+TEST_F(ParserScannerTest, FunctionMain3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main(i int, str string) {\n"
+        "    a := 6\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE);
+}
+
+TEST_F(ParserScannerTest, FunctionMain4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() int {\n"
+        "    a := 6\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE);
+}
+
+TEST_F(ParserScannerTest, FunctionMain5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() (string, int) {\n"
+        "    a := 6\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE);
+}
+
+TEST_F(ParserScannerTest, FunctionMain6) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func foo(i int) {\n"
+        "    a := 6\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
+}
