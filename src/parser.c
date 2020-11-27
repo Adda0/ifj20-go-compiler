@@ -487,6 +487,13 @@ int statement() {
                 case KEYWORD_FOR:
                     // rule <statement> -> for <for_definition> ; expression ; <for_assignment> { <body> }
                     check_new_token(EOL_OPTIONAL);
+                    // For definition needs a separate level of symtable.
+                    if ((new_body_table = symtable_init(TABLE_SIZE)) == NULL) {
+                        return COMPILER_RESULT_ERROR_INTERNAL;
+                    }
+                    if (symtable_stack_push(&symtable_stack, new_body_table) == NULL) {
+                        return COMPILER_RESULT_ERROR_INTERNAL;
+                    }
                     check_nonterminal(for_definition());
                     if (token.type != TOKEN_SEMICOLON) {
                         token_error("expected semicolon after for definition, got %s\n");
@@ -515,6 +522,7 @@ int statement() {
                     if (symtable_stack_push(&symtable_stack, new_body_table) == NULL) {
                         return COMPILER_RESULT_ERROR_INTERNAL;
                     }
+                    symtable_stack_pop(&symtable_stack);
                     symtable_stack_pop(&symtable_stack);
                     check_nonterminal(body());
                     if (token.type != TOKEN_CURLY_RIGHT_BRACKET) {
@@ -759,6 +767,7 @@ int program() {
                        "incorrect prototype of function main\n");
         return COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE;
     }
+
     syntax_ok();
 }
 
