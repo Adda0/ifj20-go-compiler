@@ -4408,3 +4408,148 @@ TEST_F(ParserScannerTest, UndefinedVariable4) {
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
 }
+
+// === Undefined function ===
+
+TEST_F(ParserScannerTest, UndefinedFunction1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo()\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
+}
+
+TEST_F(ParserScannerTest, UndefinedFunction2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(4, 7, true)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
+}
+
+TEST_F(ParserScannerTest, UndefinedFunction3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := foo()\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
+}
+
+TEST_F(ParserScannerTest, UndefinedFunction4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := 4 / foo()\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
+}
+
+TEST_F(ParserScannerTest, UndefinedFunction5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    bar(4, foo())\n"
+        "}\n"
+        "func bar(i int, b bool) {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
+}
+
+// === Redefined function ===
+
+TEST_F(ParserScannerTest, RedefinedFunction1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo()\n"
+        "}\n"
+        "func foo() {\n"
+        "}\n"
+        "func foo() {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
+}
+
+TEST_F(ParserScannerTest, RedefinedFunction2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(4, 7, true)\n"
+        "}\n"
+        "func foo(i int, i2 int, b bool) {\n"
+        "}\n"
+        "func foo(b bool, f float64, s string) {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
+}
+
+TEST_F(ParserScannerTest, RedefinedFunction3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := foo()\n"
+        "}\n"
+        "func foo() int {\n"
+        "    return 8\n"
+        "}\n"
+        "func foo() string {\n"
+        "    return \"\"\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
+}
+
+TEST_F(ParserScannerTest, RedefinedFunction4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := 4 / foo()\n"
+        "}\n"
+        "func foo() int {\n"
+        "    return 8\n"
+        "}\n"
+        "func foo() float64 {\n"
+        "   return 5.8\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
+}
+
+TEST_F(ParserScannerTest, RedefinedFunction5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    bar(4, foo())\n"
+        "}\n"
+        "func bar(i int, b bool) {\n"
+        "}\n"
+        "func foo() bool {\n"
+        "   return false\n"
+        "}\n"
+        "func foo() int {\n"
+        "    return 5\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
+}
+
