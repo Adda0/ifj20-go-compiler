@@ -2628,6 +2628,98 @@ TEST_F(ParserScannerTest, EmptyRandomFunction) {
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
+TEST_F(ParserScannerTest, MissingMainFunc1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
+}
+
+TEST_F(ParserScannerTest, MissingMainFunc2) {
+    std::string inputStr = \
+        "package main\n"
+        "func foo() {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
+}
+
+TEST_F(ParserScannerTest, AssignToVoidVariable1) {
+    std::string inputStr = \
+        "package main\n"
+        "func main() {\n"
+        "   _ = foo()\n"
+        "}\n"
+        "func foo() {\n"
+        "    return true\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, AssignToVoidVariable2) {
+    std::string inputStr = \
+        "package main\n"
+        "func main() {\n"
+        "   _, _ = foo()\n"
+        "}\n"
+        "func foo() (bool, bool, bool) {\n"
+        "    return true, true, false\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL); //TODO which error code should be returned?
+}
+
+TEST_F(ParserScannerTest, AssignToVoidVariable3) {
+    std::string inputStr = \
+        "package main\n"
+        "func main() {\n"
+        "   _, _, _ = foo()\n"
+        "}\n"
+        "func foo() (bool, bool, bool) {\n"
+        "    return true, true, false\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, DefineToVoidVariable1) {
+    std::string inputStr = \
+        "package main\n"
+        "func main() {\n"
+        "   _ := foo()\n"
+        "}\n"
+        "func foo() bool {\n"
+        "    return true\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL); //TODO which error code should be returned?
+}
+
+TEST_F(ParserScannerTest, DefineToVoidVariable2) {
+    std::string inputStr = \
+        "package main\n"
+        "func main() {\n"
+        "   _, _, _ := foo()\n"
+        "}\n"
+        "func foo() bool, bool, bool {\n"
+        "    return true, true, false\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL);
+}
+
+TEST_F(ParserScannerTest, VoidVariableInExpression) {
+    std::string inputStr = \
+        "package main\n"
+        "func main() {\n"
+        "    a := _ + 5\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
+}
+
 // === Test function headers ===
 
 TEST_F(ParserScannerTest, FunctionHeader1) {
@@ -5047,4 +5139,28 @@ TEST_F(ParserScannerTest, ZeroDivision4) {
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_DIVISION_BY_ZERO);
+}
+
+// === Test MULTIVAL definition ===
+
+TEST_F(ParserScannerTest, MultivalDefinition1) {
+    std::string inputStr = \
+        "package main\n"
+        "func main() {\n"
+        "    b := 0\n"
+        "    a, b := 5, 6\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, MultivalDefinition2) {
+    std::string inputStr = \
+        "package main\n"
+        "func main() {\n"
+        "    a, b := 0, 5\n"
+        "    a, b := 5, 6\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
 }
