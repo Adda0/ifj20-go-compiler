@@ -132,4 +132,21 @@ bool symtable_add_param(STItem *item, const char *id, STDataType type);
  */
 bool symtable_add_ret_type(STItem *item, const char *id, STDataType type);
 
+/**
+ * @brief Get the first item in the given symbol table.
+ *
+ * @param table Table to search for items in.
+ * @return STItem* Returns pointer to the first item in the symbol table or NULL, if the symbol table is empty.
+ */
+STItem *symtable_get_first_item(SymbolTable *table);
+
+/**
+ * @brief Get the next item in the given symbol table following the given item.
+ *
+ * @param table Table to search for items in.
+ * @param current_item The returned item will be following this current item item in the symbol table.
+ * @return STItem*  Returns pointer to the next item in the symbol table or NULL, if the symbol table is empty or the given item is the last item.
+ */
+STItem *symtable_get_next_item(SymbolTable *table, STItem *current_item);
+
 #endif
