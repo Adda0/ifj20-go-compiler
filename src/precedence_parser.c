@@ -335,7 +335,11 @@ bool reduce_assign(PrecedenceStack *stack, PrecedenceNode *start) {
 }
 
 bool reduce_define(PrecedenceStack *stack, PrecedenceNode *start) {
-    SymbolTable *table = symtable_stack_top(&symtable_stack)->table;
+    SymtableNode *node = symtable_stack_top(&symtable_stack);
+    if (node == NULL) {
+        return false;
+    }
+    SymbolTable *table = node->table;
     PrecedenceNode *current = start;
     while (current->data.type != TOKEN_DEFINE) {
         if (current->data.type == SYMB_NONTERMINAL) {
