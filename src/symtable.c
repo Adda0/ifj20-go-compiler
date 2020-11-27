@@ -234,3 +234,29 @@ bool symtable_add_ret_type(STItem *item, const char *id, STDataType type) {
     item->data.data.func_data.ret_types_count++;
     return true;
 }
+
+STItem *symtable_get_first_item(SymbolTable *table) {
+    for (size_t i = 0; i < table->arr_size; i++) {
+        if (table->arr[i] != NULL) {
+            return table->arr[i];
+        }
+    }
+
+    return NULL;
+}
+
+STItem *symtable_get_next_item(SymbolTable *table, STItem *current_item) {
+    size_t index = symtable_hash(current_item->key) % table->arr_size;
+
+    if (current_item->next != NULL) {
+        return current_item->next;
+    } else {
+        for (size_t i = index + 1; i < table->arr_size; i++) {
+            if (table->arr[i] != NULL) {
+                return table->arr[i];
+            }
+        }
+    }
+
+    return NULL;
+}
