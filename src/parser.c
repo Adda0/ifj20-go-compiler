@@ -178,10 +178,12 @@ int params_n(STItem *current_function, bool ret_type, bool already_found, STPara
             STParam *next_param = NULL;
             if (semantic_enabled) {
                 if (ret_type) {
+                    cf_add_return_value(mstr_content(&id), data_type);
                     if (!symtable_add_ret_type(current_function, mstr_content(&id), data_type)) {
                         return COMPILER_RESULT_ERROR_INTERNAL;
                     }
                 } else {
+                    cf_add_argument(mstr_content(&id), data_type);
                     if (already_found) {
                         if (current_param == NULL) {
                             stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
@@ -217,7 +219,6 @@ int params_n(STItem *current_function, bool ret_type, bool already_found, STPara
                 }
                 var->data.data.var_data.type = data_type;
             }
-            mstr_free(&id);
             return params_n(current_function, ret_type, already_found, next_param);
         default:
             token_error("expected ) or , when parsing parameters, got %s\n");
@@ -240,10 +241,12 @@ int params(STItem *current_function, bool ret_type, bool already_found) {
             STParam *next_param = NULL;
             if (semantic_enabled) {
                 if (ret_type) {
+                    cf_add_return_value(mstr_content(&id), data_type);
                     if (!symtable_add_ret_type(current_function, mstr_content(&id), data_type)) {
                         return COMPILER_RESULT_ERROR_INTERNAL;
                     }
                 } else {
+                    cf_add_argument(mstr_content(&id), data_type);
                     if (already_found) {
                         // Check the type of the first param if we predicted arguments in an expression
                         STParam *first_param = current_function->data.data.func_data.params;
@@ -280,7 +283,6 @@ int params(STItem *current_function, bool ret_type, bool already_found) {
                 }
                 var->data.data.var_data.type = data_type;
             }
-            mstr_free(&id);
             return params_n(current_function, ret_type, already_found, next_param);
         default:
             token_error("expected ) or identifier when parsing parameters, got %s\n");
@@ -605,6 +607,7 @@ int ret_type_n(STItem *current_function) {
             check_new_token(EOL_OPTIONAL);
             check_nonterminal(type(&data_type));
             if (semantic_enabled) {
+                cf_add_return_value(NULL, data_type);
                 if (!symtable_add_ret_type(current_function, NULL, data_type)) {
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
@@ -632,6 +635,7 @@ int ret_type_inner(STItem *current_function) {
                     // rule <ret_type_inner> -> <type> <ret_type_n>
                     check_nonterminal(type(&data_type));
                     if (semantic_enabled) {
+                        cf_add_return_value(NULL, data_type);
                         if (!symtable_add_ret_type(current_function, NULL, data_type)) {
                             return COMPILER_RESULT_ERROR_INTERNAL;
                         }
@@ -659,6 +663,7 @@ int ret_type(STItem *current_function) {
                     // rule <ret_type> -> <type>
                     check_nonterminal(type(&data_type));
                     if (semantic_enabled) {
+                        cf_add_return_value(NULL, data_type);
                         if (!symtable_add_ret_type(current_function, NULL, data_type)) {
                             return COMPILER_RESULT_ERROR_INTERNAL;
                         }
@@ -703,6 +708,9 @@ int execution() {
             token_error("expected function identifier after func keyword, got %s\n");
             syntax_error();
         }
+        if (semantic_enabled) {
+            cf_make_function(mstr_content(&token.data.str_val));
+        }
         STItem *function = symtable_find(function_table, mstr_content(&token.data.str_val));
         bool already_found = false;
         if (semantic_enabled) {
@@ -721,7 +729,6 @@ int execution() {
             }
             function->data.data.func_data.defined = true;
         }
-        clear_token();
 
         check_new_token(EOL_FORBIDDEN);
         if (token.type != TOKEN_LEFT_BRACKET) {
@@ -731,6 +738,7 @@ int execution() {
 
         if (semantic_enabled) {
             SymbolTable *body_table = symtable_init(TABLE_SIZE);
+            cf_assign_function_symtable(body_table);
             if (body_table == NULL || symtable_stack_push(&symtable_stack, body_table) == NULL) {
                 return COMPILER_RESULT_ERROR_INTERNAL;
             }
@@ -861,6 +869,7 @@ int program() {
     if (function_table == NULL) {
         return COMPILER_RESULT_ERROR_INTERNAL;
     }
+    cf_assign_global_symtable(function_table);
     if (!prepare_builtins()) {
         return COMPILER_RESULT_ERROR_INTERNAL;
     }
