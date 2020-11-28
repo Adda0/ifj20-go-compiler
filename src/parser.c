@@ -301,12 +301,14 @@ int else_n() {
             }
             check_new_token(EOL_REQUIRED);
             if (semantic_enabled) {
+                cf_make_if_else_statement(CF_BASIC);
                 if ((new_body_table = symtable_init(TABLE_SIZE)) == NULL) {
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
                 if (symtable_stack_push(&symtable_stack, new_body_table) == NULL) {
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
+                cf_assign_statement_symtable(new_body_table);
             }
             check_nonterminal(body());
             if (token.type != TOKEN_CURLY_RIGHT_BRACKET) {
@@ -314,6 +316,7 @@ int else_n() {
                 syntax_error();
             }
             if (semantic_enabled) {
+                cf_pop_previous_branched_statement();
                 symtable_stack_pop(&symtable_stack);
             }
             check_new_token(EOL_REQUIRED);
@@ -321,8 +324,15 @@ int else_n() {
         case TOKEN_KEYWORD:
             if (token.data.keyword_type == KEYWORD_IF) {
                 // rule <else_n> -> if expression { <body> } <else>
+                if (semantic_enabled) {
+                    cf_make_if_else_statement(CF_IF);
+                }
                 check_new_token(EOL_OPTIONAL);
-                check_nonterminal(parse_expression(PURE_EXPRESSION, true));
+                ASTNode *expression;
+                check_nonterminal(parse_expression(PURE_EXPRESSION, true, &expression));
+                if (semantic_enabled) {
+                    cf_use_ast_explicit(expression, CF_IF_CONDITIONAL);
+                }
                 if (token.context.eol_read) {
                     eol_error("unexpected EOL after if expression\n");
                     syntax_error();
@@ -332,14 +342,21 @@ int else_n() {
                     syntax_error();
                 }
                 check_new_token(EOL_REQUIRED);
-                if ((new_body_table = symtable_init(TABLE_SIZE)) == NULL) {
-                    return COMPILER_RESULT_ERROR_INTERNAL;
-                }
-                if (symtable_stack_push(&symtable_stack, new_body_table) == NULL) {
-                    return COMPILER_RESULT_ERROR_INTERNAL;
+                if (semantic_enabled) {
+                    cf_make_if_then_statement(CF_BASIC);
+                    if ((new_body_table = symtable_init(TABLE_SIZE)) == NULL) {
+                        return COMPILER_RESULT_ERROR_INTERNAL;
+                    }
+                    if (symtable_stack_push(&symtable_stack, new_body_table) == NULL) {
+                        return COMPILER_RESULT_ERROR_INTERNAL;
+                    }
+                    cf_assign_statement_symtable(new_body_table);
                 }
                 check_nonterminal(body());
-                symtable_stack_pop(&symtable_stack);
+                if (semantic_enabled) {
+                    cf_pop_previous_branched_statement();
+                    symtable_stack_pop(&symtable_stack);
+                }
                 if (token.type != TOKEN_CURLY_RIGHT_BRACKET) {
                     token_error("expected } after else body, got %s\n");
                     syntax_error();
@@ -388,13 +405,17 @@ int else_() {
 }
 
 int for_definition() {
+    ASTNode *definition;
     switch (token.type) {
         case TOKEN_SEMICOLON:
             // rule <for_definition> -> eps
             syntax_ok();
         case TOKEN_ID:
             // rule <for_definition> -> expression
-            check_nonterminal(parse_expression(DEFINE_REQUIRED, true));
+            check_nonterminal(parse_expression(DEFINE_REQUIRED, true, &definition));
+            if (semantic_enabled) {
+                cf_use_ast_explicit(definition, CF_FOR_DEFINITION);
+            }
             if (token.context.eol_read) {
                 eol_error("unexpected EOL after for definition\n");
                 syntax_error();
@@ -407,13 +428,17 @@ int for_definition() {
 }
 
 int for_assignment() {
+    ASTNode *assignment;
     switch (token.type) {
         case TOKEN_CURLY_LEFT_BRACKET:
             // rule <for_assignment> -> eps
             syntax_ok();
         case TOKEN_ID:
             // rule <for_assignment> -> expression
-            check_nonterminal(parse_expression(ASSIGN_REQUIRED, false));
+            check_nonterminal(parse_expression(ASSIGN_REQUIRED, false, &assignment));
+            if (semantic_enabled) {
+                cf_use_ast_explicit(assignment, CF_FOR_AFTERTHOUGHT);
+            }
             if (token.context.eol_read) {
                 eol_error("unexpected EOL after for assignment\n");
                 syntax_error();
@@ -449,7 +474,20 @@ int return_follow() {
                 syntax_ok();
             }
             // rule <return_follow> -> expression
-            check_nonterminal(parse_expression(PURE_EXPRESSION, true));
+            ASTNode *result_node;
+            check_nonterminal(parse_expression(PURE_EXPRESSION, true, &result_node));
+            if (semantic_enabled) {
+                if (result_node->actionType != AST_LIST) {
+                    ASTNode *tmp = ast_node_list(1);
+                    if (tmp == NULL) {
+                        return COMPILER_RESULT_ERROR_INTERNAL;
+                    }
+                    tmp->data[0].astPtr = result_node;
+                    cf_use_ast_explicit(tmp, CF_RETURN_LIST);
+                } else {
+                    cf_use_ast_explicit(result_node, CF_RETURN_LIST);
+                }
+            }
             if (!token.context.eol_read) {
                 eol_error("expected EOL after return \n");
                 syntax_error();
@@ -465,12 +503,22 @@ int statement() {
             switch (token.data.keyword_type) {
                 case KEYWORD_RETURN:
                     // rule <statement> -> return <return_follow>
+                    if (semantic_enabled) {
+                        cf_make_next_statement(CF_RETURN);
+                    }
                     check_new_token(EOL_OPTIONAL);
                     return return_follow();
                 case KEYWORD_IF:
                     // rule <statement> -> if expression { <body> } <else>
                     check_new_token(EOL_OPTIONAL);
-                    check_nonterminal(parse_expression(PURE_EXPRESSION, true));
+                    ASTNode *result_expr;
+                    if (semantic_enabled) {
+                        cf_make_next_statement(CF_IF);
+                    }
+                    check_nonterminal(parse_expression(PURE_EXPRESSION, true, &result_expr));
+                    if (semantic_enabled) {
+                        cf_use_ast_explicit(result_expr, CF_IF_CONDITIONAL);
+                    }
                     if (token.context.eol_read) {
                         eol_error("unexpected EOL after if expression\n");
                         syntax_error();
@@ -487,6 +535,8 @@ int statement() {
                         if (symtable_stack_push(&symtable_stack, new_body_table) == NULL) {
                             return COMPILER_RESULT_ERROR_INTERNAL;
                         }
+                        cf_make_if_then_statement(CF_BASIC);
+                        cf_assign_statement_symtable(new_body_table);
                     }
                     check_nonterminal(body());
                     if (token.type != TOKEN_CURLY_RIGHT_BRACKET) {
@@ -494,6 +544,7 @@ int statement() {
                         syntax_error();
                     }
                     if (semantic_enabled) {
+                        cf_pop_previous_branched_statement();
                         symtable_stack_pop(&symtable_stack);
                     }
                     check_new_token(EOL_OPTIONAL);
@@ -503,12 +554,14 @@ int statement() {
                     check_new_token(EOL_OPTIONAL);
                     // For definition needs a separate level of symtable.
                     if (semantic_enabled) {
+                        cf_make_next_statement(CF_FOR);
                         if ((new_body_table = symtable_init(TABLE_SIZE)) == NULL) {
                             return COMPILER_RESULT_ERROR_INTERNAL;
                         }
                         if (symtable_stack_push(&symtable_stack, new_body_table) == NULL) {
                             return COMPILER_RESULT_ERROR_INTERNAL;
                         }
+                        cf_assign_statement_symtable(new_body_table);
                     }
                     check_nonterminal(for_definition());
                     if (token.type != TOKEN_SEMICOLON) {
@@ -516,7 +569,11 @@ int statement() {
                         syntax_error();
                     }
                     check_new_token(EOL_OPTIONAL);
-                    check_nonterminal(parse_expression(PURE_EXPRESSION, false));
+                    ASTNode *for_expression;
+                    check_nonterminal(parse_expression(PURE_EXPRESSION, false, &for_expression));
+                    if (semantic_enabled) {
+                        cf_use_ast_explicit(for_expression, CF_FOR_CONDITIONAL);
+                    }
                     if (token.context.eol_read) {
                         eol_error("unexpected EOL after for expression\n");
                         syntax_error();
@@ -533,12 +590,14 @@ int statement() {
                     }
                     check_new_token(EOL_REQUIRED);
                     if (semantic_enabled) {
+                        cf_make_for_body_statement(CF_BASIC);
                         if ((new_body_table = symtable_init(TABLE_SIZE)) == NULL) {
                             return COMPILER_RESULT_ERROR_INTERNAL;
                         }
                         if (symtable_stack_push(&symtable_stack, new_body_table) == NULL) {
                             return COMPILER_RESULT_ERROR_INTERNAL;
                         }
+                        cf_assign_statement_symtable(new_body_table);
                     }
                     check_nonterminal(body());
                     if (token.type != TOKEN_CURLY_RIGHT_BRACKET) {
@@ -546,6 +605,7 @@ int statement() {
                         syntax_error();
                     }
                     if (semantic_enabled) {
+                        cf_pop_previous_branched_statement();
                         symtable_stack_pop(&symtable_stack);
                         symtable_stack_pop(&symtable_stack);
                     }
@@ -557,7 +617,10 @@ int statement() {
             }
         case TOKEN_ID:
             // rule <statement> -> expression
-            check_nonterminal(parse_expression(VALID_STATEMENT, true));
+            cf_make_next_statement(CF_BASIC);
+            ASTNode *expression;
+            check_nonterminal(parse_expression(VALID_STATEMENT, true, &expression));
+            cf_use_ast_explicit(expression, CF_STATEMENT_BODY);
             if (!token.context.eol_read) {
                 eol_error("expected EOL after expression\n");
                 syntax_error();
@@ -897,6 +960,8 @@ int program() {
                            "incorrect prototype of function main\n");
             return COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE;
         }
+        // FIXME: dirty hack
+        main->data.reference_counter = 1;
         for (STItem *function=symtable_get_first_item(function_table); function != NULL;
                 function=symtable_get_next_item(function_table, function)) {
             if (!function->data.data.func_data.defined) {
