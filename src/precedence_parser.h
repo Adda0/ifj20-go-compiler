@@ -78,8 +78,9 @@ typedef enum indices {
  *
  * @param assign_rule Whether assign and define is allowed in the expression.
  * @param eol_before_allowed Specifies whether EOL was allowed preceeding the current token.
+ * @param result Root of the result AST.
  * @return 0 on successful expression parsing, non-zero otherwise (see compiler.h).
  */
-int parse_expression(AssignRule assign_rule, bool eol_before_allowed);
+int parse_expression(AssignRule assign_rule, bool eol_before_allowed, ASTNode **result);
 
 #endif
