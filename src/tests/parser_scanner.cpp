@@ -22,12 +22,58 @@
 extern "C" {
 #include "scanner.h"
 #include "parser.h"
+#include "control_flow.h"
+#include "ast.h"
 }
 
 class ParserScannerTest : public StdinMockingScannerTest {
 protected:
     void ComplexTest(std::string &inputStr, CompilerResult expected_compiler_result);
+
+    void CheckStatementRecursively(CFStatement *st);
+
+    void SetUp() override {
+        StdinMockingScannerTest::SetUp();
+        ast_set_strict_inference_state(false);
+    }
 };
+
+void ParserScannerTest::CheckStatementRecursively(CFStatement *st) {
+    bool x;
+    static int a = 0;
+    switch (st->statementType) {
+        case CF_RETURN:
+        case CF_BASIC:
+            if(st->data.bodyAst == NULL) {
+                if (st->followingStatement != NULL) {
+                    CheckStatementRecursively(st->followingStatement);
+                }
+                return;
+            }
+
+            ASSERT_TRUE(ast_infer_node_type(st->data.bodyAst));
+            return;
+        case CF_IF:
+            ASSERT_TRUE(ast_infer_node_type(st->data.ifData->conditionalAst));
+
+            if (st->data.ifData->thenStatement != NULL)
+                CheckStatementRecursively(st->data.ifData->thenStatement);
+            if (st->data.ifData->elseStatement != NULL)
+                CheckStatementRecursively(st->data.ifData->elseStatement);
+
+            return;
+        case CF_FOR:
+            if (st->data.forData->conditionalAst != NULL)
+                ASSERT_TRUE(ast_infer_node_type(st->data.forData->conditionalAst));
+            if (st->data.forData->afterthoughtAst != NULL)
+                ASSERT_TRUE(ast_infer_node_type(st->data.forData->afterthoughtAst));
+            if (st->data.forData->definitionAst != NULL)
+                ASSERT_TRUE(ast_infer_node_type(st->data.forData->definitionAst));
+
+            CheckStatementRecursively(st->data.forData->bodyStatement);
+            return;
+    }
+}
 
 void ParserScannerTest::ComplexTest(std::string &inputStr, CompilerResult expected_compiler_result) {
 #if VERBOSE
@@ -36,7 +82,32 @@ void ParserScannerTest::ComplexTest(std::string &inputStr, CompilerResult expect
     buffer->sputn(inputStr.c_str(), inputStr.length());
     buffer->sputc(EOF);
 
-    ASSERT_EQ(parser_parse(), expected_compiler_result);
+    CompilerResult parserRes = parser_parse();
+
+    if (parserRes == COMPILER_RESULT_SUCCESS) {
+        ast_set_strict_inference_state(true);
+        CFProgram *prog = get_program();
+        ASSERT_NE(prog, nullptr);
+
+        CFFuncListNode *fn = prog->functionList;
+        while (fn != NULL) {
+            CFFunction *f = &fn->fun;
+            ASSERT_NE(f, nullptr);
+
+            CFStatement *st = f->rootStatement;
+
+            while (st != NULL) {
+                CheckStatementRecursively(st);
+                st = st->followingStatement;
+            }
+
+            fn = fn->next;
+        }
+
+        ASSERT_EQ(compiler_result, expected_compiler_result);
+    } else {
+        ASSERT_EQ(parserRes, expected_compiler_result);
+    }
 }
 
 TEST_F(ParserScannerTest, BasicCode) {
@@ -2102,7 +2173,7 @@ TEST_F(ParserScannerTest, FunctionHeader12) {
         "func foo (i int, s string) () {\n"
         "    func bar (i int, s string) () {\n"
         "    }\n";
-        "}\n";
+    "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
@@ -2161,7 +2232,7 @@ TEST_F(ParserScannerTest, LexicalErrorCompilerResult1) {
         "func main() {\n"
         "}\n";
 
-   ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
 TEST_F(ParserScannerTest, LexicalErrorCompilerResult2) {
@@ -2171,7 +2242,7 @@ TEST_F(ParserScannerTest, LexicalErrorCompilerResult2) {
         "func main() {\n"
         "}\n";
 
-   ComplexTest(inputStr, COMPILER_RESULT_ERROR_LEXICAL);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_LEXICAL);
 }
 
 TEST_F(ParserScannerTest, LexicalErrorCompilerResult3) {
@@ -3235,7 +3306,7 @@ TEST_F(ParserScannerTest, ExpressionInIfStatements10) {
         "        foo = 1\n"
         "    } else {\n"
         "        bar := 1\n"
-         "}\n";
+        "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
