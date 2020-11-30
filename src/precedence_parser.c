@@ -834,6 +834,8 @@ bool reduce_multi_expression(PrecedenceStack *stack, PrecedenceNode *start) {
         if (current->data.type == SYMB_NONTERMINAL) {
             ast_push_to_list(expression_list, current->data.ast);
         }
+
+        current = current->rptr;
     }
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .ast=expression_list};
     precedence_stack_pop_from(stack, start);
@@ -1151,7 +1153,7 @@ StackSymbol copy_token_to_symbol() {
 
 int parse_expression(AssignRule assign_rule, bool eol_before_allowed, ASTNode **result) {
     // Check if there is any expression to read
-    right_hand_side = false;
+    right_hand_side = assign_rule == PURE_EXPRESSION ? true: false;
     if (get_table_index(token.type, eol_before_allowed, token.context.eol_read) == INDEX_END) {
         token_error("expected expression, got %s");
         syntax_error();
