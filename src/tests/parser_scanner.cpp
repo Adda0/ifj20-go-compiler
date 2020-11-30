@@ -783,12 +783,47 @@ TEST_F(ParserScannerTest, AssignStatement5) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foo\n"
+        "    a, b := 1\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, AssignStatement6) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, b := 1, 2, 3\n"
+
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, AssignStatement7) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    ab := 1, 2\n"
+
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, AssignStatement8) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := foo\n"
         "}\n"
         "func foo() {\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
 }
 
 // === Test EOL in commands ===
@@ -814,7 +849,7 @@ TEST_F(ParserScannerTest, EOLInDefinitionOfVariable2) {
         "    two := 2\n"
         "    a := 3\n"
         "    b := 3\n"
-        "    a, b =\n 1 + \n two\n"
+        "    a, b =\n 1 + \n two,\n 2 /\n two\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
