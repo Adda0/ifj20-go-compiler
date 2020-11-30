@@ -217,7 +217,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
             token->context.char_num = char_num;
             break;
 
-            // already have read at least one char of a new token
+        // already have read at least one character of a new token
         case STATE_ID:
             if (isalpha(read_char) || read_char == '_' || isdigit(read_char)) {
                 // new token should be identifier
@@ -266,16 +266,12 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                                line_num, char_num, mstr_content(mutable_string));
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
             } else {
-                *automaton_state = STATE_ZERO_NUM;
+                *automaton_state = STATE_INT;
+                token->data.num_int_val = 0;
+                mstr_free(mutable_string);
+                token->type = TOKEN_INT;
+                *token_done = true;
             }
-            break;
-
-        case STATE_ZERO_NUM:
-            *automaton_state = STATE_INT;
-            token->data.num_int_val = 0;
-            mstr_free(mutable_string);
-            token->type = TOKEN_INT;
-            *token_done = true;
             break;
 
         case STATE_ZERO_UNDERSCORE:
@@ -1117,8 +1113,8 @@ static void check_for_bool_values(Token *token, MutableString *mutable_string) {
 }
 
 static char *prepare_number_for_parsing(MutableString *mutable_string) {
-    char *number_without_underscores = (char *) calloc(mstr_length(mutable_string), sizeof(char));
-    if (number_without_underscores == NULL) {
+    char *number_to_parse = (char *) calloc(mstr_length(mutable_string), sizeof(char));
+    if (number_to_parse == NULL) {
         stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
                        "Malloc of string for a number in a different numeral system failed.\n");
         return NULL;
@@ -1129,9 +1125,9 @@ static char *prepare_number_for_parsing(MutableString *mutable_string) {
     // omit '0x', '0b', '0o' for strtoll cannot recognize binary and octal format of these and omit '_'
     for (size_t i = 2; i < mstr_length(mutable_string); i++) {
         if (mstr_content(mutable_string)[i] != '_') {
-            number_without_underscores[index] = mstr_content(mutable_string)[i];
+            number_to_parse[index] = mstr_content(mutable_string)[i];
             index++;
         }
     }
-    return number_without_underscores;
+    return number_to_parse;
 }
