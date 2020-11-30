@@ -292,10 +292,20 @@ bool check_binary_node_children(ASTNode *node) {
         } else {
             node->inheritedDataType = node->right->inheritedDataType;
 
-            if (node->left->actionType == AST_ID
-                && node->left->data[0].symbolTableItemPtr->type == ST_SYMBOL_VAR) {
+            if (node->left->actionType == AST_ID) {
                 node->left->inheritedDataType = node->inheritedDataType;
-                node->left->data[0].symbolTableItemPtr->data.var_data.type = node->right->inheritedDataType;
+
+                if (node->left->data[0].symbolTableItemPtr == NULL) {
+                    if (strictInference) {
+                        ast_uninferrable(node);
+                    } else {
+                        return true;
+                    }
+                }
+
+                if (node->left->data[0].symbolTableItemPtr->type == ST_SYMBOL_VAR) {
+                    node->left->data[0].symbolTableItemPtr->data.var_data.type = node->right->inheritedDataType;
+                }
             }
 
             return true;
@@ -303,10 +313,20 @@ bool check_binary_node_children(ASTNode *node) {
     } else if (node->right->inheritedDataType == CF_UNKNOWN) {
         node->inheritedDataType = node->left->inheritedDataType;
 
-        if (node->right->actionType == AST_ID
-            && node->right->data[0].symbolTableItemPtr->type == ST_SYMBOL_VAR) {
+        if (node->right->actionType == AST_ID) {
             node->right->inheritedDataType = node->inheritedDataType;
-            node->right->data[0].symbolTableItemPtr->data.var_data.type = node->left->inheritedDataType;
+
+            if (node->right->data[0].symbolTableItemPtr == NULL) {
+                if (strictInference) {
+                    ast_uninferrable(node);
+                } else {
+                    return true;
+                }
+            }
+
+            if (node->right->data[0].symbolTableItemPtr->type == ST_SYMBOL_VAR) {
+                node->right->data[0].symbolTableItemPtr->data.var_data.type = node->left->inheritedDataType;
+            }
         }
 
         return true;
