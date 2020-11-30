@@ -284,7 +284,7 @@ bool reduce_less_than(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     new_node->left = first_op->data.ast;
     new_node->right = second_op->data.ast;
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->data.data_type, .ast=new_node};
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL, .ast=new_node};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
@@ -305,7 +305,7 @@ bool reduce_greater_than(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     new_node->left = first_op->data.ast;
     new_node->right = second_op->data.ast;
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->data.data_type, .ast=new_node};
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL, .ast=new_node};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
@@ -326,7 +326,7 @@ bool reduce_less_or_equal(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     new_node->left = first_op->data.ast;
     new_node->right = second_op->data.ast;
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->data.data_type, .ast=new_node};
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL, .ast=new_node};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
@@ -347,7 +347,7 @@ bool reduce_greater_or_equal(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     new_node->left = first_op->data.ast;
     new_node->right = second_op->data.ast;
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->data.data_type, .ast=new_node};
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL, .ast=new_node};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
@@ -369,7 +369,7 @@ bool reduce_equal_to(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     new_node->left = first_op->data.ast;
     new_node->right = second_op->data.ast;
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->data.data_type, .ast=new_node};
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL, .ast=new_node};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
@@ -391,7 +391,7 @@ bool reduce_not_equal_to(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     new_node->left = first_op->data.ast;
     new_node->right = second_op->data.ast;
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->data.data_type, .ast=new_node};
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL, .ast=new_node};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
