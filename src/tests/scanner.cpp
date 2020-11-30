@@ -1506,3 +1506,56 @@ TEST_F(ScannerTest, IdentifierAdditionalTests6) {
     ComplexTest(inputStr, expectedResult);
     ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
 }
+
+TEST_F(ScannerTest, DoubleDotInFloat1) {
+    std::string inputStr = "15.2.3";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_FLOAT, {.doubleVal = 15.2}),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+            ExpectedToken(TOKEN_INT, {.intVal = 3}),
+    };
+
+    ComplexTest(inputStr, expectedResult);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, DoubleDotInFloat2) {
+    std::string inputStr = "15..3";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+            ExpectedToken(TOKEN_INT, {.intVal = 3}),
+    };
+
+    ComplexTest(inputStr, expectedResult);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, FloatInvalidExponent1) {
+    std::string inputStr = "15e.3";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+            ExpectedToken(TOKEN_INT, {.intVal = 3}),
+    };
+
+    ComplexTest(inputStr, expectedResult);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, FloatInvalidExponent2) {
+    std::string inputStr = "15eE.3";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+            ExpectedToken(TOKEN_ID, {.strVal = "E"}),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+            ExpectedToken(TOKEN_INT, {.intVal = 3}),
+    };
+
+    ComplexTest(inputStr, expectedResult);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+}

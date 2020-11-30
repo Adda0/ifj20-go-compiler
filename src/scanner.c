@@ -581,6 +581,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
                                "Line %llu, col %llu: Expected a digit following the decimal point in '%s'.\n",
                                line_num, char_num, mstr_content(mutable_string));
+                *scanner_result = SCANNER_RESULT_INVALID_STATE;
             }
             break;
 
@@ -597,6 +598,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
                                "Line %llu, col %llu: Expected a digit in the exponent part, following the E in '%s'.\n",
                                line_num, char_num, mstr_content(mutable_string));
+                *scanner_result = SCANNER_RESULT_INVALID_STATE;
             }
             break;
 
@@ -609,6 +611,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
                                "Line %llu, col %llu: Expected a digit in the exponent part, following the sign in '%s'.\n",
                                line_num, char_num, mstr_content(mutable_string));
+                *scanner_result = SCANNER_RESULT_INVALID_STATE;
             }
             break;
 
