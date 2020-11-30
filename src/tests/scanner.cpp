@@ -1425,3 +1425,84 @@ TEST_F(ScannerTest, CompilerResultValue3) {
     LEX("\"returned \\x49 string\"", EOL_OPTIONAL, SCANNER_RESULT_SUCCESS, TOKEN_STRING);
     ASSERT_EQ(compiler_result, COMPILER_RESULT_SUCCESS);
 }
+
+TEST_F(ScannerTest, IdentifierAdditionalTests1) {
+    LEX("__test", EOL_OPTIONAL, SCANNER_RESULT_SUCCESS, TOKEN_ID);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ScannerTest, IdentifierAdditionalTests2) {
+    LEX("_t_t_test", EOL_OPTIONAL, SCANNER_RESULT_SUCCESS, TOKEN_ID);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ScannerTest, IdentifierAdditionalTests3) {
+    LEX("[test", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, IdentifierAdditionalTests4) {
+    std::string inputStr = "func main() {\n(test := 1\n}\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET, EOL_FORBIDDEN),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_LEFT_BRACKET, EOL_OPTIONAL),
+            ExpectedToken(TOKEN_ID, {.strVal = "test"}),
+            ExpectedToken(TOKEN_DEFINE),
+            ExpectedToken(TOKEN_INT, {.intVal = 1}, EOL_REQUIRED),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_OPTIONAL)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, IdentifierAdditionalTests5) {
+    std::string inputStr = "func main() {\n(te)s%t := 1\n}\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET, EOL_FORBIDDEN),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_LEFT_BRACKET, EOL_OPTIONAL),
+            ExpectedToken(TOKEN_ID, {.strVal = "te"}),
+            ExpectedToken(TOKEN_RIGHT_BRACKET, EOL_FORBIDDEN),
+            ExpectedToken(TOKEN_ID, {.strVal = "s"}),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+            ExpectedToken(TOKEN_ID, {.strVal = "t"}),
+            ExpectedToken(TOKEN_DEFINE),
+            ExpectedToken(TOKEN_INT, {.intVal = 1}, EOL_REQUIRED),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_OPTIONAL)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, IdentifierAdditionalTests6) {
+    std::string inputStr = "func main() {\n(te)%st := 1\n}\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET, EOL_FORBIDDEN),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_LEFT_BRACKET, EOL_OPTIONAL),
+            ExpectedToken(TOKEN_ID, {.strVal = "te"}),
+            ExpectedToken(TOKEN_RIGHT_BRACKET, EOL_FORBIDDEN),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+            ExpectedToken(TOKEN_ID, {.strVal = "st"}),
+            ExpectedToken(TOKEN_DEFINE),
+            ExpectedToken(TOKEN_INT, {.intVal = 1}, EOL_REQUIRED),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_OPTIONAL)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+}
