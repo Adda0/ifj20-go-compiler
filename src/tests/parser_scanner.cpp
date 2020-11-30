@@ -2634,6 +2634,26 @@ TEST_F(ParserScannerTest, LongIdentifiers) {
 
 // === Others ===
 
+TEST_F(ParserScannerTest, StringConcatenation1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := \"te\" + \"st\" + \"str\" + \"ing\"\n"
+        "}\n";
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, StringConcatenation2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := \"te\" + \"st\" \"str\" + \"ing\"\n"
+        "}\n";
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
 TEST_F(ParserScannerTest, EmptyMainFunction1) {
     std::string inputStr = \
         "package main\n"
