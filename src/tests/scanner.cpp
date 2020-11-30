@@ -757,6 +757,16 @@ TEST_F(ScannerTest, IntExpMinusSignMultipleZero) {
     ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 1600000e-10);
 }
 
+TEST_F(ScannerTest, InvalidFloats1) {
+    LEX(" .5 ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, InvalidFloats2) {
+    LEX(" 1. ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
 TEST_F(ScannerTest, Float) {
     LEX_SUCCESS("1.5 ", TOKEN_FLOAT);
     ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 1.5);
@@ -880,6 +890,45 @@ TEST_F(ScannerTest, FloatExpMinusSignMultiple) {
 TEST_F(ScannerTest, FloatExpMinusSignMultipleZero) {
     LEX_SUCCESS("1600000.0e-010 ", TOKEN_FLOAT);
     ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 1600000.0e-10);
+}
+
+TEST_F(ScannerTest, FloatExponentInvalidValues1) {
+    LEX(" 1e++6 ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, FloatExponentInvalidValues2) {
+    LEX(" 1e+_6 ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, FloatExponentInvalidValues3) {
+    LEX(" 1e--6 ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, FloatExponentInvalidValues4) {
+    LEX(" 1.5E ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, FloatExponentInvalidValues5) {
+    LEX(" 15e.1 ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, FloatExponentInvalidValues6) {
+        std::string inputStr = "a := 15e1.6";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_ID, {.strVal = "a"}),
+            ExpectedToken(TOKEN_DEFINE),
+            ExpectedToken(TOKEN_FLOAT, {.doubleVal = 15e1}),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+    };
+
+    ComplexTest(inputStr, expectedResult);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
 }
 
 TEST_F(ScannerTest, FloatUnderscore) {
@@ -1410,6 +1459,24 @@ TEST_F(ScannerTest, Comment_LineEOLPreceedsBlock) {
     ComplexTest(inputStr, expectedResult);
 }
 
+TEST_F(ScannerTest, Comment_NestedBlockComment) {
+    std::string inputStr = "func main() {\n/*  block /* with nested block comment */ comment*/}\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET, EOL_FORBIDDEN),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_ID, {.strVal = "comment"}),
+            ExpectedToken(TOKEN_MULTIPLY),
+            ExpectedToken(TOKEN_DIVIDE),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
 TEST_F(ScannerTest, CompilerResultValue1) {
     LEX("09", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT);
     ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
@@ -1557,5 +1624,68 @@ TEST_F(ScannerTest, FloatInvalidExponent2) {
     };
 
     ComplexTest(inputStr, expectedResult);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, InvalidEscapeSequences1) {
+    LEX("\" \\\\ \" ", EOL_OPTIONAL, SCANNER_RESULT_SUCCESS, TOKEN_STRING);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ScannerTest, InvalidEscapeSequences2) {
+    LEX("\" \\ \" ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, InvalidEscapeSequences3) {
+    LEX("\" \\\"\" ", EOL_OPTIONAL, SCANNER_RESULT_SUCCESS, TOKEN_STRING);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ScannerTest, InvalidEscapeSequences4) {
+    LEX("\" \\p \" ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, InvalidEscapeSequences5) {
+    LEX("\" \\x0 \" ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, InvalidEscapeSequences6) {
+    LEX("\" \\x00 \" ", EOL_OPTIONAL, SCANNER_RESULT_SUCCESS, TOKEN_STRING);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ScannerTest, UnaryOperators1) {
+    std::string inputStr = "a := -13";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_ID, {.strVal = "a"}),
+            ExpectedToken(TOKEN_DEFINE),
+            ExpectedToken(TOKEN_MINUS),
+            ExpectedToken(TOKEN_INT, {.intVal = 13}),
+    };
+
+    ComplexTest(inputStr, expectedResult);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ScannerTest, UnaryOperators2) {
+    std::string inputStr = "a := -13.4";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_ID, {.strVal = "a"}),
+            ExpectedToken(TOKEN_DEFINE),
+            ExpectedToken(TOKEN_MINUS),
+            ExpectedToken(TOKEN_FLOAT, {.doubleVal = 13.4}),
+    };
+
+    ComplexTest(inputStr, expectedResult);
+    ASSERT_EQ(compiler_result, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ScannerTest, NeverendingString) {
+    LEX("\"test ", EOL_OPTIONAL, SCANNER_RESULT_EOF, TOKEN_DEFAULT);
     ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
 }
