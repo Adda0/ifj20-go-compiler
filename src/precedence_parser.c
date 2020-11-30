@@ -894,6 +894,7 @@ int get_table_index(int type, bool eol_allowed, bool eol_read) {
                 case TOKEN_FLOAT:
                 case TOKEN_INT:
                 case TOKEN_BOOL:
+                case TOKEN_ID:
                 case TOKEN_RIGHT_BRACKET:
                     return (token.type == TOKEN_PLUS) ? INDEX_PLUS : INDEX_MINUS;
                 default:
