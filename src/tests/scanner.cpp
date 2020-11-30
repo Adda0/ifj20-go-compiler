@@ -1343,7 +1343,7 @@ TEST_F(ScannerTest, Comments_LineInLine) {
     ComplexTest(inputStr, expectedResult);
 }
 
-TEST_F(ScannerTest, Comments_Multiline) {
+TEST_F(ScannerTest, Comments_Multiline1) {
     std::string inputStr = "func main() {\n \t/* a\nmultiline\t\t \ncomment */\n}\n ";
 
     auto expectedResult = std::list<ExpectedToken>{
@@ -1353,6 +1353,53 @@ TEST_F(ScannerTest, Comments_Multiline) {
             ExpectedToken(TOKEN_RIGHT_BRACKET),
             ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
             ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_REQUIRED)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, Comments_Multiline2) {
+    std::string inputStr = "func main() {\n \t/* a\nmul*tiline\t\t \ncomment */\n}\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_REQUIRED)
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, Comments_MultilineInString1) {
+    std::string inputStr = "func main() {\n \t\"string /* a\\nmultiline\\t\\t \\ncomment */continues here\"\n}\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_STRING, {.strVal = "string /* a\\nmultiline\\t\\t \\ncomment */continues here"}),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_REQUIRED),
+    };
+
+    ComplexTest(inputStr, expectedResult);
+}
+
+TEST_F(ScannerTest, Comments_MultilineInString2) {
+    std::string inputStr = "func main() {\n \t\"string /* a  \n    multiline\\t\\t \\ncomment */continues here\"\n}\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_STRING),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_REQUIRED),
     };
 
     ComplexTest(inputStr, expectedResult);
@@ -1688,4 +1735,20 @@ TEST_F(ScannerTest, UnaryOperators2) {
 TEST_F(ScannerTest, NeverendingString) {
     LEX("\"test ", EOL_OPTIONAL, SCANNER_RESULT_EOF, TOKEN_DEFAULT);
     ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, Colon) {
+    std::string inputStr = "func main() { \n : = \n";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+            ExpectedToken(TOKEN_ASSIGN),
+    };
+
+    ComplexTest(inputStr, expectedResult);
 }
