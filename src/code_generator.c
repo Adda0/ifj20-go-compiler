@@ -106,6 +106,11 @@ bool is_statement_empty(CFStatement *stat) {
 
     switch (stat->statementType) {
         case CF_BASIC:
+            if (stat->parentStatement != NULL && (stat->parentStatement->statementType == CF_IF
+                || stat->parentStatement->statementType == CF_FOR)) {
+                return false;
+            }
+
             return is_ast_empty(stat->data.bodyAst);
         case CF_IF:
             return is_ast_empty(stat->data.ifData->conditionalAst) ||
@@ -579,7 +584,9 @@ void generate_expression_ast(ASTNode *exprAst, CFStatement *stat) {
             }
             break;
         case AST_AR_NEGATE:
-        out("SUBS");
+            if(exprAst->right != NULL) {
+                out("SUBS");
+            }
             break;
         case AST_LOG_NOT:
         case AST_LOG_AND:
@@ -646,11 +653,9 @@ bool generate_expression_ast_result(ASTNode *exprAst, CFStatement *stat) {
         if (exprAst->left->actionType == AST_CONST_INT) {
             int i = exprAst->left->data[0].intConstantValue;
             exprAst->left->data[0].intConstantValue = -i;
-            return true;
         } else if (exprAst->left->actionType == AST_CONST_FLOAT) {
             double i = exprAst->left->data[0].floatConstantValue;
             exprAst->left->data[0].floatConstantValue = -i;
-            return true;
         } else {
             // Convert into a (0 - AST) expression
             exprAst->right = exprAst->left;
@@ -659,8 +664,6 @@ bool generate_expression_ast_result(ASTNode *exprAst, CFStatement *stat) {
             } else {
                 exprAst->left = ast_leaf_constf(0.0);
             }
-
-            return true;
         }
     }
 
@@ -743,7 +746,7 @@ bool generate_simple_logic_expression(ASTNode *exprAst, CFStatement *stat, char 
 
     if (is_direct_ast(left) && is_direct_ast(right)) {
         if (t == AST_LOG_EQ || t == AST_LOG_NEQ) {
-            out_nnl("%s %s ", t == AST_LOG_EQ ? "JUMPIFEQ": "JUMPIFNEQ", trueLabel);
+            out_nnl("%s %s ", t == AST_LOG_EQ ? "JUMPIFEQ" : "JUMPIFNEQ", trueLabel);
             print_var_name_or_const(left, stat);
             out_nnl(" ");
             print_var_name_or_const(right, stat);
@@ -787,8 +790,7 @@ bool generate_simple_logic_expression(ASTNode *exprAst, CFStatement *stat, char 
             out("JUMPIFEQS %s", trueLabel);
         } else if (t == AST_LOG_NEQ) {
             out("EQS");
-            out("NOTS");
-            out("PUSHS bool@true");
+            out("PUSHS bool@false");
             out("JUMPIFNEQS %s", trueLabel);
         } else if (t == AST_LOG_LT) {
             out("LTS");
@@ -921,19 +923,23 @@ void generate_assignment_for_varname(const char *varName, CFStatement *stat, AST
 
 void generate_assignment(ASTNode *asgAst, CFStatement *stat) {
     if (asgAst->left->actionType == AST_LIST) {
-        if (asgAst->right->actionType == AST_FUNC_CALL) {
-            STSymbol *funcSymb = asgAst->right->left->data[0].symbolTableItemPtr;
+        if (asgAst->right->actionType == AST_LIST && asgAst->right->dataCount == 1
+            && asgAst->right->data[0].astPtr->actionType == AST_FUNC_CALL) {
+
+            STSymbol *funcSymb = asgAst->right->data[0].astPtr->left->data[0].symbolTableItemPtr;
+
             if (asgAst->left->dataCount != funcSymb->data.func_data.ret_types_count) {
                 stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
                                "Assignment left-hand side variables don't match the right-hand side function's return values.\n");
                 return;
             }
 
-            generate_func_call(asgAst->right, stat);
+            generate_func_call(asgAst->right->data[0].astPtr, stat);
             for (unsigned i = 0; i < asgAst->left->dataCount; i++) {
                 unsigned parI = asgAst->left->dataCount - i - 1;
 
                 if (asgAst->left->data[parI].astPtr->inheritedDataType == CF_BLACK_HOLE) {
+                    out("POPS %s", REG_1);
                     continue;
                 }
 
@@ -951,14 +957,19 @@ void generate_assignment(ASTNode *asgAst, CFStatement *stat) {
                            "Expected AST_LIST on the right side, got %i instead.\n", asgAst->right->actionType);
         }
 
+        if (asgAst->left->dataCount != asgAst->right->dataCount) {
+            stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+                           "Assignment left-hand side variable count doesn't match the right-hand side variable count.\n");
+            return;
+        }
+
         for (unsigned i = 0; i < asgAst->left->dataCount; i++) {
             ASTNode *tmpAssignNode = ast_node(AST_ASSIGN);
-            ASTNode *tmpAssignLeft = ast_leaf_id(asgAst->left->data[i].symbolTableItemPtr);
+            ASTNode *tmpAssignLeft = asgAst->left->data[i].astPtr;
             tmpAssignNode->left = tmpAssignLeft;
             tmpAssignNode->right = asgAst->right->data[i].astPtr;
             generate_assignment(tmpAssignNode, stat);
             free(tmpAssignNode);
-            free(tmpAssignLeft);
         }
 
         return;
@@ -1113,6 +1124,7 @@ void generate_for_statement(CFStatement *stat) {
 }
 
 void generate_basic_statement(CFStatement *stat) {
+    if (stat->data.bodyAst == NULL) return;
     ast_infer_node_type(stat->data.bodyAst);
 
     switch (stat->data.bodyAst->actionType) {
@@ -1134,7 +1146,9 @@ void generate_basic_statement(CFStatement *stat) {
 
 void generate_statement(CFStatement *stat) {
     if (is_statement_empty(stat)) {
-        dbg("Omitting empty statement");
+        if (stat != NULL && stat->followingStatement != NULL && stat->followingStatement->statementType != CF_IF) {
+            dbg("Omitting empty statement");
+        }
     } else {
         switch (stat->statementType) {
             case CF_BASIC:
@@ -1168,7 +1182,7 @@ void generate_definitions(CFStatement *stat) {
             while (it != NULL) {
                 STSymbol *symb = &it->data;
 
-                if (symb->reference_counter > 0 && symb->type == ST_SYMBOL_VAR) {
+                if (/*symb->reference_counter > 0 &&*/ symb->type == ST_SYMBOL_VAR) {
                     if (!symb->data.var_data.is_argument_variable) {
                         MutableString varName = make_var_name(symb->identifier, stat, false);
                         char *varNameP = mstr_content(&varName);
@@ -1198,7 +1212,6 @@ void generate_definitions(CFStatement *stat) {
                         mstr_free(&varName);
                     }
                 }
-
 
                 it = it->next;
             }

@@ -176,8 +176,12 @@ bool ast_infer_leaf_type(ASTNode *node) {
         STSymbol *symb = node->data[0].symbolTableItemPtr;
 
         if (symb == NULL) {
+            node->inheritedDataType = CF_UNKNOWN;
+            return true;
+            /*
             ast_error = AST_ERROR_SYMBOL_NOT_ASSIGNED;
             ast_uninferrable(node);
+             */
         }
 
         if (symb->type == ST_SYMBOL_VAR) {
@@ -290,6 +294,7 @@ bool check_binary_node_children(ASTNode *node) {
 
             if (node->left->actionType == AST_ID
                 && node->left->data[0].symbolTableItemPtr->type == ST_SYMBOL_VAR) {
+                node->left->inheritedDataType = node->inheritedDataType;
                 node->left->data[0].symbolTableItemPtr->data.var_data.type = node->right->inheritedDataType;
             }
 
@@ -300,6 +305,7 @@ bool check_binary_node_children(ASTNode *node) {
 
         if (node->right->actionType == AST_ID
             && node->right->data[0].symbolTableItemPtr->type == ST_SYMBOL_VAR) {
+            node->right->inheritedDataType = node->inheritedDataType;
             node->right->data[0].symbolTableItemPtr->data.var_data.type = node->left->inheritedDataType;
         }
 
@@ -359,8 +365,9 @@ ASTDataType check_nodes_matching(ASTNode *left, ASTNode *right, ASTNodeType root
 
 bool assignment_inference_list_func_call(ASTNode *node) {
     ASTNode *leftIdListNode = node->left;
-    ASTNode *rightFuncCallNode = node->right;
-    ASTNode *funcCallIdNode = node->right->left;
+    ASTNode *rightFuncCallNode = node->right->data[0].astPtr;
+
+    ASTNode *funcCallIdNode = rightFuncCallNode->left;
 
     if (!ast_infer_node_type(rightFuncCallNode)) {
         // TODO: error code
@@ -423,7 +430,10 @@ bool assignment_inference_list_func_call(ASTNode *node) {
 
 bool assignment_inference_semantic_checks(ASTNode *node) {
     if (node->left->actionType == AST_LIST) {
-        if (node->right->actionType == AST_FUNC_CALL) {
+        // TODO: rozdělit na víc ifů -> rozumnější chybová hlášení
+
+        if (node->right->actionType == AST_LIST && node->right->dataCount == 1
+            && node->right->data[0].astPtr->actionType == AST_FUNC_CALL) {
             return assignment_inference_list_func_call(node);
         }
 
@@ -447,8 +457,8 @@ bool assignment_inference_semantic_checks(ASTNode *node) {
                 ast_uninferrable(node);
             }
 
-            if (!check_nodes_matching(leftIdNode, rightValueNode, node->actionType)) {
-                print_error(COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+            if (check_nodes_matching(leftIdNode, rightValueNode, node->actionType) == CF_UNKNOWN_UNINFERRABLE) {
+                print_error(COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION,
                             "Type of left-hand side variable '%s' doesn't match its corresponding right-hand side.\n",
                             leftIdNode->data[0].symbolTableItemPtr->identifier);
                 // TODO: error code
@@ -501,7 +511,7 @@ bool func_call_inference_semantic_checks(ASTNode *node) {
         // let's just infer the arguments and call it a day
 
         if (rightFuncParamsNode != NULL) {
-            if(!ast_infer_node_type(rightFuncParamsNode)) {
+            if (!ast_infer_node_type(rightFuncParamsNode)) {
                 ast_uninferrable(node);
             }
         }
@@ -563,7 +573,7 @@ bool func_call_inference_semantic_checks(ASTNode *node) {
                 par->type = parAst->inheritedDataType;
                 return true;
             } else {
-                if (par->type != parAst->inheritedDataType) {
+                if (par->type != parAst->inheritedDataType && parAst->inheritedDataType != CF_UNKNOWN) {
                     print_error(COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
                                 "Invalid type of the argument number %u in function '%s' call.\n", i,
                                 funcSymbol->identifier);

@@ -212,7 +212,9 @@ void cf_use_ast(CFASTTarget target) {
 }
 
 void cf_use_ast_explicit(ASTNode *ast, CFASTTarget target) {
-    CF_ACT_STAT_CHECK();
+    if (ast == NULL) {
+        return;
+    }
 
     // TODO: this is a bit spaghetti, a cleanup would be nice
     switch (activeStat->statementType) {

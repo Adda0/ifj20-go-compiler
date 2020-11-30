@@ -76,52 +76,95 @@ int get_token(Token *token, EolRule eol, bool peek_only) {
 
 char *convert_token_to_text() {
     switch (token.type) {
-        case TOKEN_DEFAULT: return "undefined";
-        case TOKEN_ID: return "identifier";
-        case TOKEN_INT: return "int value";
-        case TOKEN_FLOAT: return "float value";
+        case TOKEN_DEFAULT:
+            return "undefined";
+        case TOKEN_ID:
+            return "identifier";
+        case TOKEN_INT:
+            return "int value";
+        case TOKEN_FLOAT:
+            return "float value";
         case TOKEN_KEYWORD:
             switch (token.data.keyword_type) {
-                case KEYWORD_BOOL: return "keyword bool";
-                case KEYWORD_ELSE: return "keyword else";
-                case KEYWORD_FLOAT64: return "keyword float64";
-                case KEYWORD_FOR: return "keyword for";
-                case KEYWORD_FUNC: return "keyword func";
-                case KEYWORD_IF: return "keyword if";
-                case KEYWORD_INT: return "keyword int";
-                case KEYWORD_PACKAGE: return "keyword package";
-                case KEYWORD_RETURN: return "keyword return";
-                case KEYWORD_STRING: return "keyword string";
-                default: return "";
+                case KEYWORD_BOOL:
+                    return "keyword bool";
+                case KEYWORD_ELSE:
+                    return "keyword else";
+                case KEYWORD_FLOAT64:
+                    return "keyword float64";
+                case KEYWORD_FOR:
+                    return "keyword for";
+                case KEYWORD_FUNC:
+                    return "keyword func";
+                case KEYWORD_IF:
+                    return "keyword if";
+                case KEYWORD_INT:
+                    return "keyword int";
+                case KEYWORD_PACKAGE:
+                    return "keyword package";
+                case KEYWORD_RETURN:
+                    return "keyword return";
+                case KEYWORD_STRING:
+                    return "keyword string";
+                default:
+                    return "";
             }
-        case TOKEN_PLUS: return "+";
-        case TOKEN_MINUS: return "-";
-        case TOKEN_MULTIPLY: return "*";
-        case TOKEN_DIVIDE: return "/";
-        case TOKEN_PLUS_ASSIGN: return "+=";
-        case TOKEN_MINUS_ASSIGN: return "-=";
-        case TOKEN_MULTIPLY_ASSIGN: return "*=";
-        case TOKEN_DIVIDE_ASSIGN: return "/=";
-        case TOKEN_DEFINE: return ":=";
-        case TOKEN_ASSIGN: return "=";
-        case TOKEN_EQUAL_TO: return "==";
-        case TOKEN_BOOL: return "bool value";
-        case TOKEN_NOT: return "!";
-        case TOKEN_NOT_EQUAL_TO: return "!=";
-        case TOKEN_AND: return "&&";
-        case TOKEN_OR: return "||";
-        case TOKEN_LEFT_BRACKET: return "(";
-        case TOKEN_RIGHT_BRACKET: return ")";
-        case TOKEN_CURLY_LEFT_BRACKET: return "{";
-        case TOKEN_CURLY_RIGHT_BRACKET: return "}";
-        case TOKEN_LESS_THAN: return "<";
-        case TOKEN_GREATER_THAN: return ">";
-        case TOKEN_LESS_OR_EQUAL: return "<=";
-        case TOKEN_GREATER_OR_EQUAL: return ">=";
-        case TOKEN_STRING: return "string value";
-        case TOKEN_COMMA: return ",";
-        case TOKEN_SEMICOLON: return ";";
-        default: return "";
+        case TOKEN_PLUS:
+            return "+";
+        case TOKEN_MINUS:
+            return "-";
+        case TOKEN_MULTIPLY:
+            return "*";
+        case TOKEN_DIVIDE:
+            return "/";
+        case TOKEN_PLUS_ASSIGN:
+            return "+=";
+        case TOKEN_MINUS_ASSIGN:
+            return "-=";
+        case TOKEN_MULTIPLY_ASSIGN:
+            return "*=";
+        case TOKEN_DIVIDE_ASSIGN:
+            return "/=";
+        case TOKEN_DEFINE:
+            return ":=";
+        case TOKEN_ASSIGN:
+            return "=";
+        case TOKEN_EQUAL_TO:
+            return "==";
+        case TOKEN_BOOL:
+            return "bool value";
+        case TOKEN_NOT:
+            return "!";
+        case TOKEN_NOT_EQUAL_TO:
+            return "!=";
+        case TOKEN_AND:
+            return "&&";
+        case TOKEN_OR:
+            return "||";
+        case TOKEN_LEFT_BRACKET:
+            return "(";
+        case TOKEN_RIGHT_BRACKET:
+            return ")";
+        case TOKEN_CURLY_LEFT_BRACKET:
+            return "{";
+        case TOKEN_CURLY_RIGHT_BRACKET:
+            return "}";
+        case TOKEN_LESS_THAN:
+            return "<";
+        case TOKEN_GREATER_THAN:
+            return ">";
+        case TOKEN_LESS_OR_EQUAL:
+            return "<=";
+        case TOKEN_GREATER_OR_EQUAL:
+            return ">=";
+        case TOKEN_STRING:
+            return "string value";
+        case TOKEN_COMMA:
+            return ",";
+        case TOKEN_SEMICOLON:
+            return ";";
+        default:
+            return "";
     }
 }
 
@@ -213,11 +256,18 @@ int params_n(STItem *current_function, bool ret_type, bool already_found, STPara
                         }
                     }
                 }
-                STItem *var = symtable_add(symtable_stack_top(&symtable_stack)->table, mstr_content(&id), ST_SYMBOL_VAR);
+                STItem *var = symtable_add(symtable_stack_top(&symtable_stack)->table, mstr_content(&id),
+                                           ST_SYMBOL_VAR);
                 if (var == NULL) {
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
                 var->data.data.var_data.type = data_type;
+
+                if (ret_type) {
+                    var->data.data.var_data.is_return_val_variable = true;
+                } else {
+                    var->data.data.var_data.is_argument_variable = true;
+                }
             }
             return params_n(current_function, ret_type, already_found, next_param);
         default:
@@ -277,11 +327,18 @@ int params(STItem *current_function, bool ret_type, bool already_found) {
                         }
                     }
                 }
-                STItem *var = symtable_add(symtable_stack_top(&symtable_stack)->table, mstr_content(&id), ST_SYMBOL_VAR);
+                STItem *var = symtable_add(symtable_stack_top(&symtable_stack)->table, mstr_content(&id),
+                                           ST_SYMBOL_VAR);
                 if (var == NULL) {
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
                 var->data.data.var_data.type = data_type;
+
+                if (ret_type) {
+                    var->data.data.var_data.is_return_val_variable = true;
+                } else {
+                    var->data.data.var_data.is_argument_variable = true;
+                }
             }
             return params_n(current_function, ret_type, already_found, next_param);
         default:
@@ -901,8 +958,8 @@ bool prepare_builtins() {
     }
     substr->data.data.func_data.defined = true;
     if (!symtable_add_param(substr, "s", CF_STRING) || !symtable_add_param(substr, "i", CF_INT) ||
-            !symtable_add_param(substr, "n", CF_INT) || !symtable_add_ret_type(substr, NULL, CF_STRING) ||
-            !symtable_add_ret_type(substr, NULL, CF_INT)) {
+        !symtable_add_param(substr, "n", CF_INT) || !symtable_add_ret_type(substr, NULL, CF_STRING) ||
+        !symtable_add_ret_type(substr, NULL, CF_INT)) {
         return false;
     }
     STItem *ord = symtable_add(function_table, "ord", ST_SYMBOL_FUNC);
@@ -920,7 +977,7 @@ bool prepare_builtins() {
     }
     chr->data.data.func_data.defined = true;
     if (!symtable_add_param(chr, "i", CF_INT) || !symtable_add_ret_type(chr, NULL, CF_STRING) ||
-            !symtable_add_ret_type(chr, NULL, CF_INT)) {
+        !symtable_add_ret_type(chr, NULL, CF_INT)) {
         return false;
     }
     return true;
@@ -962,8 +1019,8 @@ int program() {
         }
         // FIXME: dirty hack
         main->data.reference_counter = 1;
-        for (STItem *function=symtable_get_first_item(function_table); function != NULL;
-                function=symtable_get_next_item(function_table, function)) {
+        for (STItem *function = symtable_get_first_item(function_table); function != NULL;
+             function = symtable_get_next_item(function_table, function)) {
             if (!function->data.data.func_data.defined) {
                 stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE,
                                "undefined function %s\n", function->key);

@@ -429,9 +429,8 @@ void factorial_rec() {
     STItem *si_factorial = symtable_add(glob, "factorial", ST_SYMBOL_FUNC);
     STSymbol *sym_factorial = &si_factorial->data;
     sym_factorial->reference_counter = 2;
-    sym_factorial->data.func_data.defined = true;
-    symtable_add_param(si_factorial, "n", CF_INT);
-    symtable_add_ret_type(si_factorial, NULL, CF_INT);
+    sym_factorial->data.func_data.defined = false;
+
 
     STSymbol *sym_factorial_n = &symtable_add(factorial, "n", ST_SYMBOL_VAR)->data;
     sym_factorial_n->data.var_data = (STVariableData) {.type = CF_INT, .is_return_val_variable = false, .is_argument_variable = true};
@@ -465,56 +464,7 @@ void factorial_rec() {
 #define link() do { n->left = n1; n->right = n2; if (!ast_infer_node_type(n)) { fprintf(stderr, "Inference error (line %d)\n", __LINE__); } } while(0)
 #define link_list(i) do { n->data[(i)].astPtr = n1; if (!ast_infer_node_type(n)) { fprintf(stderr, "Inference error (line %d)\n", __LINE__); } } while(0)
 
-    // func factorial(n int) (int) {
-    cf_make_function("factorial");
-    cf_assign_function_symtable(factorial);
-    cf_add_argument("n", CF_INT);
-    cf_add_return_value(NULL, CF_INT);
-
-    // dec_n := n - 1
-    cf_make_next_statement(CF_BASIC);
-    ASTNode *n1 = ast_leaf_id(sym_factorial_n);
-    ASTNode *n2 = ast_leaf_consti(1);
-    ASTNode *n = ast_node(AST_SUBTRACT);
-    link();
-
-    n1 = ast_leaf_id(sym_factorial_decN);
-    n2 = n;
-    n = ast_node(AST_DEFINE);
-    link();
-    cf_use_ast_explicit(n, CF_STATEMENT_BODY);
-
-    // if n < 2 {
-    cf_make_next_statement(CF_IF);
-    n1 = ast_leaf_id(sym_factorial_n);
-    n2 = ast_leaf_consti(2);
-    n = ast_node(AST_LOG_LT);
-    link();
-    cf_use_ast_explicit(n, CF_IF_CONDITIONAL);
-    // return 1
-    cf_make_if_then_statement(CF_RETURN);
-    cf_assign_statement_symtable(factorial_if_then);
-    n1 = ast_leaf_consti(1);
-    n = cf_ast_current();
-    link_list(0); // link 0 to predefined RETURN's AST_LIST
-    // } else {
-    cf_pop_previous_branched_statement();
-    cf_make_if_else_statement(CF_RETURN);
-    cf_assign_statement_symtable(factorial_if_else);
-    // return n * factorial(dec_n)
-
-    // -> funcall argument
-    n = ast_node_list(1);
-    n1 = ast_leaf_id(sym_factorial_decN);
-    link_list(0);
-
-    n2 = ast_node_func_call(sym_factorial, n);
-    n1 = ast_leaf_id(sym_factorial_n);
-    n = ast_node(AST_MULTIPLY);
-    link();
-    n1 = n;
-    n = cf_ast_current();
-    link_list(0); // link MULTIPLY to predefined RETURN's AST_LIST
+    ASTNode *n1, *n2, *n;
 
     // func main() {
     cf_make_function("main");
@@ -617,6 +567,63 @@ void factorial_rec() {
     n1 = n;
     n = ast_node_func_call(sym_print, n1);
     cf_use_ast_explicit(n, CF_STATEMENT_BODY);
+
+    // func factorial(n int) (int) {
+    cf_make_function("factorial");
+    cf_assign_function_symtable(factorial);
+    cf_add_argument("n", CF_INT);
+    cf_add_return_value(NULL, CF_INT);
+
+    // dec_n := n - 1
+    cf_make_next_statement(CF_BASIC);
+    n1 = ast_leaf_id(sym_factorial_n);
+    n2 = ast_leaf_consti(1);
+    n = ast_node(AST_SUBTRACT);
+    link();
+
+    n1 = ast_leaf_id(sym_factorial_decN);
+    n2 = n;
+    n = ast_node(AST_DEFINE);
+    link();
+    cf_use_ast_explicit(n, CF_STATEMENT_BODY);
+
+    // if n < 2 {
+    cf_make_next_statement(CF_IF);
+    n1 = ast_leaf_id(sym_factorial_n);
+    n2 = ast_leaf_consti(2);
+    n = ast_node(AST_LOG_LT);
+    link();
+    cf_use_ast_explicit(n, CF_IF_CONDITIONAL);
+    // return 1
+    cf_make_if_then_statement(CF_RETURN);
+    cf_assign_statement_symtable(factorial_if_then);
+    n1 = ast_leaf_consti(1);
+    n = cf_ast_current();
+    link_list(0); // link 0 to predefined RETURN's AST_LIST
+    // } else {
+    cf_pop_previous_branched_statement();
+    cf_make_if_else_statement(CF_RETURN);
+    cf_assign_statement_symtable(factorial_if_else);
+    // return n * factorial(dec_n)
+
+    // -> funcall argument
+    n = ast_node_list(1);
+    n1 = ast_leaf_id(sym_factorial_decN);
+    link_list(0);
+
+    n2 = ast_node_func_call(sym_factorial, n);
+    n1 = ast_leaf_id(sym_factorial_n);
+    n = ast_node(AST_MULTIPLY);
+    link();
+    n1 = n;
+    n = cf_ast_current();
+    link_list(0); // link MULTIPLY to predefined RETURN's AST_LIST
+
+    si_factorial->data.data.func_data.defined = true;
+    symtable_add_param(si_factorial, "n", CF_INT);
+    symtable_add_ret_type(si_factorial, NULL, CF_INT);
+
+    ast_set_strict_inference_state(true);
 }
 
 int main() {

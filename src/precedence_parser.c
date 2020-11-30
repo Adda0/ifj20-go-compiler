@@ -17,104 +17,104 @@
 #include "stacks.h"
 
 const char precedence_table[][NUMBER_OF_OPS] = {
-    {'<', '<', '<', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>',
-        ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // !
-    {'<', '<', '<', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>',
-        ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // + (unary)
-    {'<', '<', '<', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>',
-        ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // - (unary)
-    {'<', '<', '<', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>',
-        ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // *
-    {'<', '<', '<', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>',
-        ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // /
-    {'<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>',
-        ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // +
-    {'<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>',
-        ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // -
-    {'<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>', '>',
-        ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // >
-    {'<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>', '>',
-        ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // <
-    {'<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>', '>',
-        ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // >=
-    {'<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>', '>',
-        ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // <=
-    {'<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>', '>',
-        ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // ==
-    {'<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>', '>',
-        ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // !=
-    {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>',
-        ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // &&
-    {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '>',
-        ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // ||
-    {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<',
-        ' ', ' ', ' ', ' ', ' ', ' ', '<', ' ', '<', '<', '=', '>'}, // =
-    {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<',
-        ' ', ' ', ' ', ' ', ' ', ' ', '<', ' ', '<', '<', '=', '>'}, // :=
-    {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<',
-        ' ', ' ', ' ', ' ', ' ', ' ', '<', ' ', '<', '<', ' ', '>'}, // +=
-    {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<',
-        ' ', ' ', ' ', ' ', ' ', ' ', '<', ' ', '<', '<', ' ', '>'}, // -=
-    {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<',
-        ' ', ' ', ' ', ' ', ' ', ' ', '<', ' ', '<', '<', ' ', '>'}, // *=
-    {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<',
-        ' ', ' ', ' ', ' ', ' ', ' ', '<', ' ', '<', '<', ' ', '>'}, // /=
-    {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<',
-        ' ', ' ', ' ', ' ', ' ', ' ', '<', '=', '<', '<', '=', ' '}, // (
-    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>',
-        ' ', ' ', ' ', ' ', ' ', ' ', ' ', '>', ' ', ' ', '>', '>'}, // )
-    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>',
-        '>', '>', '>', '>', '>', '>', ' ', '>', ' ', ' ', '>', '>'}, // i
-    {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
-        ' ', ' ', ' ', ' ', ' ', ' ', '=', ' ', ' ', ' ', ' ', ' '}, // f
-    {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<',
-        '=', '=', '=', '=', '=', '=', '<', '=', '<', '<', '=', '>'}, // ,
-    {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<',
-        '<', '<', '<', '<', '<', '<', '<', ' ', '<', '<', '<', 'o'}, // $
+        {'<', '<', '<', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>',
+                ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // !
+        {'<', '<', '<', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>',
+                ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // + (unary)
+        {'<', '<', '<', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>',
+                ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // - (unary)
+        {'<', '<', '<', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>',
+                ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // *
+        {'<', '<', '<', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>',
+                ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // /
+        {'<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>',
+                ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // +
+        {'<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>',
+                ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // -
+        {'<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>', '>',
+                ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // >
+        {'<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>', '>',
+                ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // <
+        {'<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>', '>',
+                ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // >=
+        {'<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>', '>',
+                ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // <=
+        {'<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>', '>',
+                ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // ==
+        {'<', '<', '<', '<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '>', '>',
+                ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // !=
+        {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '>', '>',
+                ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // &&
+        {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '>',
+                ' ', ' ', ' ', ' ', ' ', ' ', '<', '>', '<', '<', '>', '>'}, // ||
+        {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<',
+                ' ', ' ', ' ', ' ', ' ', ' ', '<', ' ', '<', '<', '=', '>'}, // =
+        {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<',
+                ' ', ' ', ' ', ' ', ' ', ' ', '<', ' ', '<', '<', '=', '>'}, // :=
+        {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<',
+                ' ', ' ', ' ', ' ', ' ', ' ', '<', ' ', '<', '<', ' ', '>'}, // +=
+        {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<',
+                ' ', ' ', ' ', ' ', ' ', ' ', '<', ' ', '<', '<', ' ', '>'}, // -=
+        {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<',
+                ' ', ' ', ' ', ' ', ' ', ' ', '<', ' ', '<', '<', ' ', '>'}, // *=
+        {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<',
+                ' ', ' ', ' ', ' ', ' ', ' ', '<', ' ', '<', '<', ' ', '>'}, // /=
+        {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<',
+                ' ', ' ', ' ', ' ', ' ', ' ', '<', '=', '<', '<', '=', ' '}, // (
+        {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>',
+                ' ', ' ', ' ', ' ', ' ', ' ', ' ', '>', ' ', ' ', '>', '>'}, // )
+        {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>',
+                '>', '>', '>', '>', '>', '>', ' ', '>', ' ', ' ', '>', '>'}, // i
+        {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
+                ' ', ' ', ' ', ' ', ' ', ' ', '=', ' ', ' ', ' ', ' ', ' '}, // f
+        {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<',
+                '=', '=', '=', '=', '=', '=', '<', '=', '<', '<', '=', '>'}, // ,
+        {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<',
+                '<', '<', '<', '<', '<', '<', '<', ' ', '<', '<', '<', 'o'}, // $
 };
 
 
 int rules[NUMBER_OF_RULES][RULE_LENGTH] = {
-    {SYMB_NONTERMINAL, TOKEN_NOT, SYMB_NONTERMINAL, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, TOKEN_PLUS, SYMB_NONTERMINAL, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, TOKEN_MINUS, SYMB_NONTERMINAL, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, SYMB_NONTERMINAL, TOKEN_MULTIPLY, SYMB_NONTERMINAL, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, SYMB_NONTERMINAL, TOKEN_DIVIDE, SYMB_NONTERMINAL, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, SYMB_NONTERMINAL, TOKEN_PLUS, SYMB_NONTERMINAL, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, SYMB_NONTERMINAL, TOKEN_MINUS, SYMB_NONTERMINAL, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, SYMB_NONTERMINAL, TOKEN_LESS_THAN, SYMB_NONTERMINAL, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, SYMB_NONTERMINAL, TOKEN_GREATER_THAN, SYMB_NONTERMINAL, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, SYMB_NONTERMINAL, TOKEN_LESS_OR_EQUAL, SYMB_NONTERMINAL, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, SYMB_NONTERMINAL, TOKEN_GREATER_OR_EQUAL, SYMB_NONTERMINAL, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, SYMB_NONTERMINAL, TOKEN_EQUAL_TO, SYMB_NONTERMINAL, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, SYMB_NONTERMINAL, TOKEN_NOT_EQUAL_TO, SYMB_NONTERMINAL, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, SYMB_NONTERMINAL, TOKEN_AND, SYMB_NONTERMINAL, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, SYMB_NONTERMINAL, TOKEN_OR, SYMB_NONTERMINAL, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, SYMB_NONTERMINAL, TOKEN_ASSIGN, SYMB_NONTERMINAL, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, SYMB_NONTERMINAL, TOKEN_COMMA, SYMB_MULTI_NONTERMINAL, TOKEN_ASSIGN,
-        SYMB_NONTERMINAL, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, SYMB_NONTERMINAL, TOKEN_COMMA, SYMB_MULTI_NONTERMINAL, TOKEN_ASSIGN,
-        SYMB_NONTERMINAL, TOKEN_COMMA, SYMB_MULTI_NONTERMINAL},
-    {SYMB_NONTERMINAL, SYMB_NONTERMINAL, TOKEN_DEFINE, SYMB_NONTERMINAL, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, SYMB_NONTERMINAL, TOKEN_COMMA, SYMB_MULTI_NONTERMINAL, TOKEN_DEFINE,
-        SYMB_NONTERMINAL, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, SYMB_NONTERMINAL, TOKEN_COMMA, SYMB_MULTI_NONTERMINAL, TOKEN_DEFINE, SYMB_NONTERMINAL,
-        TOKEN_COMMA, SYMB_MULTI_NONTERMINAL},
-    {SYMB_NONTERMINAL, SYMB_NONTERMINAL, TOKEN_PLUS_ASSIGN, SYMB_NONTERMINAL, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, SYMB_NONTERMINAL, TOKEN_MINUS_ASSIGN, SYMB_NONTERMINAL, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, SYMB_NONTERMINAL, TOKEN_MULTIPLY_ASSIGN, SYMB_NONTERMINAL, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, SYMB_NONTERMINAL, TOKEN_DIVIDE_ASSIGN, SYMB_NONTERMINAL, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, TOKEN_LEFT_BRACKET, SYMB_NONTERMINAL, TOKEN_RIGHT_BRACKET, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, SYMB_ID, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, TOKEN_INT, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, TOKEN_FLOAT, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, TOKEN_STRING, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, TOKEN_BOOL, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, SYMB_FUNCTION, TOKEN_LEFT_BRACKET, TOKEN_RIGHT_BRACKET, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, SYMB_FUNCTION, TOKEN_LEFT_BRACKET, SYMB_NONTERMINAL, TOKEN_RIGHT_BRACKET, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, SYMB_FUNCTION, TOKEN_LEFT_BRACKET, SYMB_NONTERMINAL, TOKEN_COMMA,
-        SYMB_MULTI_NONTERMINAL, TOKEN_RIGHT_BRACKET, SYMB_UNDEF},
-    {SYMB_NONTERMINAL, SYMB_NONTERMINAL, TOKEN_COMMA, SYMB_MULTI_NONTERMINAL, SYMB_UNDEF},
+        {SYMB_NONTERMINAL, TOKEN_NOT,          SYMB_NONTERMINAL,       SYMB_UNDEF},
+        {SYMB_NONTERMINAL, TOKEN_PLUS,         SYMB_NONTERMINAL,       SYMB_UNDEF},
+        {SYMB_NONTERMINAL, TOKEN_MINUS,        SYMB_NONTERMINAL,       SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_MULTIPLY,         SYMB_NONTERMINAL,       SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_DIVIDE,           SYMB_NONTERMINAL,       SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_PLUS,             SYMB_NONTERMINAL,       SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_MINUS,            SYMB_NONTERMINAL,       SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_LESS_THAN,        SYMB_NONTERMINAL,       SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_GREATER_THAN,     SYMB_NONTERMINAL,       SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_LESS_OR_EQUAL,    SYMB_NONTERMINAL,       SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_GREATER_OR_EQUAL, SYMB_NONTERMINAL,       SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_EQUAL_TO,         SYMB_NONTERMINAL,       SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_NOT_EQUAL_TO,     SYMB_NONTERMINAL,       SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_AND,              SYMB_NONTERMINAL,       SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_OR,               SYMB_NONTERMINAL,       SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_ASSIGN,           SYMB_NONTERMINAL,       SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_COMMA,            SYMB_MULTI_NONTERMINAL, TOKEN_ASSIGN,
+                                                                                                                    SYMB_NONTERMINAL,       SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_COMMA,            SYMB_MULTI_NONTERMINAL, TOKEN_ASSIGN,
+                                                                                                                    SYMB_NONTERMINAL,       TOKEN_COMMA,         SYMB_MULTI_NONTERMINAL},
+        {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_DEFINE,           SYMB_NONTERMINAL,       SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_COMMA,            SYMB_MULTI_NONTERMINAL, TOKEN_DEFINE,
+                                                                                                                    SYMB_NONTERMINAL,       SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_COMMA,            SYMB_MULTI_NONTERMINAL, TOKEN_DEFINE,        SYMB_NONTERMINAL,
+                                                                                                                                            TOKEN_COMMA,         SYMB_MULTI_NONTERMINAL},
+        {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_PLUS_ASSIGN,      SYMB_NONTERMINAL,       SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_MINUS_ASSIGN,     SYMB_NONTERMINAL,       SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_MULTIPLY_ASSIGN,  SYMB_NONTERMINAL,       SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_DIVIDE_ASSIGN,    SYMB_NONTERMINAL,       SYMB_UNDEF},
+        {SYMB_NONTERMINAL, TOKEN_LEFT_BRACKET, SYMB_NONTERMINAL,       TOKEN_RIGHT_BRACKET,    SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_ID,            SYMB_UNDEF},
+        {SYMB_NONTERMINAL, TOKEN_INT,          SYMB_UNDEF},
+        {SYMB_NONTERMINAL, TOKEN_FLOAT,        SYMB_UNDEF},
+        {SYMB_NONTERMINAL, TOKEN_STRING,       SYMB_UNDEF},
+        {SYMB_NONTERMINAL, TOKEN_BOOL,         SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_FUNCTION,      TOKEN_LEFT_BRACKET,     TOKEN_RIGHT_BRACKET,    SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_FUNCTION,      TOKEN_LEFT_BRACKET,     SYMB_NONTERMINAL,       TOKEN_RIGHT_BRACKET, SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_FUNCTION,      TOKEN_LEFT_BRACKET,     SYMB_NONTERMINAL,       TOKEN_COMMA,
+                                                                                                                    SYMB_MULTI_NONTERMINAL, TOKEN_RIGHT_BRACKET, SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_COMMA,            SYMB_MULTI_NONTERMINAL, SYMB_UNDEF},
 };
 
 // Keep track if we are on the right hand side of the expression for id reductions.
@@ -141,12 +141,8 @@ bool reduce_unary_plus(PrecedenceStack *stack, PrecedenceNode *start) {
         type_error("expected int or float as operand for unary plus\n");
         return false;
     }
-    ASTNode *new_node = ast_node(AST_ADD);
-    if (new_node == NULL) {
-        return false;
-    }
-    new_node->left = start->rptr->rptr->data.ast;
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->rptr->data.data_type, .ast=new_node};
+
+    StackSymbol new_nonterminal = start->rptr->rptr->data;
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
@@ -157,7 +153,7 @@ bool reduce_unary_minus(PrecedenceStack *stack, PrecedenceNode *start) {
         type_error("expected int or float as operand for unary minus\n");
         return false;
     }
-    ASTNode *new_node = ast_node(AST_SUBTRACT);
+    ASTNode *new_node = ast_node(AST_AR_NEGATE);
     if (new_node == NULL) {
         return false;
     }
@@ -202,7 +198,7 @@ bool reduce_divide(PrecedenceStack *stack, PrecedenceNode *start) {
         type_error("expected int or float operands for division\n");
         return false;
     }
-    if (type2 == CF_INT) {
+    if (type2 == CF_INT && second_op->data.ast->actionType == AST_CONST_INT) {
         int64_t divider = start->rptr->rptr->rptr->data.data.num_int_val;
         if (divider == 0) {
             stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_DIVISION_BY_ZERO,
@@ -210,7 +206,8 @@ bool reduce_divide(PrecedenceStack *stack, PrecedenceNode *start) {
             return false;
         }
 
-    } else if (type2 == CF_FLOAT) {
+    } else if (type2 == CF_FLOAT && (second_op->data.ast->actionType ==
+                                     AST_CONST_FLOAT /* TODO: || second_op->data.ast->actionType == AST_AR_NEGATE */)) {
         double divider = start->rptr->rptr->rptr->data.data.num_float_val;
         if (dabs(divider) < 1e-7) {
             stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_DIVISION_BY_ZERO,
@@ -472,12 +469,17 @@ bool reduce_assign(PrecedenceStack *stack, PrecedenceNode *start) {
         if (current->data.type == SYMB_NONTERMINAL) {
             char *id = mstr_content(&current->data.data.str_val);
             if (lhs) {
-                if (strcmp(id, "_") != 0 && symtable_stack_find_symbol(&symtable_stack, id) == NULL) {
+                STItem *id_st_item = symtable_stack_find_symbol(&symtable_stack, id);
+
+                if (current->data.ast->inheritedDataType != CF_BLACK_HOLE && id_st_item == NULL) {
                     stderr_message("precedence_parser", ERROR,
                                    COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE, "Line %u "
-                                   "assignment to undefined variable %s\n", current->data.context.line_num, id);
+                                                                                                      "assignment to undefined variable %s\n",
+                                   current->data.context.line_num, id);
                     return false;
                 }
+
+                current->data.ast->data[0].symbolTableItemPtr = &id_st_item->data;
                 ast_push_to_list(id_list, current->data.ast);
             } else {
                 ast_push_to_list(expression_list, current->data.ast);
@@ -575,7 +577,8 @@ bool reduce_plus_assign(PrecedenceStack *stack, PrecedenceNode *start) {
     if (symtable_stack_find_symbol(&symtable_stack, mstr_content(&start->rptr->data.data.str_val)) == NULL) {
         stderr_message("precedence_parser", ERROR,
                        COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE, "Line %u: "
-                       "assignment to undefined variable \n", start->rptr->data.context.line_num);
+                                                                                          "assignment to undefined variable \n",
+                       start->rptr->data.context.line_num);
         return false;
     }
     PrecedenceNode *target = start->rptr;
@@ -607,7 +610,8 @@ bool reduce_minus_assign(PrecedenceStack *stack, PrecedenceNode *start) {
     if (symtable_stack_find_symbol(&symtable_stack, mstr_content(&start->rptr->data.data.str_val)) == NULL) {
         stderr_message("precedence_parser", ERROR,
                        COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE, "Line %u: "
-                       "assignment to undefined variable \n", start->rptr->data.context.line_num);
+                                                                                          "assignment to undefined variable \n",
+                       start->rptr->data.context.line_num);
         return false;
     }
     PrecedenceNode *target = start->rptr;
@@ -635,7 +639,8 @@ bool reduce_multiply_assign(PrecedenceStack *stack, PrecedenceNode *start) {
     if (symtable_stack_find_symbol(&symtable_stack, mstr_content(&start->rptr->data.data.str_val)) == NULL) {
         stderr_message("precedence_parser", ERROR,
                        COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE, "Line %u: "
-                       "assignment to undefined variable \n", start->rptr->data.context.line_num);
+                                                                                          "assignment to undefined variable \n",
+                       start->rptr->data.context.line_num);
         return false;
     }
     PrecedenceNode *target = start->rptr;
@@ -663,7 +668,8 @@ bool reduce_divide_assign(PrecedenceStack *stack, PrecedenceNode *start) {
     if (symtable_stack_find_symbol(&symtable_stack, mstr_content(&start->rptr->data.data.str_val)) == NULL) {
         stderr_message("precedence_parser", ERROR,
                        COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE, "Line %u: "
-                       "assignment to undefined variable \n", start->rptr->data.context.line_num);
+                                                                                          "assignment to undefined variable \n",
+                       start->rptr->data.context.line_num);
         return false;
     }
     PrecedenceNode *target = start->rptr;
@@ -688,7 +694,7 @@ bool reduce_divide_assign(PrecedenceStack *stack, PrecedenceNode *start) {
 }
 
 bool reduce_brackets(PrecedenceStack *stack, PrecedenceNode *start) {
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->rptr->data.data_type};
+    StackSymbol new_nonterminal = start->rptr->rptr->data;
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
@@ -701,23 +707,26 @@ bool reduce_id(PrecedenceStack *stack, PrecedenceNode *start) {
         if (item == NULL) {
             stderr_message("precedence_parser", ERROR,
                            COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE, "Line %u: "
-                            "undefined variable %s\n", start->rptr->data.context.line_num,
-                            mstr_content(&start->rptr->data.data.str_val));
+                                                                                              "undefined variable %s\n",
+                           start->rptr->data.context.line_num,
+                           mstr_content(&start->rptr->data.data.str_val));
             return false;
         }
+
         new_nonterminal.data_type = item->data.data.var_data.type;
     }
+
     ASTNode *new_node;
     if (strcmp("_", mstr_content(&start->rptr->data.data.str_val)) == 0) {
         new_node = ast_leaf_black_hole();
     } else {
-        // FIXME: dirty hack
-        STSymbol *current_symbol = item == NULL ? NULL: &item->data;
+        STSymbol *current_symbol = item == NULL ? NULL : &item->data;
         new_node = ast_node_data(AST_ID, 1);
         if (new_node == NULL) {
             return false;
         }
-        new_node->data[0].symbolTableItemPtr = NULL;
+
+        new_node->data[0].symbolTableItemPtr = current_symbol;
     }
     new_nonterminal.ast = new_node;
     precedence_stack_pop_from(stack, start);
@@ -726,28 +735,28 @@ bool reduce_id(PrecedenceStack *stack, PrecedenceNode *start) {
 
 bool reduce_int(PrecedenceStack *stack, PrecedenceNode *start) {
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_INT, .data=start->rptr->data.data,
-                                   .ast=ast_leaf_consti(start->rptr->data.data.num_int_val)};
+            .ast=ast_leaf_consti(start->rptr->data.data.num_int_val)};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
 
 bool reduce_float(PrecedenceStack *stack, PrecedenceNode *start) {
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_FLOAT, .data=start->rptr->data.data,
-                                   .ast=ast_leaf_constf(start->rptr->data.data.num_float_val)};
+            .ast=ast_leaf_constf(start->rptr->data.data.num_float_val)};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
 
 bool reduce_string(PrecedenceStack *stack, PrecedenceNode *start) {
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_STRING, .data=start->rptr->data.data,
-                                   .ast=ast_leaf_consts(mstr_content(&start->rptr->data.data.str_val))};
+            .ast=ast_leaf_consts(mstr_content(&start->rptr->data.data.str_val))};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
 
 bool reduce_bool(PrecedenceStack *stack, PrecedenceNode *start) {
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL, .data=start->rptr->data.data,
-                                   .ast=ast_leaf_constb(start->rptr->data.data.bool_val)};
+            .ast=ast_leaf_constb(start->rptr->data.data.bool_val)};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
@@ -779,24 +788,26 @@ bool reduce_function(PrecedenceStack *stack, PrecedenceNode *start) {
             }
             current = current->rptr;
         }
-    } else if (strcmp(func_name, "print") != 0){
-        // Ignore the print function
+    } else {
+        bool is_not_print = strcmp(func_name, "print") != 0;
         current = start;
         STParam *param = function->data.data.func_data.params;
         while (current->data.type != TOKEN_RIGHT_BRACKET) {
             if (current->data.type == SYMB_NONTERMINAL) {
-                if (param == NULL) {
+                if (is_not_print && param == NULL) {
                     stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
                                    "Line %u: too many params to function call %s\n", token.context.line_num, func_name);
                     return false;
                 }
-                if (param->type != CF_UNKNOWN && current->data.data_type != CF_UNKNOWN &&
+                if (is_not_print && param->type != CF_UNKNOWN && current->data.data_type != CF_UNKNOWN &&
                     current->data.data_type != param->type) {
                     stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
                                    "Line %u: wrong param type for function %s\n", token.context.line_num, func_name);
                     return false;
                 }
-                param = param->next;
+                if (is_not_print) {
+                    param = param->next;
+                }
                 ast_push_to_list(params, current->data.ast);
             }
             current = current->rptr;
@@ -830,41 +841,41 @@ bool reduce_multi_expression(PrecedenceStack *stack, PrecedenceNode *start) {
 }
 
 bool (*semantic_actions[NUMBER_OF_RULES])(PrecedenceStack *stack, PrecedenceNode *start) = {
-    reduce_not,
-    reduce_unary_plus,
-    reduce_unary_minus,
-    reduce_multiply,
-    reduce_divide,
-    reduce_plus,
-    reduce_minus,
-    reduce_less_than,
-    reduce_greater_than,
-    reduce_less_or_equal,
-    reduce_greater_or_equal,
-    reduce_equal_to,
-    reduce_not_equal_to,
-    reduce_and,
-    reduce_or,
-    reduce_assign,
-    reduce_assign,
-    reduce_assign,
-    reduce_define,
-    reduce_define,
-    reduce_define,
-    reduce_plus_assign,
-    reduce_minus_assign,
-    reduce_multiply_assign,
-    reduce_divide_assign,
-    reduce_brackets,
-    reduce_id,
-    reduce_int,
-    reduce_float,
-    reduce_string,
-    reduce_bool,
-    reduce_function,
-    reduce_function,
-    reduce_function,
-    reduce_multi_expression,
+        reduce_not,
+        reduce_unary_plus,
+        reduce_unary_minus,
+        reduce_multiply,
+        reduce_divide,
+        reduce_plus,
+        reduce_minus,
+        reduce_less_than,
+        reduce_greater_than,
+        reduce_less_or_equal,
+        reduce_greater_or_equal,
+        reduce_equal_to,
+        reduce_not_equal_to,
+        reduce_and,
+        reduce_or,
+        reduce_assign,
+        reduce_assign,
+        reduce_assign,
+        reduce_define,
+        reduce_define,
+        reduce_define,
+        reduce_plus_assign,
+        reduce_minus_assign,
+        reduce_multiply_assign,
+        reduce_divide_assign,
+        reduce_brackets,
+        reduce_id,
+        reduce_int,
+        reduce_float,
+        reduce_string,
+        reduce_bool,
+        reduce_function,
+        reduce_function,
+        reduce_function,
+        reduce_multi_expression,
 };
 
 int get_table_index(int type, bool eol_allowed, bool eol_read) {
@@ -873,7 +884,8 @@ int get_table_index(int type, bool eol_allowed, bool eol_read) {
     }
     Token tmp;
     switch (type) {
-        case TOKEN_NOT: return INDEX_NOT;
+        case TOKEN_NOT:
+            return INDEX_NOT;
         case TOKEN_PLUS:
         case TOKEN_MINUS:
             // Check if it is unary or binary
@@ -885,26 +897,44 @@ int get_table_index(int type, bool eol_allowed, bool eol_read) {
                 case TOKEN_RIGHT_BRACKET:
                     return (token.type == TOKEN_PLUS) ? INDEX_PLUS : INDEX_MINUS;
                 default:
-                    return (token.type == TOKEN_PLUS) ? INDEX_UNARY_PLUS: INDEX_UNARY_MINUS;
+                    return (token.type == TOKEN_PLUS) ? INDEX_UNARY_PLUS : INDEX_UNARY_MINUS;
             }
-        case TOKEN_MULTIPLY: return INDEX_MULTIPLY;
-        case TOKEN_DIVIDE: return INDEX_DIVIDE;
-        case TOKEN_GREATER_THAN: return INDEX_GREATER_THAN;
-        case TOKEN_LESS_THAN: return INDEX_LESS_THAN;
-        case TOKEN_LESS_OR_EQUAL: return INDEX_LESS_OR_EQUAL;
-        case TOKEN_GREATER_OR_EQUAL: return INDEX_GREATER_OR_EQUAL;
-        case TOKEN_EQUAL_TO: return INDEX_EQUAL_TO;
-        case TOKEN_NOT_EQUAL_TO: return INDEX_NOT_EQUAL_TO;
-        case TOKEN_AND: return INDEX_AND;
-        case TOKEN_OR: return INDEX_OR;
-        case TOKEN_ASSIGN: return INDEX_ASSIGN;
-        case TOKEN_DEFINE: return INDEX_DEFINE;
-        case TOKEN_PLUS_ASSIGN: return INDEX_PLUS_ASSIGN;
-        case TOKEN_MINUS_ASSIGN: return INDEX_MINUS_ASSIGN;
-        case TOKEN_MULTIPLY_ASSIGN: return INDEX_MULTIPLY_ASSIGN;
-        case TOKEN_DIVIDE_ASSIGN: return INDEX_DIVIDE_ASSIGN;
-        case TOKEN_LEFT_BRACKET: return INDEX_LEFT_BRACKET;
-        case TOKEN_RIGHT_BRACKET: return INDEX_RIGHT_BRACKET;
+        case TOKEN_MULTIPLY:
+            return INDEX_MULTIPLY;
+        case TOKEN_DIVIDE:
+            return INDEX_DIVIDE;
+        case TOKEN_GREATER_THAN:
+            return INDEX_GREATER_THAN;
+        case TOKEN_LESS_THAN:
+            return INDEX_LESS_THAN;
+        case TOKEN_LESS_OR_EQUAL:
+            return INDEX_LESS_OR_EQUAL;
+        case TOKEN_GREATER_OR_EQUAL:
+            return INDEX_GREATER_OR_EQUAL;
+        case TOKEN_EQUAL_TO:
+            return INDEX_EQUAL_TO;
+        case TOKEN_NOT_EQUAL_TO:
+            return INDEX_NOT_EQUAL_TO;
+        case TOKEN_AND:
+            return INDEX_AND;
+        case TOKEN_OR:
+            return INDEX_OR;
+        case TOKEN_ASSIGN:
+            return INDEX_ASSIGN;
+        case TOKEN_DEFINE:
+            return INDEX_DEFINE;
+        case TOKEN_PLUS_ASSIGN:
+            return INDEX_PLUS_ASSIGN;
+        case TOKEN_MINUS_ASSIGN:
+            return INDEX_MINUS_ASSIGN;
+        case TOKEN_MULTIPLY_ASSIGN:
+            return INDEX_MULTIPLY_ASSIGN;
+        case TOKEN_DIVIDE_ASSIGN:
+            return INDEX_DIVIDE_ASSIGN;
+        case TOKEN_LEFT_BRACKET:
+            return INDEX_LEFT_BRACKET;
+        case TOKEN_RIGHT_BRACKET:
+            return INDEX_RIGHT_BRACKET;
         case TOKEN_STRING:
         case TOKEN_FLOAT:
         case TOKEN_INT:
@@ -924,10 +954,14 @@ int get_table_index(int type, bool eol_allowed, bool eol_read) {
             } else {
                 return INDEX_I;
             }
-        case SYMB_FUNCTION: return INDEX_F;
-        case SYMB_ID: return INDEX_I;
-        case TOKEN_COMMA: return INDEX_COMMA;
-        default: return INDEX_END;
+        case SYMB_FUNCTION:
+            return INDEX_F;
+        case SYMB_ID:
+            return INDEX_I;
+        case TOKEN_COMMA:
+            return INDEX_COMMA;
+        default:
+            return INDEX_END;
     }
 }
 
@@ -1007,7 +1041,14 @@ bool reduce(PrecedenceStack *stack, PrecedenceNode *start, int *function_level) 
                 (*function_level)--;
             }
             if (semantic_enabled) {
-                return semantic_actions[i](stack, start);
+                bool sem_res = semantic_actions[i](stack, start);
+                ASTNode *top_ast = stack->top->data.ast;
+
+                if (top_ast != NULL) {
+                    ast_infer_node_type(top_ast);
+                }
+
+                return sem_res;
             } else {
                 // semantics not enabled, simply pop and check syntax
                 StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL};
@@ -1101,6 +1142,9 @@ StackSymbol copy_token_to_symbol() {
     result.type = token.type;
     result.data = token.data;
     result.context = token.context;
+    result.ast = NULL;
+    result.data_type = CF_UNKNOWN;
+
     return result;
 }
 
