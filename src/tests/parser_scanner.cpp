@@ -2720,6 +2720,39 @@ TEST_F(ParserScannerTest, VoidVariableInExpression) {
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
 }
 
+TEST_F(ParserScannerTest, TextAtTheEndOfFile1) {
+    std::string inputStr = \
+        "package main\n"
+        "func main() {\n"
+        "    a, b := 0, 5\n"
+        "}\n"
+        "bla bla bla\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, TextAtTheEndOfFile2) {
+    std::string inputStr = \
+        "package main\n"
+        "func main() {\n"
+        "    a, b := 0, 5\n"
+         "}\n"
+        "/*comment*/\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, TextAtTheEndOfFile3) {
+    std::string inputStr = \
+        "package main\n"
+        "func main() {\n"
+        "    a, b := 0, 5\n"
+        "}\n"
+        "// comment \n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
 // === Test function headers ===
 
 TEST_F(ParserScannerTest, FunctionHeader1) {
