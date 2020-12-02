@@ -103,11 +103,9 @@ void ParserScannerTest::ComplexTest(std::string &inputStr, CompilerResult expect
 
             fn = fn->next;
         }
-
-        ASSERT_EQ(compiler_result, expected_compiler_result);
-    } else {
-        ASSERT_EQ(parserRes, expected_compiler_result);
     }
+
+    ASSERT_EQ(compiler_result, expected_compiler_result);
 }
 
 TEST_F(ParserScannerTest, BasicCode) {
