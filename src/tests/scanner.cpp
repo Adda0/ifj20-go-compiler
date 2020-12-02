@@ -4,7 +4,8 @@
  *
  * @brief Contains tests for the scanner module.
  *
- * @author Ondřej Ondryáš (xondry02), FIT BUT
+ * @author Ondřej Ondryáš   (xondry02), FIT BUT
+ * @author David Chocholatý (xchoch08), FIT BUT
  */
 
 // Verbosity levels:
@@ -126,7 +127,7 @@ const std::map<TokenType, std::string> tokenTypeNames = {{TOKEN_DEFAULT,        
 
 class ScannerTest : public StdinMockingScannerTest {
 protected:
-    void ComplexTest(std::string &inputStr, std::list<ExpectedToken> &expected);
+    void ComplexTest(std::string &inputStr, std::list<ExpectedToken> &expected, CompilerResult expectedCompilerResult);
 };
 
 ScannerResult scanner_get_token_wrapper(Token *token, EolRule eolRule, ScannerResult expRes, TokenType expType) {
@@ -141,22 +142,23 @@ ScannerResult scanner_get_token_wrapper(Token *token, EolRule eolRule, ScannerRe
     return res;
 }
 
-#define LEX(input, eolRule, expectedScannerResult, expectedResult)  \
+#define LEX(input, eolRule, expectedScannerResult, expectedResult, expectedCompilerResult)  \
     std::string inputStr = input;                                   \
     buffer->sputn(inputStr.c_str(), inputStr.length());             \
     buffer->sputc(EOF);                                             \
     Token resultToken;                                              \
     auto res = scanner_get_token_wrapper(&resultToken, (eolRule), (expectedScannerResult), (expectedResult)); \
     ASSERT_EQ(res, (expectedScannerResult));                        \
-    ASSERT_EQ(resultToken.type, (expectedResult))
+    ASSERT_EQ(resultToken.type, (expectedResult));                  \
+    ASSERT_EQ(compiler_result, (expectedCompilerResult))
 
 #define LEX_SUCCESS(input, expectedResult) \
-    LEX(input, EOL_OPTIONAL, SCANNER_RESULT_SUCCESS, expectedResult)
+    LEX(input, EOL_OPTIONAL, SCANNER_RESULT_SUCCESS, expectedResult, COMPILER_RESULT_SUCCESS)
 
 #define LEX_SUCCESS_EOL(input, eolRule, expectedResult) \
-    LEX(input, eolRule, SCANNER_RESULT_SUCCESS, expectedResult)
+    LEX(input, eolRule, SCANNER_RESULT_SUCCESS, expectedResult, COMPILER_RESULT_SUCCESS)
 
-void ScannerTest::ComplexTest(std::string &inputStr, std::list<ExpectedToken> &expected) {
+void ScannerTest::ComplexTest(std::string &inputStr, std::list<ExpectedToken> &expected, CompilerResult expectedCompilerResult) {
 #if VERBOSE
     std::cout << "[TEST] Input string:\n" << inputStr << "\n[START]\n";
 #endif
@@ -237,6 +239,7 @@ void ScannerTest::ComplexTest(std::string &inputStr, std::list<ExpectedToken> &e
     }
 
     ASSERT_EQ(it, end);
+    ASSERT_EQ(compiler_result, expectedCompilerResult);
 }
 
 std::list<ExpectedToken> MakeBasicFunctionResults() {
@@ -266,14 +269,14 @@ TEST_F(ScannerTest, FunctionValid) {
     std::string inputStr = "func add(i int, j int) (int) {\n return i + j }\n";
     auto expectedResult = MakeBasicFunctionResults();
 
-    ComplexTest(inputStr, expectedResult);
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_SUCCESS);
 }
 
 TEST_F(ScannerTest, FunctionValidOptionalEols) {
     std::string inputStr = "func\nadd(\ni int,\nj int) (\nint) { \n return i +\n j \n }\n";
     auto expectedResult = MakeBasicFunctionResults();
 
-    ComplexTest(inputStr, expectedResult);
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_SUCCESS);
 }
 
 TEST_F(ScannerTest, FunctionExcessEol) {
@@ -285,7 +288,7 @@ TEST_F(ScannerTest, FunctionExcessEol) {
     it++;
     it->expectedResult = SCANNER_RESULT_EXCESS_EOL;
 
-    ComplexTest(inputStr, expectedResult);
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_SUCCESS);
 }
 
 TEST_F(ScannerTest, FunctionMultipleExcessEols) {
@@ -298,7 +301,7 @@ TEST_F(ScannerTest, FunctionMultipleExcessEols) {
     auto it2 = expectedResult.rbegin();
     std::next(it2, 2)->expectedResult = SCANNER_RESULT_EXCESS_EOL;
 
-    ComplexTest(inputStr, expectedResult);
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_SUCCESS);
 }
 
 TEST_F(ScannerTest, FunctionMissingEol) {
@@ -308,7 +311,7 @@ TEST_F(ScannerTest, FunctionMissingEol) {
     auto it = std::next(expectedResult.rbegin(), 4);
     it->expectedResult = SCANNER_RESULT_MISSING_EOL;
 
-    ComplexTest(inputStr, expectedResult);
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_SUCCESS);
 }
 
 std::list<ExpectedToken> MakeInvocationResults() {
@@ -328,7 +331,7 @@ TEST_F(ScannerTest, InvocationValidOptionalEols) {
     std::string inputStr = "i =\nadd(\n1, \n1)\n";
     auto expectedResult = MakeInvocationResults();
 
-    ComplexTest(inputStr, expectedResult);
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_SUCCESS);
 }
 
 TEST_F(ScannerTest, InvocationMultipleExcessEols) {
@@ -338,7 +341,7 @@ TEST_F(ScannerTest, InvocationMultipleExcessEols) {
     expectedResult.rbegin()->expectedResult = SCANNER_RESULT_EXCESS_EOL;
     std::next(expectedResult.begin(), 1)->expectedResult = SCANNER_RESULT_EXCESS_EOL;
 
-    ComplexTest(inputStr, expectedResult);
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_SUCCESS);
 }
 
 std::list<ExpectedToken> MakeComparisonsResults() {
@@ -368,20 +371,20 @@ TEST_F(ScannerTest, ComparisonsValidOptionalEols) {
     std::string inputStr = "if\na > \nb {\nexpr\n} else {\n if a <= b {\n expr }\n expr }\n";
 
     auto expectedResult = MakeComparisonsResults();
-    ComplexTest(inputStr, expectedResult);
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_SUCCESS);
 }
 
 // Tests whether an input with no \n at its end still passes the EOL_REQUIRED rule and terminates correctly,
 // with SCANNER_RESULT_EOF instead of SCANNER_RESULT_MISSING_EOL.
 TEST_F(ScannerTest, NoRequiredEolBeforeEof) {
-    LEX("}", EOL_OPTIONAL, SCANNER_RESULT_SUCCESS, TOKEN_CURLY_RIGHT_BRACKET);
+    LEX("}", EOL_OPTIONAL, SCANNER_RESULT_SUCCESS, TOKEN_CURLY_RIGHT_BRACKET, COMPILER_RESULT_SUCCESS);
     res = scanner_get_token(&resultToken, EOL_REQUIRED);
     ASSERT_EQ(res, SCANNER_RESULT_EOF);
 }
 
 // Tests whether an input with no \n at its end terminates correctly.
 TEST_F(ScannerTest, NoOptionalEolBeforeEof) {
-    LEX("}", EOL_OPTIONAL, SCANNER_RESULT_SUCCESS, TOKEN_CURLY_RIGHT_BRACKET);
+    LEX("}", EOL_OPTIONAL, SCANNER_RESULT_SUCCESS, TOKEN_CURLY_RIGHT_BRACKET, COMPILER_RESULT_SUCCESS);
     res = scanner_get_token(&resultToken, EOL_OPTIONAL);
     ASSERT_EQ(res, SCANNER_RESULT_EOF);
 }
@@ -435,7 +438,7 @@ TEST_F(ScannerTest, IntStartingWithZero1) {
 TEST_F(ScannerTest, IntStartingWithZero2) {
     // Go interprets this as an octal number, same as C
     // So this should yield an error
-    LEX("09 ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT);
+    LEX("09 ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT, COMPILER_RESULT_ERROR_LEXICAL);
 }
 
 TEST_F(ScannerTest, IntStartingWithMultipleZeroes1) {
@@ -467,7 +470,7 @@ TEST_F(ScannerTest, IntUnderscore) {
 }
 
 TEST_F(ScannerTest, IntUnderscoreInvalid) {
-    LEX("1__456 ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT);
+    LEX("1__456 ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT, COMPILER_RESULT_ERROR_LEXICAL);
 }
 
 TEST_F(ScannerTest, IntUnderscoreWithZero) {
@@ -689,7 +692,7 @@ TEST_F(ScannerTest, IntHexaUnderscoreMultiple5) {
 
 TEST_F(ScannerTest, IntTooBig) {
     LEX("9223372036854775809 ", EOL_OPTIONAL,
-        SCANNER_RESULT_NUMBER_OVERFLOW, TOKEN_INT);
+        SCANNER_RESULT_NUMBER_OVERFLOW, TOKEN_INT, COMPILER_RESULT_ERROR_LEXICAL);
 }
 
 TEST_F(ScannerTest, IntExp) {
@@ -755,6 +758,14 @@ TEST_F(ScannerTest, IntExpMinusSignMultiple) {
 TEST_F(ScannerTest, IntExpMinusSignMultipleZero) {
     LEX_SUCCESS("1600000e-010 ", TOKEN_FLOAT);
     ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 1600000e-10);
+}
+
+TEST_F(ScannerTest, InvalidFloats1) {
+    LEX(" .5 ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, InvalidFloats2) {
+    LEX(" 1. ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT, COMPILER_RESULT_ERROR_LEXICAL);
 }
 
 TEST_F(ScannerTest, Float) {
@@ -882,6 +893,39 @@ TEST_F(ScannerTest, FloatExpMinusSignMultipleZero) {
     ASSERT_DOUBLE_EQ(resultToken.data.num_float_val, 1600000.0e-10);
 }
 
+TEST_F(ScannerTest, FloatExponentInvalidValues1) {
+    LEX(" 1e++6 ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, FloatExponentInvalidValues2) {
+    LEX(" 1e+_6 ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, FloatExponentInvalidValues3) {
+    LEX(" 1e--6 ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, FloatExponentInvalidValues4) {
+    LEX(" 1.5E ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, FloatExponentInvalidValues5) {
+    LEX(" 15e.1 ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, FloatExponentInvalidValues6) {
+        std::string inputStr = "a := 15e1.6";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_ID, {.strVal = "a"}),
+            ExpectedToken(TOKEN_DEFINE),
+            ExpectedToken(TOKEN_FLOAT, {.doubleVal = 15e1}),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+    };
+
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
 TEST_F(ScannerTest, FloatUnderscore) {
     // This is valid in Go
     LEX_SUCCESS("0.93_75", TOKEN_FLOAT);
@@ -970,19 +1014,19 @@ TEST_F(ScannerTest, StringComplex) {
 }
 
 TEST_F(ScannerTest, StringUnexpectedEol) {
-    LEX("\"A str\ning\" ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING);
+    LEX("\"A str\ning\" ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING, COMPILER_RESULT_ERROR_LEXICAL);
 }
 
 TEST_F(ScannerTest, StringUnexpectedHexa1) {
-    LEX("\"\\x9g\" ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING);
+    LEX("\"\\x9g\" ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING, COMPILER_RESULT_ERROR_LEXICAL);
 }
 
 TEST_F(ScannerTest, StringUnexpectedHexa2) {
-    LEX("\"\\xg9\" ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING);
+    LEX("\"\\xg9\" ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING, COMPILER_RESULT_ERROR_LEXICAL);
 }
 
 TEST_F(ScannerTest, StringUnexpectedHexaEol) {
-    LEX("\"\\xa\n9\" ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING);
+    LEX("\"\\xa\n9\" ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING, COMPILER_RESULT_ERROR_LEXICAL);
 }
 
 TEST_F(ScannerTest, KeywordBool) {
@@ -1159,7 +1203,7 @@ TEST_F(ScannerTest, InvalidInput_Amp) {
             ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET)
     };
 
-    ComplexTest(inputStr, expectedResult);
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_ERROR_LEXICAL);
 }
 
 TEST_F(ScannerTest, InvalidInput_BracketInIdentifier) {
@@ -1177,7 +1221,7 @@ TEST_F(ScannerTest, InvalidInput_BracketInIdentifier) {
             ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET)
     };
 
-    ComplexTest(inputStr, expectedResult);
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_ERROR_LEXICAL);
 }
 
 TEST_F(ScannerTest, InvalidInput_DollarSign) {
@@ -1194,7 +1238,7 @@ TEST_F(ScannerTest, InvalidInput_DollarSign) {
             ExpectedToken(SCANNER_RESULT_INVALID_STATE)
     };
 
-    ComplexTest(inputStr, expectedResult);
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_ERROR_LEXICAL);
 }
 
 TEST_F(ScannerTest, InvalidInput_UnexpectedDot) {
@@ -1211,7 +1255,7 @@ TEST_F(ScannerTest, InvalidInput_UnexpectedDot) {
             ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET)
     };
 
-    ComplexTest(inputStr, expectedResult);
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_ERROR_LEXICAL);
 }
 
 TEST_F(ScannerTest, InvalidInput_QuestionMark) {
@@ -1228,7 +1272,7 @@ TEST_F(ScannerTest, InvalidInput_QuestionMark) {
             ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_REQUIRED)
     };
 
-    ComplexTest(inputStr, expectedResult);
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_ERROR_LEXICAL);
 }
 
 
@@ -1246,7 +1290,7 @@ TEST_F(ScannerTest, InvalidInput_Hash) {
             ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_REQUIRED)
     };
 
-    ComplexTest(inputStr, expectedResult);
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_ERROR_LEXICAL);
 }
 
 TEST_F(ScannerTest, Comments_LineInBlock) {
@@ -1261,7 +1305,7 @@ TEST_F(ScannerTest, Comments_LineInBlock) {
             ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_REQUIRED)
     };
 
-    ComplexTest(inputStr, expectedResult);
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_SUCCESS);
 }
 
 TEST_F(ScannerTest, Comments_BlockInLine) {
@@ -1276,7 +1320,7 @@ TEST_F(ScannerTest, Comments_BlockInLine) {
             ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_REQUIRED)
     };
 
-    ComplexTest(inputStr, expectedResult);
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_SUCCESS);
 }
 
 TEST_F(ScannerTest, Comments_LineInLine) {
@@ -1291,10 +1335,10 @@ TEST_F(ScannerTest, Comments_LineInLine) {
             ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_REQUIRED)
     };
 
-    ComplexTest(inputStr, expectedResult);
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_SUCCESS);
 }
 
-TEST_F(ScannerTest, Comments_Multiline) {
+TEST_F(ScannerTest, Comments_Multiline1) {
     std::string inputStr = "func main() {\n \t/* a\nmultiline\t\t \ncomment */\n}\n ";
 
     auto expectedResult = std::list<ExpectedToken>{
@@ -1306,7 +1350,54 @@ TEST_F(ScannerTest, Comments_Multiline) {
             ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_REQUIRED)
     };
 
-    ComplexTest(inputStr, expectedResult);
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ScannerTest, Comments_Multiline2) {
+    std::string inputStr = "func main() {\n \t/* a\nmul*tiline\t\t \ncomment */\n}\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_REQUIRED)
+    };
+
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ScannerTest, Comments_MultilineInString1) {
+    std::string inputStr = "func main() {\n \t\"string /* a\\nmultiline\\t\\t \\ncomment */continues here\"\n}\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_STRING, {.strVal = "string /* a\\nmultiline\\t\\t \\ncomment */continues here"}),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_REQUIRED),
+    };
+
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ScannerTest, Comments_MultilineInString2) {
+    std::string inputStr = "func main() {\n \t\"string /* a  \n    multiline\\t\\t \\ncomment */continues here\"\n}\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_STRING),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_REQUIRED),
+    };
+
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_ERROR_LEXICAL);
 }
 
 TEST_F(ScannerTest, Comment_NeverendingBlock) {
@@ -1320,8 +1411,7 @@ TEST_F(ScannerTest, Comment_NeverendingBlock) {
             ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
     };
 
-    ComplexTest(inputStr, expectedResult);
-    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_ERROR_LEXICAL);
 }
 
 TEST_F(ScannerTest, Comment_BlockIsWhitespace1) {
@@ -1334,7 +1424,7 @@ TEST_F(ScannerTest, Comment_BlockIsWhitespace1) {
             ExpectedToken(TOKEN_RIGHT_BRACKET),
     };
 
-    ComplexTest(inputStr, expectedResult);
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_SUCCESS);
 }
 
 TEST_F(ScannerTest, Comment_BlockIsWhitespace2) {
@@ -1347,7 +1437,7 @@ TEST_F(ScannerTest, Comment_BlockIsWhitespace2) {
             ExpectedToken(TOKEN_RIGHT_BRACKET),
     };
 
-    ComplexTest(inputStr, expectedResult);
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_SUCCESS);
 }
 
 TEST_F(ScannerTest, Comment_BlockIsWhitespace3) {
@@ -1360,7 +1450,7 @@ TEST_F(ScannerTest, Comment_BlockIsWhitespace3) {
             ExpectedToken(TOKEN_RIGHT_BRACKET),
     };
 
-    ComplexTest(inputStr, expectedResult);
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_SUCCESS);
 }
 
 TEST_F(ScannerTest, Comment_BlockIsWhitespaceConsumingEOL) {
@@ -1373,7 +1463,7 @@ TEST_F(ScannerTest, Comment_BlockIsWhitespaceConsumingEOL) {
             ExpectedToken(TOKEN_RIGHT_BRACKET),
     };
 
-    ComplexTest(inputStr, expectedResult);
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_SUCCESS);
 }
 
 TEST_F(ScannerTest, Comment_LineIsEOL) {
@@ -1388,7 +1478,7 @@ TEST_F(ScannerTest, Comment_LineIsEOL) {
             ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET)
     };
 
-    ComplexTest(inputStr, expectedResult);
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_SUCCESS);
 }
 
 TEST_F(ScannerTest, Comment_LineEOLPreceedsBlock) {
@@ -1407,21 +1497,232 @@ TEST_F(ScannerTest, Comment_LineEOLPreceedsBlock) {
             ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET)
     };
 
-    ComplexTest(inputStr, expectedResult);
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ScannerTest, Comment_NestedBlockComment) {
+    std::string inputStr = "func main() {\n/*  block /* with nested block comment */ comment*/}\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET, EOL_FORBIDDEN),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_ID, {.strVal = "comment"}),
+            ExpectedToken(TOKEN_MULTIPLY),
+            ExpectedToken(TOKEN_DIVIDE),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET)
+    };
+
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_SUCCESS);
 }
 
 TEST_F(ScannerTest, CompilerResultValue1) {
-    LEX("09", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT);
-    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+    LEX("09", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT, COMPILER_RESULT_ERROR_LEXICAL);
 
 }
 
 TEST_F(ScannerTest, CompilerResultValue2) {
-    LEX("\"foo\\sbar\"", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING);
-    ASSERT_EQ(compiler_result, COMPILER_RESULT_ERROR_LEXICAL);
+    LEX("\"foo\\sbar\"", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING, COMPILER_RESULT_ERROR_LEXICAL);
+
 }
 
 TEST_F(ScannerTest, CompilerResultValue3) {
-    LEX("\"returned \\x49 string\"", EOL_OPTIONAL, SCANNER_RESULT_SUCCESS, TOKEN_STRING);
-    ASSERT_EQ(compiler_result, COMPILER_RESULT_SUCCESS);
+    LEX("\"returned \\x49 string\"", EOL_OPTIONAL, SCANNER_RESULT_SUCCESS, TOKEN_STRING, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ScannerTest, IdentifierAdditionalTests1) {
+    LEX("__test", EOL_OPTIONAL, SCANNER_RESULT_SUCCESS, TOKEN_ID, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ScannerTest, IdentifierAdditionalTests2) {
+    LEX("_t_t_test", EOL_OPTIONAL, SCANNER_RESULT_SUCCESS, TOKEN_ID, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ScannerTest, IdentifierAdditionalTests3) {
+    LEX("[test", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, IdentifierAdditionalTests4) {
+    std::string inputStr = "func main() {\n(test := 1\n}\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET, EOL_FORBIDDEN),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_LEFT_BRACKET, EOL_OPTIONAL),
+            ExpectedToken(TOKEN_ID, {.strVal = "test"}),
+            ExpectedToken(TOKEN_DEFINE),
+            ExpectedToken(TOKEN_INT, {.intVal = 1}, EOL_REQUIRED),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_OPTIONAL)
+    };
+
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ScannerTest, IdentifierAdditionalTests5) {
+    std::string inputStr = "func main() {\n(te)s%t := 1\n}\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET, EOL_FORBIDDEN),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_LEFT_BRACKET, EOL_OPTIONAL),
+            ExpectedToken(TOKEN_ID, {.strVal = "te"}),
+            ExpectedToken(TOKEN_RIGHT_BRACKET, EOL_FORBIDDEN),
+            ExpectedToken(TOKEN_ID, {.strVal = "s"}),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+            ExpectedToken(TOKEN_ID, {.strVal = "t"}),
+            ExpectedToken(TOKEN_DEFINE),
+            ExpectedToken(TOKEN_INT, {.intVal = 1}, EOL_REQUIRED),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_OPTIONAL)
+    };
+
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, IdentifierAdditionalTests6) {
+    std::string inputStr = "func main() {\n(te)%st := 1\n}\n ";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET, EOL_FORBIDDEN),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET, EOL_REQUIRED),
+            ExpectedToken(TOKEN_LEFT_BRACKET, EOL_OPTIONAL),
+            ExpectedToken(TOKEN_ID, {.strVal = "te"}),
+            ExpectedToken(TOKEN_RIGHT_BRACKET, EOL_FORBIDDEN),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+            ExpectedToken(TOKEN_ID, {.strVal = "st"}),
+            ExpectedToken(TOKEN_DEFINE),
+            ExpectedToken(TOKEN_INT, {.intVal = 1}, EOL_REQUIRED),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET, EOL_OPTIONAL)
+    };
+
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, DoubleDotInFloat1) {
+    std::string inputStr = "15.2.3";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_FLOAT, {.doubleVal = 15.2}),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+            ExpectedToken(TOKEN_INT, {.intVal = 3}),
+    };
+
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, DoubleDotInFloat2) {
+    std::string inputStr = "15..3";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+            ExpectedToken(TOKEN_INT, {.intVal = 3}),
+    };
+
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, FloatInvalidExponent1) {
+    std::string inputStr = "15e.3";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+            ExpectedToken(TOKEN_INT, {.intVal = 3}),
+    };
+
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, FloatInvalidExponent2) {
+    std::string inputStr = "15eE.3";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+            ExpectedToken(TOKEN_ID, {.strVal = "E"}),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+            ExpectedToken(TOKEN_INT, {.intVal = 3}),
+    };
+
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, InvalidEscapeSequences1) {
+    LEX("\" \\\\ \" ", EOL_OPTIONAL, SCANNER_RESULT_SUCCESS, TOKEN_STRING, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ScannerTest, InvalidEscapeSequences2) {
+    LEX("\" \\ \" ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, InvalidEscapeSequences3) {
+    LEX("\" \\\"\" ", EOL_OPTIONAL, SCANNER_RESULT_SUCCESS, TOKEN_STRING, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ScannerTest, InvalidEscapeSequences4) {
+    LEX("\" \\p \" ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, InvalidEscapeSequences5) {
+    LEX("\" \\x0 \" ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, InvalidEscapeSequences6) {
+    LEX("\" \\x00 \" ", EOL_OPTIONAL, SCANNER_RESULT_SUCCESS, TOKEN_STRING, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ScannerTest, UnaryOperators1) {
+    std::string inputStr = "a := -13";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_ID, {.strVal = "a"}),
+            ExpectedToken(TOKEN_DEFINE),
+            ExpectedToken(TOKEN_MINUS),
+            ExpectedToken(TOKEN_INT, {.intVal = 13}),
+    };
+
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ScannerTest, UnaryOperators2) {
+    std::string inputStr = "a := -13.4";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_ID, {.strVal = "a"}),
+            ExpectedToken(TOKEN_DEFINE),
+            ExpectedToken(TOKEN_MINUS),
+            ExpectedToken(TOKEN_FLOAT, {.doubleVal = 13.4}),
+    };
+
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ScannerTest, NeverendingString) {
+    LEX("\"test ", EOL_OPTIONAL, SCANNER_RESULT_EOF, TOKEN_DEFAULT, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, Colon) {
+    std::string inputStr = "func main() { \n : = \n";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+            ExpectedToken(TOKEN_ASSIGN),
+    };
+
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_ERROR_LEXICAL);
 }

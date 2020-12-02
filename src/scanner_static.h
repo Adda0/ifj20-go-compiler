@@ -49,7 +49,6 @@ typedef enum automaton_state {
     STATE_KEYWORD,
 
     STATE_ZERO, // first char of a number was '0'
-    STATE_ZERO_NUM,
     STATE_ZERO_UNDERSCORE,
     STATE_BINARY,
     STATE_BINARY_NUMBER,
