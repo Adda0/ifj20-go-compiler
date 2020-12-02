@@ -947,9 +947,7 @@ int get_table_index(int type, bool eol_allowed, bool eol_read) {
             if ((scanner_result = get_token(&tmp, EOL_FORBIDDEN, true)) == SCANNER_RESULT_INTERNAL_ERROR
                 || scanner_result == SCANNER_RESULT_INVALID_STATE || scanner_result == SCANNER_RESULT_NUMBER_OVERFLOW) {
                 return -1;
-            } else if (scanner_result == SCANNER_RESULT_EOF) {
-                return INDEX_END;
-            } else if (scanner_result == SCANNER_RESULT_EXCESS_EOL) {
+            } else if (scanner_result == SCANNER_RESULT_EOF || scanner_result == SCANNER_RESULT_EXCESS_EOL) {
                 return INDEX_I;
             }
             if (tmp.type == TOKEN_LEFT_BRACKET) {
