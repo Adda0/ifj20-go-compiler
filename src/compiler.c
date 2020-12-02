@@ -11,6 +11,7 @@
 #include "compiler.h"
 #include "parser.h"
 #include "optimiser.h"
+#include "control_flow.h"
 #include "code_generator.h"
 
 CompilerResult compiler_result = COMPILER_RESULT_SUCCESS;
@@ -28,6 +29,7 @@ int main() {
     if (compiler_result == COMPILER_RESULT_SUCCESS) {
         optimiser_optimise();
         tcg_generate();
+        cf_clean_all();
     }
     return compiler_result;
 }

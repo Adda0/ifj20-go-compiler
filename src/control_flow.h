@@ -135,6 +135,13 @@ extern CFError cf_error;
 // Initializes the control flow graph generator.
 void cf_init();
 
+/* Recursively walks trough the generated program and frees:
+ *  - Memory assigned to AST_CONST_STRING data, pointed to by the stringConstantValue pointer.
+ *  - Memory occupied by all AST nodes, CFG statement nodes, CFG function nodes and CFG root program node.
+ *  - Memory occupied by all symbol tables.
+ */
+void cf_clean_all();
+
 // Assigns a pointer to the global symbol table.
 // This can only be done ONCE!
 void cf_assign_global_symtable(SymbolTable *symbolTable);
@@ -171,6 +178,7 @@ CFStatement *cf_make_next_statement(CFStatementType statementType);
 // This can only be done on a statement with NO following statement!
 void cf_assign_statement_symtable(SymbolTable *symbolTable);
 
+// Deprecated.
 // Uses the specified AST as the AST of the active statement.
 // The semantics of cf_use_ast_explicit() apply.
 void cf_use_ast(CFASTTarget target);
@@ -210,6 +218,8 @@ CFStatement *cf_make_if_else_statement(CFStatementType statementType);
 // Creates a statement and sets it as the body statement for the currently active FOR statement.
 // If the active statement is not an FOR statement, throws an error.
 CFStatement *cf_make_for_body_statement(CFStatementType statementType);
+
+// ---- Deprecated functions ----
 
 // Creates a new AST and sets it as the active AST node.
 // If target is not ROOT, links it to the currently active AST node.

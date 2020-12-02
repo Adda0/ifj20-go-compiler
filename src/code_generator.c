@@ -124,7 +124,7 @@ bool is_statement_empty(CFStatement *stat) {
 
 char *convert_to_target_string_form(const char *input) {
     // Worst case scenario, all characters will be converted to escape sequences which are 4 chars long
-    char *buf = malloc(strlen(input) * 4 - 3);
+    char *buf = malloc(strlen(input) * 4 + 1);
     char *bufRet = buf;
     char n;
     while ((n = *(input++)) != '\0') {

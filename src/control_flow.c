@@ -372,6 +372,86 @@ CFStatement *cf_make_for_body_statement(CFStatementType type) {
     return newStat;
 }
 
+static void clean_ast(ASTNode *node) {
+    if (node == NULL) return;
+    clean_ast(node->left);
+    clean_ast(node->right);
+
+    switch (node->actionType) {
+        case AST_LIST:
+            for (unsigned i = 0; i < node->dataCount; i++) {
+                clean_ast(node->data[i].astPtr);
+            }
+            break;
+        case AST_CONST_STRING:
+            free((void *) node->data[0].stringConstantValue);
+            break;
+    }
+
+    free(node);
+}
+
+static void clean_stat(CFStatement *stat) {
+    if (stat == NULL) return;
+    switch (stat->statementType) {
+        case CF_BASIC:
+        case CF_RETURN:
+            clean_ast(stat->data.bodyAst);
+            break;
+        case CF_IF:
+            clean_ast(stat->data.ifData->conditionalAst);
+            clean_stat(stat->data.ifData->thenStatement);
+            clean_stat(stat->data.ifData->elseStatement);
+            break;
+        case CF_FOR:
+            clean_ast(stat->data.forData->conditionalAst);
+            clean_ast(stat->data.forData->definitionAst);
+            clean_ast(stat->data.forData->afterthoughtAst);
+            clean_stat(stat->data.forData->bodyStatement);
+            break;
+    }
+
+    if (stat->localSymbolTable != NULL && stat->localSymbolTable != stat->parentFunction->symbolTable) {
+        symtable_free(stat->localSymbolTable);
+        if (stat->followingStatement != NULL && stat->followingStatement->localSymbolTable == stat->localSymbolTable) {
+            stat->followingStatement->localSymbolTable = NULL;
+        }
+    } else {
+        if (stat->followingStatement != NULL) {
+            stat->followingStatement->localSymbolTable = NULL;
+        }
+    }
+
+    clean_stat(stat->followingStatement);
+    free(stat);
+}
+
+static void clean_varlist(CFVarListNode *begin) {
+    while(begin != NULL) {
+        CFVarListNode *next = begin->next;
+        free(begin);
+        begin = next;
+    }
+}
+
+void cf_clean_all() {
+    CFFuncListNode *n = program->functionList;
+
+    while (n != NULL) {
+        symtable_free(n->fun.symbolTable);
+        clean_stat(n->fun.rootStatement);
+        clean_varlist(n->fun.arguments);
+        clean_varlist(n->fun.returnValues);
+        CFFuncListNode *toFree = n;
+        n = n->next;
+        free(toFree);
+    }
+
+    symtable_free(program->globalSymtable);
+    free(program);
+}
+
+// ---- Deprecated functions ----
 ASTNode *cf_ast_init_with_data(ASTNewNodeTarget target, ASTNodeType type, unsigned dataCount) {
     if (target != AST_ROOT) {
         CF_ACT_AST_CHECK_RN();
@@ -511,12 +591,6 @@ ASTNode *cf_ast_root() {
 
 void cf_ast_set_data(unsigned position, ASTNodeData data) {
     CF_ACT_AST_CHECK();
-
-    // TODO: [DESIGN] reference counting might be done in the parser instead
-    if (activeAst->actionType == AST_ID) {
-        data.symbolTableItemPtr->reference_counter++;
-    }
-
     activeAst->data[position] = data;
 }
 
