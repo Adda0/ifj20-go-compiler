@@ -450,7 +450,7 @@ bool assignment_inference_list_func_call(ASTNode *node) {
 
 bool assignment_inference_semantic_checks(ASTNode *node) {
     if (node->left->actionType == AST_LIST) {
-        // TODO: rozdělit na víc ifů -> rozumnější chybová hlášení
+        // TODO: break into multiple ifs to provide (better) error messages
 
         if (node->right->actionType == AST_LIST && node->right->dataCount == 1
             && node->right->data[0].astPtr->actionType == AST_FUNC_CALL) {

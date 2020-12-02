@@ -482,7 +482,9 @@ void factorial_rec() {
     // a, err := inputi()
     cf_make_next_statement(CF_BASIC);
     n1 = ast_node_list(0);
-    n = ast_node_func_call(sym_inputi, n1);
+
+    n = ast_node_list(1);
+    ast_push_to_list(n, ast_node_func_call(sym_inputi, n1));
 
     n2 = n;
     n = ast_node_list(2);

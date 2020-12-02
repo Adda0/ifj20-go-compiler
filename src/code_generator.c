@@ -2,7 +2,7 @@
  *
  * IFJ20 compiler
  *
- * @brief Implements a simple target code generator with no .
+ * @brief Implements the target code generator.
  *
  * @author Ondřej Ondryáš (xondry02), FIT BUT
  */
@@ -107,7 +107,7 @@ bool is_statement_empty(CFStatement *stat) {
     switch (stat->statementType) {
         case CF_BASIC:
             if (stat->parentStatement != NULL && (stat->parentStatement->statementType == CF_IF
-                || stat->parentStatement->statementType == CF_FOR)) {
+                                                  || stat->parentStatement->statementType == CF_FOR)) {
                 return false;
             }
 
@@ -251,7 +251,6 @@ void generate_print(ASTNode *argAstList, CFStatement *stat) {
                 break;
             case AST_CONST_BOOL:
             out("WRITE bool@%s", ast->data[0].boolConstantValue ? "true" : "false");
-                out("WRITE string@\\010"); // TODO: remove
                 break;
             case AST_ID:
                 out_nnl("WRITE ");
@@ -264,13 +263,10 @@ void generate_print(ASTNode *argAstList, CFStatement *stat) {
                 if (ast->inheritedDataType == CF_BOOL) {
                     generate_print_log_expr(ast, stat);
 
-                    out("WRITE string@\\010"); // TODO: remove
                 } else {
                     generate_expression_ast_result(ast, stat);
                     out("POPS %s", PRINT_VAR);
                     out("WRITE %s", PRINT_VAR);
-
-                    out("WRITE string@\\010"); // TODO: remove
                 }
                 break;
         }
@@ -584,7 +580,7 @@ void generate_expression_ast(ASTNode *exprAst, CFStatement *stat) {
             }
             break;
         case AST_AR_NEGATE:
-            if(exprAst->right != NULL) {
+            if (exprAst->right != NULL) {
                 out("SUBS");
             }
             break;
@@ -818,8 +814,6 @@ bool generate_simple_logic_expression(ASTNode *exprAst, CFStatement *stat, char 
 }
 
 bool generate_logic_expression_tree(ASTNode *exprAst, CFStatement *stat, char *trueLabel, char *falseLabel) {
-    // když to volám z top levelu (assignment, func call), musím si vyrobit ta návěští true/falseLabel
-
     ASTNode *left = exprAst->left;
     ASTNode *right = exprAst->right;
 
@@ -1007,6 +1001,8 @@ void generate_return_statement(CFStatement *stat) {
             return;
         }
     } else {
+        bool hasNamedReturnValues = currentFunction.function->returnValues->variable.name != NULL;
+
         if (retAstList->actionType != AST_LIST) {
             stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
                            "Unexpected AST in RETURN statement.\n");
@@ -1019,10 +1015,25 @@ void generate_return_statement(CFStatement *stat) {
                            stat->parentFunction->name);
             return;
         }
+
     }
 
+    CFVarListNode *argNode = currentFunction.function->returnValues;
     for (unsigned i = 0; i < retAstList->dataCount; i++) {
-        generate_expression_ast_result(retAstList->data[i].astPtr, stat);
+        ASTNode *ast = retAstList->data[i].astPtr;
+        if (!ast_infer_node_type(ast)) {
+            return;
+        }
+
+        if (ast->inheritedDataType != argNode->variable.dataType) {
+            stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
+                           "Function '%s': Invalid return value type (return value on index %u).",
+                           currentFunction.function->name, i);
+            return;
+        }
+
+        generate_expression_ast_result(ast, stat);
+        argNode = argNode->next;
     }
 
     // Delete the local frame
@@ -1150,6 +1161,12 @@ void generate_statement(CFStatement *stat) {
             dbg("Omitting empty statement");
         }
     } else {
+        if (compiler_result != COMPILER_RESULT_SUCCESS) {
+            out("Code generation error occurred; omitting the rest.");
+            stderr_message("codegen", ERROR, compiler_result, "Code generation error occurred; omitting the rest.");
+            return;
+        }
+
         switch (stat->statementType) {
             case CF_BASIC:
                 generate_basic_statement(stat);
