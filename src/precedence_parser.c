@@ -573,120 +573,49 @@ bool reduce_define(PrecedenceStack *stack, PrecedenceNode *start) {
     return precedence_stack_push(stack, new_nonterminal);
 }
 
-bool reduce_plus_assign(PrecedenceStack *stack, PrecedenceNode *start) {
+bool reduce_modify_assign(PrecedenceStack *stack, PrecedenceNode *start) {
     if (symtable_stack_find_symbol(&symtable_stack, mstr_content(&start->rptr->data.data.str_val)) == NULL) {
         stderr_message("precedence_parser", ERROR,
                        COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE, "Line %u: "
-                                                                                          "assignment to undefined variable \n",
-                       start->rptr->data.context.line_num);
+                       "assignment to undefined variable \n", start->rptr->data.context.line_num);
         return false;
     }
     PrecedenceNode *target = start->rptr;
+    PrecedenceNode *operator = start->rptr->rptr;
     PrecedenceNode *to_add = start->rptr->rptr->rptr;
-    ASTNode *add_node = ast_node(AST_ADD);
-    if (add_node == NULL) {
+    ASTNode *op_node;
+    switch (operator->data.type) {
+        case TOKEN_PLUS_ASSIGN:
+            op_node = ast_node(AST_ADD);
+            break;
+        case TOKEN_MINUS_ASSIGN:
+            op_node = ast_node(AST_SUBTRACT);
+            break;
+        case TOKEN_MULTIPLY_ASSIGN:
+            op_node = ast_node(AST_MULTIPLY);
+            break;
+        case TOKEN_DIVIDE_ASSIGN:
+            op_node = ast_node(AST_DIVIDE);
+            break;
+        default:
+            return false;
+    }
+    if (op_node == NULL) {
         return false;
     }
-    add_node->left = target->data.ast;
-    add_node->right = to_add->data.ast;
+    op_node->left = target->data.ast;
+    op_node->right = to_add->data.ast;
 
     ASTNode *assign_node = ast_node(AST_ASSIGN);
     if (assign_node == NULL) {
         return false;
     }
-    assign_node->left = target->data.ast;
-    assign_node->right = add_node;
-    // FIXME: maybe?
-    //      =
-    //   i   <-  +
-    //              i2
-
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .ast=assign_node};
-    precedence_stack_pop_from(stack, start);
-    return precedence_stack_push(stack, new_nonterminal);
-}
-
-bool reduce_minus_assign(PrecedenceStack *stack, PrecedenceNode *start) {
-    if (symtable_stack_find_symbol(&symtable_stack, mstr_content(&start->rptr->data.data.str_val)) == NULL) {
-        stderr_message("precedence_parser", ERROR,
-                       COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE, "Line %u: "
-                                                                                          "assignment to undefined variable \n",
-                       start->rptr->data.context.line_num);
-        return false;
-    }
-    PrecedenceNode *target = start->rptr;
-    PrecedenceNode *to_subtract = start->rptr->rptr->rptr;
-    ASTNode *subtract_node = ast_node(AST_SUBTRACT);
-    if (subtract_node == NULL) {
-        return false;
-    }
-    subtract_node->left = target->data.ast;
-    subtract_node->right = to_subtract->data.ast;
-
-    ASTNode *assign_node = ast_node(AST_ASSIGN);
-    if (assign_node == NULL) {
+    ASTNode *target_node = ast_leaf_id(target->data.ast->data[0].symbolTableItemPtr);
+    if (target_node == NULL) {
         return false;
     }
     assign_node->left = target->data.ast;
-    assign_node->right = subtract_node;
-
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .ast=assign_node};
-    precedence_stack_pop_from(stack, start);
-    return precedence_stack_push(stack, new_nonterminal);
-}
-
-bool reduce_multiply_assign(PrecedenceStack *stack, PrecedenceNode *start) {
-    if (symtable_stack_find_symbol(&symtable_stack, mstr_content(&start->rptr->data.data.str_val)) == NULL) {
-        stderr_message("precedence_parser", ERROR,
-                       COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE, "Line %u: "
-                                                                                          "assignment to undefined variable \n",
-                       start->rptr->data.context.line_num);
-        return false;
-    }
-    PrecedenceNode *target = start->rptr;
-    PrecedenceNode *to_multiply = start->rptr->rptr->rptr;
-    ASTNode *multiply_node = ast_node(AST_MULTIPLY);
-    if (multiply_node == NULL) {
-        return false;
-    }
-    multiply_node->left = target->data.ast;
-    multiply_node->right = to_multiply->data.ast;
-
-    ASTNode *assign_node = ast_node(AST_ASSIGN);
-    if (assign_node == NULL) {
-        return false;
-    }
-    assign_node->left = target->data.ast;
-    assign_node->right = multiply_node;
-
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .ast=assign_node};
-    precedence_stack_pop_from(stack, start);
-    return precedence_stack_push(stack, new_nonterminal);
-}
-
-bool reduce_divide_assign(PrecedenceStack *stack, PrecedenceNode *start) {
-    if (symtable_stack_find_symbol(&symtable_stack, mstr_content(&start->rptr->data.data.str_val)) == NULL) {
-        stderr_message("precedence_parser", ERROR,
-                       COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE, "Line %u: "
-                                                                                          "assignment to undefined variable \n",
-                       start->rptr->data.context.line_num);
-        return false;
-    }
-    PrecedenceNode *target = start->rptr;
-    PrecedenceNode *to_divide = start->rptr->rptr->rptr;
-    ASTNode *divide_node = ast_node(AST_DIVIDE);
-    if (divide_node == NULL) {
-        return false;
-    }
-    divide_node->left = target->data.ast;
-    divide_node->right = to_divide->data.ast;
-
-    ASTNode *assign_node = ast_node(AST_ASSIGN);
-    if (assign_node == NULL) {
-        return false;
-    }
-    assign_node->left = target->data.ast;
-    assign_node->right = divide_node;
+    assign_node->right = op_node;
 
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .ast=assign_node};
     precedence_stack_pop_from(stack, start);
@@ -864,10 +793,10 @@ bool (*semantic_actions[NUMBER_OF_RULES])(PrecedenceStack *stack, PrecedenceNode
         reduce_define,
         reduce_define,
         reduce_define,
-        reduce_plus_assign,
-        reduce_minus_assign,
-        reduce_multiply_assign,
-        reduce_divide_assign,
+        reduce_modify_assign,
+        reduce_modify_assign,
+        reduce_modify_assign,
+        reduce_modify_assign,
         reduce_brackets,
         reduce_id,
         reduce_int,
