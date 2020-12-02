@@ -63,7 +63,6 @@ struct {
     STSymbol *inputb;
 
     bool printUsed;
-    bool reg2Used;
     bool reg3Used;
 } symbs;
 
@@ -86,12 +85,6 @@ void find_internal_symbols(SymbolTable *globSt) {
 
     symbs.printUsed =
             symbs.print != NULL && symbs.print->reference_counter > 0;
-    symbs.reg2Used =
-            (symbs.len != NULL && symbs.len->reference_counter > 0)
-            || (symbs.inputi != NULL && symbs.inputi->reference_counter > 0)
-            || (symbs.inputf != NULL && symbs.inputf->reference_counter > 0)
-            || (symbs.inputb != NULL && symbs.inputb->reference_counter > 0)
-            || (symbs.inputs != NULL && symbs.inputs->reference_counter > 0);
     symbs.reg3Used =
             (symbs.ord != NULL && symbs.ord->reference_counter > 0)
             || (symbs.substr != NULL && symbs.substr->reference_counter > 0);
@@ -191,7 +184,7 @@ void print_var_name_or_const(ASTNode *node, CFStatement *stat) {
         out_nnl("int@%s", node->data[0].boolConstantValue ? "true" : "false");
     } else if (node->actionType == AST_CONST_STRING) {
         char *s = convert_to_target_string_form(node->data[0].stringConstantValue);
-        out_nnl("int@%s", s);
+        out_nnl("string@%s", s);
         free(s);
     } else {
         print_var_name(node, stat);
@@ -287,14 +280,14 @@ void generate_internal_inputx(const char *expType, CFStatement *stat) {
         REG_2, expType);
 
     // Type matches -> push result and 0
-    out("PUSHS %s", REG_1);
     out("PUSHS int@0");
+    out("PUSHS %s", REG_1);
     out("JUMP $%s_input%i_end", stat->parentFunction->name, counter);
 
     // Type doesn't match -> push default value of target type and 1
     out("LABEL $%s_input%i_error", stat->parentFunction->name, counter);
-    out("PUSHS %s@", expType);
     out("PUSHS int@1");
+    out("PUSHS %s@", expType);
 
     out("LABEL $%s_input%i_end", stat->parentFunction->name, counter);
 }
@@ -610,23 +603,38 @@ void generate_expression_ast(ASTNode *exprAst, CFStatement *stat) {
     }
 }
 
-void generate_string_concat(ASTNode *addAst, CFStatement *stat, const char *targetVariable) {
-    // TODO
+// Target: 0 = push to stack, 1 = REG_1, 2 = REG_2
+void generate_string_concat(ASTNode *addAst, CFStatement *stat, int target) {
     ASTNode *left = addAst->left;
     ASTNode *right = addAst->right;
-    ASTNodeType lT = left->actionType;
-    ASTNodeType rT = right->actionType;
 
-    if (lT == AST_CONST_STRING || lT == AST_ID) {
-        if (rT == AST_CONST_STRING) {
+    if (is_direct_ast(left) && is_direct_ast(right)) {
+        out_nnl("CONCAT %s ", target == 2 ? REG_2 : REG_1);
+        print_var_name_or_const(left, stat);
+        out_nnl(" ");
+        print_var_name_or_const(right, stat);
+        out_nl();
+    } else if (is_direct_ast(left)) {
+        generate_string_concat(right, stat, 1);
 
-        }
+        out_nnl("CONCAT %s ", target == 2 ? REG_2 : REG_1);
+        print_var_name_or_const(left, stat);
+        out("%s", target == 2 ? REG_2 : REG_1);
+    } else if (is_direct_ast(right)) {
+        generate_string_concat(left, stat, 1);
 
-    } else if (rT == AST_CONST_STRING) {
+        out_nnl("CONCAT %s %s ", target == 2 ? REG_2 : REG_1, REG_1);
+        print_var_name_or_const(right, stat);
+        out_nl();
+    } else {
+        generate_string_concat(left, stat, 2);
+        generate_string_concat(right, stat, 1);
 
-    } else if (lT == AST_ADD && left->inheritedDataType == CF_STRING
-               && rT == AST_ADD && right->inheritedDataType == CF_STRING) {
+        out("CONCAT %s %s %s", target == 2 ? REG_2 : REG_1, REG_2, REG_1);
+    }
 
+    if (target == 0) {
+        out("PUSHS %s", REG_1);
     }
 }
 
@@ -667,9 +675,7 @@ bool generate_expression_ast_result(ASTNode *exprAst, CFStatement *stat) {
 
     if (exprAst->inheritedDataType == CF_STRING) {
         if (exprAst->actionType == AST_ADD) {
-            //generate_string_concat(exprAst, stat);
-            out("#todo: string concat");
-            out("PUSHS string@todo");
+            generate_string_concat(exprAst, stat, 0);
         } else if (exprAst->actionType == AST_ID) {
             out_nnl("PUSHS ");
             print_var_name(exprAst, stat);
@@ -1355,13 +1361,11 @@ void tcg_generate() {
     out("DEFVAR %s", COND_LHS_VAR);
     out("DEFVAR %s", COND_RHS_VAR);
     out("DEFVAR %s", REG_1);
+    out("DEFVAR %s", REG_2);
 
     find_internal_symbols(prog->globalSymtable);
     if (symbs.printUsed) {
         out("DEFVAR %s", PRINT_VAR);
-    }
-    if (symbs.reg2Used) {
-        out("DEFVAR %s", REG_2);
     }
     if (symbs.reg3Used) {
         out("DEFVAR %s", REG_3);
