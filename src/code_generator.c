@@ -1289,6 +1289,8 @@ void tcg_generate() {
         return;
     }
 
+    ast_set_strict_inference_state(true);
+
     CFProgram *prog = get_program();
     CFFuncListNode *n = prog->functionList;
 
