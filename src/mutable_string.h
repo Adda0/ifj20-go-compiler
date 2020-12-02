@@ -27,6 +27,15 @@ typedef struct mutable_string {
  */
 bool mstr_init(MutableString *string, size_t initial_size);
 
+/** @brief Initializes a mutable string by appending copies of input C strings.
+ *
+ * @param count The total number of appended strings, including the first one.
+ * @param first The first C string to copy.
+ * @param ... Other pointers to C strings that will be appended to the resulting Mutable string.
+ * @return Whether the initialization was successful.
+ */
+bool mstr_make(MutableString *string, unsigned count, const char *first, ...);
+
 /** @brief Returns a pointer to string data. */
 char *mstr_content(const MutableString *string);
 

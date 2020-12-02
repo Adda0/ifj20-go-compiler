@@ -64,7 +64,7 @@ STItem *symtable_add(SymbolTable *table, const char *key, STType type) {
     size_t i = symtable_hash(key) % table->arr_size;
 
 
-    STItem *new = (STItem *) malloc(sizeof(STItem));
+    STItem *new = (STItem *) calloc(1, sizeof(STItem));
     if (new == NULL) {
         stderr_message("symbol_table", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
                        "Malloc of a new item for symbol table failed.\n");
@@ -193,6 +193,8 @@ bool symtable_add_param(STItem *item, const char *id, STDataType type) {
         }
         tmp->next = new;
     }
+
+    item->data.data.func_data.params_count++;
     return true;
 }
 
@@ -228,6 +230,8 @@ bool symtable_add_ret_type(STItem *item, const char *id, STDataType type) {
         }
         tmp->next = new;
     }
+
+    item->data.data.func_data.ret_types_count++;
     return true;
 }
 

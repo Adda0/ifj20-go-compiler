@@ -12,6 +12,16 @@
 
 #include "compiler.h"
 #include "scanner.h"
+#include "stacks.h"
+#include "symtable.h"
+
+#define TABLE_SIZE 100
+
+#define semantic_enabled compiler_result == COMPILER_RESULT_SUCCESS
+
+#define type_error(message)                                                                     \
+    stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION,   \
+                   "Line %u: " message, token.context.line_num)
 
 #define token_error(message)                                                                    \
     stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL,                  \
@@ -22,6 +32,11 @@
     stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL,                  \
                    "Line %u, col %u: " message, token.context.line_num,                         \
                    token.context.char_num)
+
+#define redefine_error(message)                                                                 \
+    stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE, \
+                   "Line %u, col %u: " message, token.context.line_num, token.context.char_num, \
+                   mstr_content(&token.data.str_val))
 
 #define recover() do {                                                                          \
     /* Try to recover from the state, find new line and start with <body> from there. */        \
@@ -77,11 +92,19 @@
     return COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL;                                           \
 } while(0)
 
+#define semantic_error_redefine() do {                                                          \
+    clear_token();                                                                              \
+    recover();                                                                                  \
+    return COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE;                   \
+} while(0)
+
 #define syntax_ok() return COMPILER_RESULT_SUCCESS
 
 extern Token token;
 extern Token prev_token;
 extern ScannerResult scanner_result;
+extern SymtableStack symtable_stack;
+extern SymbolTable *function_table;
 
 int body();
 void clear_token();

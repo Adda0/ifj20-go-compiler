@@ -13,19 +13,25 @@ CTESTFLAGS ?= ""
 all: compiler
 
 compiler: scanner.o mutable_string.o stderr_message.o compiler.o \
-		  parser.o precedence_parser.o stacks.o symtable.o
+		  parser.o precedence_parser.o stacks.o symtable.o ast.o control_flow.o code_generator.o \
+		  optimiser.o
 
 scanner.o: scanner.c scanner.h mutable_string.h compiler.h \
 		   scanner_static.h stderr_message.h
 mutable_string.o: mutable_string.c mutable_string.h
 stderr_message.o: stderr_message.c stderr_message.h  compiler.h
-compiler.o: compiler.c compiler.h parser.h scanner.h mutable_string.h
+compiler.o: compiler.c compiler.h parser.h scanner.h mutable_string.h control_flow.h
 parser.o: parser.c parser.h compiler.h scanner.h mutable_string.h stderr_message.h \
-		  precedence_parser.h
+		  precedence_parser.h control_flow.h ast.h
 precedence_parser.o: precedence_parser.c precedence_parser.h scanner.h \
-					 mutable_string.h compiler.h parser.h stderr_message.h stacks.h
+					 mutable_string.h compiler.h parser.h stderr_message.h stacks.h \
+					 control_flow.h ast.h
 stacks.o: stacks.c stacks.h scanner.h mutable_string.h compiler.h precedence_parser.h
 symtable.o: symtable.c symtable.h stderr_message.h compiler.h
+ast.o: ast.c ast.h symtable.h
+control_flow.o: control_flow.c control_flow.h ast.h symtable.h
+code_generator.o: code_generator.c code_generator.h control_flow.h ast.h symtable.h
+optimiser.o: optimiser.c optimiser.h
 
 
 test:

@@ -23,23 +23,29 @@
 extern ASTNode *cf_ast_init(ASTNewNodeTarget target, ASTNodeType type); // NOLINT(readability-redundant-declaration)
 extern ASTNode *cf_ast_init_for_list(ASTNodeType type, int listDataIndex); // NOLINT(readability-redundant-declaration)
 
-static struct program_structure *program;
+static CFProgram *program;
 CFError cf_error = CF_NO_ERROR;
 
 CFStatement *activeStat;
 CFFunction *activeFunc;
 ASTNode *activeAst;
 
-struct program_structure *get_program() {
+CFProgram *get_program() {
     return program;
 }
 
 void cf_init() {
-    program = malloc(sizeof(struct program_structure));
+    program = calloc(1, sizeof(struct cfgraph_program_structure));
     CF_ALLOC_CHECK(program);
+}
 
-    program->mainFunc = NULL;
-    program->functionList = NULL;
+void cf_assign_global_symtable(SymbolTable *symbolTable) {
+    if (program->globalSymtable != NULL) {
+        cf_error = CF_ERROR_SYMTABLE_ALREADY_ASSIGNED;
+        return;
+    }
+
+    program->globalSymtable = symbolTable;
 }
 
 CFFunction *cf_get_function(const char *name, bool setActive) {
@@ -85,6 +91,10 @@ CFFunction *cf_make_function(const char *name) {
 
 void cf_add_argument(const char *name, CFDataType type) {
     CF_ACT_FUN_CHECK();
+    if (program->mainFunc == activeFunc) {
+        cf_error = CF_ERROR_MAIN_NO_ARGUMENTS_OR_RETURN_VALUES;
+        return;
+    }
 
     CFVarListNode *n = activeFunc->arguments;
     CFVarListNode *newNode = malloc(sizeof(CFVarListNode));
@@ -103,6 +113,10 @@ void cf_add_argument(const char *name, CFDataType type) {
 
 void cf_add_return_value(const char *name, CFDataType type) {
     CF_ACT_FUN_CHECK();
+    if (program->mainFunc == activeFunc) {
+        cf_error = CF_ERROR_MAIN_NO_ARGUMENTS_OR_RETURN_VALUES;
+        return;
+    }
 
     CFVarListNode *n = activeFunc->returnValues;
 
@@ -137,6 +151,12 @@ CFStatement *cf_make_next_statement(CFStatementType statementType) {
     newStat->parentStatement = activeStat;
     newStat->statementType = statementType;
 
+    if (activeStat != NULL && activeStat->localSymbolTable != NULL) {
+        newStat->localSymbolTable = activeStat->localSymbolTable;
+    } else {
+        newStat->localSymbolTable = activeFunc->symbolTable;
+    };
+
     if (activeFunc->rootStatement == NULL) {
         activeFunc->rootStatement = newStat;
     }
@@ -147,15 +167,13 @@ CFStatement *cf_make_next_statement(CFStatementType statementType) {
 
     switch (statementType) {
         case CF_BASIC:
+        case CF_RETURN:
             break;
         case CF_IF:
             newStat->data.ifData = calloc(1, sizeof(CFStatementIf));
             break;
         case CF_FOR:
             newStat->data.forData = calloc(1, sizeof(CFStatementFor));
-            break;
-        case CF_RETURN:
-            newStat->data.bodyAst = cf_ast_init_with_data(AST_ROOT, AST_LIST, activeFunc->returnValuesCount);
             break;
         default:
             cf_error = CF_ERROR_INVALID_ENUM_VALUE;
@@ -166,14 +184,35 @@ CFStatement *cf_make_next_statement(CFStatementType statementType) {
     return newStat;
 }
 
-void cf_assign_symtable(SymbolTable *symbolTable) {
+void cf_assign_function_symtable(SymbolTable *symbolTable) {
+    CF_ACT_FUN_CHECK();
+    if (activeFunc->rootStatement != NULL) {
+        cf_error = CF_ERROR_SYMTABLE_TARGET_HAS_CHILDREN;
+        return;
+    }
+
+    activeFunc->symbolTable = symbolTable;
+}
+
+void cf_assign_statement_symtable(SymbolTable *symbolTable) {
     CF_ACT_STAT_CHECK();
+    if (activeStat->followingStatement != NULL) {
+        cf_error = CF_ERROR_SYMTABLE_TARGET_HAS_CHILDREN;
+        return;
+    }
+
     activeStat->localSymbolTable = symbolTable;
 }
 
 void cf_use_ast(CFASTTarget target) {
-    CF_ACT_STAT_CHECK();
     CF_ACT_AST_CHECK();
+    cf_use_ast_explicit(activeAst, target);
+}
+
+void cf_use_ast_explicit(ASTNode *ast, CFASTTarget target) {
+    if (ast == NULL) {
+        return;
+    }
 
     // TODO: this is a bit spaghetti, a cleanup would be nice
     switch (activeStat->statementType) {
@@ -183,14 +222,14 @@ void cf_use_ast(CFASTTarget target) {
                 return;
             }
 
-            if (activeAst->actionType != AST_DEFINE
-                && activeAst->actionType != AST_ASSIGN
-                && activeAst->actionType != AST_FUNC_CALL) {
+            if (ast->actionType != AST_DEFINE
+                && ast->actionType != AST_ASSIGN
+                && ast->actionType != AST_FUNC_CALL) {
                 cf_error = CF_ERROR_INVALID_AST_TYPE;
                 return;
             }
 
-            activeStat->data.bodyAst = activeAst;
+            activeStat->data.bodyAst = ast;
             break;
         case CF_IF:
             if (target != CF_IF_CONDITIONAL) {
@@ -198,41 +237,41 @@ void cf_use_ast(CFASTTarget target) {
                 return;
             }
 
-            if (activeAst->actionType != AST_FUNC_CALL
-                && activeAst->actionType != AST_ID
-                && activeAst->actionType != AST_CONST_BOOL
-                && !(activeAst->actionType >= AST_LOGIC && activeAst->actionType < AST_CONTROL)) {
+            if (ast->actionType != AST_FUNC_CALL
+                && ast->actionType != AST_ID
+                && ast->actionType != AST_CONST_BOOL
+                && !(ast->actionType >= AST_LOGIC && ast->actionType < AST_CONTROL)) {
                 cf_error = CF_ERROR_INVALID_AST_TYPE;
                 return;
             }
 
-            activeStat->data.ifData->conditionalAst = activeAst;
+            activeStat->data.ifData->conditionalAst = ast;
             break;
         case CF_FOR:
             switch (target) {
                 case CF_FOR_DEFINITION:
-                    if (activeAst->actionType != AST_DEFINE) {
+                    if (ast->actionType != AST_DEFINE) {
                         cf_error = CF_ERROR_INVALID_AST_TYPE;
                         return;
                     }
-                    activeStat->data.forData->definitionAst = activeAst;
+                    activeStat->data.forData->definitionAst = ast;
                     break;
                 case CF_FOR_CONDITIONAL:
-                    if (activeAst->actionType != AST_FUNC_CALL
-                        && activeAst->actionType != AST_ID
-                        && activeAst->actionType != AST_CONST_BOOL
-                        && !(activeAst->actionType >= AST_LOGIC && activeAst->actionType < AST_CONTROL)) {
+                    if (ast->actionType != AST_FUNC_CALL
+                        && ast->actionType != AST_ID
+                        && ast->actionType != AST_CONST_BOOL
+                        && !(ast->actionType >= AST_LOGIC && ast->actionType < AST_CONTROL)) {
                         cf_error = CF_ERROR_INVALID_AST_TYPE;
                         return;
                     }
-                    activeStat->data.forData->conditionalAst = activeAst;
+                    activeStat->data.forData->conditionalAst = ast;
                     break;
                 case CF_FOR_AFTERTHOUGHT:
-                    if (activeAst->actionType != AST_ASSIGN) {
+                    if (ast->actionType != AST_ASSIGN) {
                         cf_error = CF_ERROR_INVALID_AST_TYPE;
                         return;
                     }
-                    activeStat->data.forData->afterthoughtAst = activeAst;
+                    activeStat->data.forData->afterthoughtAst = ast;
                     break;
                 default:
                     cf_error = CF_ERROR_INVALID_AST_TARGET;
@@ -245,12 +284,12 @@ void cf_use_ast(CFASTTarget target) {
                 return;
             }
 
-            if (activeAst->actionType != AST_LIST) {
+            if (ast->actionType != AST_LIST) {
                 cf_error = CF_ERROR_INVALID_AST_TYPE;
                 return;
             }
 
-            activeStat->data.bodyAst = activeAst;
+            activeStat->data.bodyAst = ast;
             break;
     }
 }
@@ -333,6 +372,86 @@ CFStatement *cf_make_for_body_statement(CFStatementType type) {
     return newStat;
 }
 
+static void clean_ast(ASTNode *node) {
+    if (node == NULL) return;
+    clean_ast(node->left);
+    clean_ast(node->right);
+
+    switch (node->actionType) {
+        case AST_LIST:
+            for (unsigned i = 0; i < node->dataCount; i++) {
+                clean_ast(node->data[i].astPtr);
+            }
+            break;
+        case AST_CONST_STRING:
+            free((void *) node->data[0].stringConstantValue);
+            break;
+    }
+
+    free(node);
+}
+
+static void clean_stat(CFStatement *stat) {
+    if (stat == NULL) return;
+    switch (stat->statementType) {
+        case CF_BASIC:
+        case CF_RETURN:
+            clean_ast(stat->data.bodyAst);
+            break;
+        case CF_IF:
+            clean_ast(stat->data.ifData->conditionalAst);
+            clean_stat(stat->data.ifData->thenStatement);
+            clean_stat(stat->data.ifData->elseStatement);
+            break;
+        case CF_FOR:
+            clean_ast(stat->data.forData->conditionalAst);
+            clean_ast(stat->data.forData->definitionAst);
+            clean_ast(stat->data.forData->afterthoughtAst);
+            clean_stat(stat->data.forData->bodyStatement);
+            break;
+    }
+
+    if (stat->localSymbolTable != NULL && stat->localSymbolTable != stat->parentFunction->symbolTable) {
+        symtable_free(stat->localSymbolTable);
+        if (stat->followingStatement != NULL && stat->followingStatement->localSymbolTable == stat->localSymbolTable) {
+            stat->followingStatement->localSymbolTable = NULL;
+        }
+    } else {
+        if (stat->followingStatement != NULL) {
+            stat->followingStatement->localSymbolTable = NULL;
+        }
+    }
+
+    clean_stat(stat->followingStatement);
+    free(stat);
+}
+
+static void clean_varlist(CFVarListNode *begin) {
+    while(begin != NULL) {
+        CFVarListNode *next = begin->next;
+        free(begin);
+        begin = next;
+    }
+}
+
+void cf_clean_all() {
+    CFFuncListNode *n = program->functionList;
+
+    while (n != NULL) {
+        symtable_free(n->fun.symbolTable);
+        clean_stat(n->fun.rootStatement);
+        clean_varlist(n->fun.arguments);
+        clean_varlist(n->fun.returnValues);
+        CFFuncListNode *toFree = n;
+        n = n->next;
+        free(toFree);
+    }
+
+    symtable_free(program->globalSymtable);
+    free(program);
+}
+
+// ---- Deprecated functions ----
 ASTNode *cf_ast_init_with_data(ASTNewNodeTarget target, ASTNodeType type, unsigned dataCount) {
     if (target != AST_ROOT) {
         CF_ACT_AST_CHECK_RN();
@@ -445,21 +564,10 @@ ASTNode *cf_ast_parent() {
 ASTNode *cf_ast_list_root() {
     CF_ACT_AST_CHECK_RN();
 
-    ASTNode *n = activeAst;
-    while (n != NULL) {
-        if (n->parent->actionType == AST_LIST) {
-            for (unsigned i = 0; i < n->parent->dataCount; i++) {
-                if (n->parent->data[i].astPtr == n) {
-                    activeAst = n->parent;
-                    return activeAst;
-                }
-            }
-        }
+    ASTNode *n = ast_get_list_root(activeAst);
+    activeAst = n;
 
-        n = n->parent;
-    }
-
-    return NULL;
+    return n;
 }
 
 bool cf_ast_is_root() {

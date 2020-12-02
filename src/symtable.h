@@ -15,12 +15,15 @@
 #include <stdbool.h>
 
 typedef enum cfgraph_data_type {
+    CF_UNKNOWN = 0,
+    CF_UNKNOWN_UNINFERRABLE,
     CF_INT,
     CF_FLOAT,
     CF_STRING,
     CF_BOOL,
-    CF_UNKNOWN,
-    CF_NIL
+    CF_MULTIPLE,
+    CF_NIL,
+    CF_BLACK_HOLE
 } STDataType;
 
 typedef enum st_type {
@@ -37,14 +40,18 @@ typedef struct st_param {
 
 /** A structure representing data for a symbol of type function. */
 typedef struct st_function_data {
-    STParam *params;     /**< Pointer to first param. */
-    STParam *ret_types;  /**< Pointer to first return type. */
-    bool defined;        /**< Whether the function has been defined */
+    unsigned params_count;       /**< Number of params. */
+    STParam *params;             /**< Pointer to first param. */
+    unsigned ret_types_count;    /**< Number of return types. */
+    STParam *ret_types;          /**< Pointer to first return type. */
+    bool defined;                /**< Whether the function has been defined */
 } STFunctionData;
 
 /** A structure representing data for a symbol of type variable. */
 typedef struct st_variable_data {
-    STDataType type;  /**< Type of the variable. */
+    STDataType type;             /**< Type of the variable. */
+    bool is_argument_variable;   /**< Whether this symbol corresponds to a function's parameter. */
+    bool is_return_val_variable; /**< Whether this symbol corresponds to a function's return value. */
 } STVariableData;
 
 /** A union containing symbol data. */
@@ -55,9 +62,10 @@ typedef union st_symbol_data {
 
 /** A structure representing a symbol. */
 typedef struct st_symbol {
-    STType type;            /**< Type of the symbol (function or variable). */
-    const char *identifier; /**< Identifier of the variable. */
-    STSymbolData data;      /**< Data of the symbol. */
+    STType type;                /**< Type of the symbol (function or variable). */
+    const char *identifier;     /**< Identifier of the variable. */
+    unsigned reference_counter; /**< Counter of symbol usages. */
+    STSymbolData data;          /**< Data of the symbol. */
 } STSymbol;
 
 /** A structure representing an item in the symbol table. */
@@ -69,9 +77,10 @@ typedef struct st_item {
 
 /** A structure representing a symbol table. */
 typedef struct symbol_table {
-    unsigned size;      /**< Number of items in the symbol table. */
-    unsigned arr_size;  /**< Number of elements in arr. */
-    STItem *arr[];      /**< An array of pointers to entries in the table. */
+    unsigned size;          /**< Number of items in the symbol table. */
+    unsigned arr_size;      /**< Number of elements in arr. */
+    unsigned symbol_prefix; /**< Codegen helper counter. */
+    STItem *arr[];          /**< An array of pointers to entries in the table. */
 } SymbolTable;
 
 /** @brief Hashing function.

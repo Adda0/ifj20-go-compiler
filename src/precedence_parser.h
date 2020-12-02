@@ -11,6 +11,8 @@
 #define _PRECEDENCE_PARSER_H 1
 
 #include "scanner.h"
+#include "symtable.h"
+#include "ast.h"
 
 #define NUMBER_OF_OPS 27
 #define RULE_LENGTH 8
@@ -24,7 +26,7 @@ typedef enum assign_rule {
     PURE_EXPRESSION, // define and assign forbidden
 } AssignRule;
 
-typedef enum rule_symbol {
+typedef enum symbol_type {
     SYMB_NONTERMINAL = TOKEN_SEMICOLON + 1,
     SYMB_END,
     SYMB_BEGIN,
@@ -32,7 +34,15 @@ typedef enum rule_symbol {
     SYMB_ID,
     SYMB_MULTI_NONTERMINAL,
     SYMB_UNDEF,
-} RuleSymbol;
+} SymbolType;
+
+typedef struct stack_symbol {
+    int type;
+    TokenData data;
+    TokenContext context;
+    STDataType data_type;
+    ASTNode *ast;
+} StackSymbol;
 
 typedef enum indices {
     INDEX_NOT,
@@ -68,8 +78,9 @@ typedef enum indices {
  *
  * @param assign_rule Whether assign and define is allowed in the expression.
  * @param eol_before_allowed Specifies whether EOL was allowed preceeding the current token.
+ * @param result Root of the result AST.
  * @return 0 on successful expression parsing, non-zero otherwise (see compiler.h).
  */
-int parse_expression(AssignRule assign_rule, bool eol_before_allowed);
+int parse_expression(AssignRule assign_rule, bool eol_before_allowed, ASTNode **result);
 
 #endif

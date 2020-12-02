@@ -13,62 +13,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "symtable.h"
-
-typedef enum ast_node_action_type {
-    // ARITHMETIC group
-#define AST_ARITHMETIC 0
-    AST_ADD = AST_ARITHMETIC,
-    AST_SUBTRACT,
-    AST_MULTIPLY,
-    AST_DIVIDE,
-    AST_AR_NEGATE,
-    // LOGIC group
-#define AST_LOGIC 100
-    AST_LOG_NOT = AST_LOGIC,
-    AST_LOG_AND,
-    AST_LOG_OR,
-    AST_LOG_EQ,
-    AST_LOG_LT,
-    AST_LOG_GT,
-    AST_LOG_LTE,
-    AST_LOG_GTE,
-    // CONTROL group
-#define AST_CONTROL 200
-    AST_ASSIGN = AST_CONTROL,
-    AST_DEFINE,
-    AST_FUNC_CALL,
-    // VALUE group
-#define AST_VALUE 300
-    AST_LIST = AST_VALUE,
-    AST_ID,
-    AST_CONST_INT,
-    AST_CONST_FLOAT,
-    AST_CONST_STRING,
-    AST_CONST_BOOL
-} ASTNodeType;
+#include "ast.h"
 
 typedef STDataType CFDataType;
-struct ast_node;
-
-typedef union ast_node_data {
-    const STItem *symbolTableItemPtr;
-    struct ast_node *astPtr;
-    int64_t intConstantValue;
-    double floatConstantValue;
-    const char *stringConstantValue;
-    bool boolConstantValue;
-} ASTNodeData;
-
-typedef struct ast_node {
-    struct ast_node *parent;
-    ASTNodeType actionType;
-    struct ast_node *left;
-    struct ast_node *right;
-
-    unsigned dataCount;
-    unsigned dataPointerIndex;
-    ASTNodeData data[];
-} ASTNode;
 
 typedef struct cfgraph_variable {
     const char *name;
@@ -128,6 +75,10 @@ typedef struct cfgraph_function {
     struct cfgraph_variable_list_node *arguments;
     struct cfgraph_variable_list_node *returnValues;
     CFStatement *rootStatement;
+
+    SymbolTable *symbolTable;
+
+    bool terminated;
 } CFFunction;
 
 typedef struct cfgraph_functions_list_node {
@@ -136,10 +87,11 @@ typedef struct cfgraph_functions_list_node {
     CFFunction fun;
 } CFFuncListNode;
 
-struct program_structure {
+typedef struct cfgraph_program_structure {
     CFFunction *mainFunc;
+    SymbolTable *globalSymtable;
     struct cfgraph_functions_list_node *functionList;
-};
+} CFProgram;
 
 typedef enum cfgraph_ast_target {
     CF_STATEMENT_BODY,
@@ -168,10 +120,13 @@ typedef enum cfgraph_error {
     CF_ERROR_INVALID_OPERATION,
     CF_ERROR_NO_ACTIVE_AST,
     CF_ERROR_NO_ACTIVE_STATEMENT,
-    CF_ERROR_NO_ACTIVE_FUNCTION
+    CF_ERROR_NO_ACTIVE_FUNCTION,
+    CF_ERROR_MAIN_NO_ARGUMENTS_OR_RETURN_VALUES,
+    CF_ERROR_SYMTABLE_ALREADY_ASSIGNED,
+    CF_ERROR_SYMTABLE_TARGET_HAS_CHILDREN
 } CFError;
 
-struct program_structure *get_program();
+CFProgram *get_program();
 
 // Holds the current error state. The "no error" state is guaranteed to be a zero,
 // so an error check may be performed using `if (cf_error)`.
@@ -180,6 +135,17 @@ extern CFError cf_error;
 // Initializes the control flow graph generator.
 void cf_init();
 
+/* Recursively walks trough the generated program and frees:
+ *  - Memory assigned to AST_CONST_STRING data, pointed to by the stringConstantValue pointer.
+ *  - Memory occupied by all AST nodes, CFG statement nodes, CFG function nodes and CFG root program node.
+ *  - Memory occupied by all symbol tables.
+ */
+void cf_clean_all();
+
+// Assigns a pointer to the global symbol table.
+// This can only be done ONCE!
+void cf_assign_global_symtable(SymbolTable *symbolTable);
+
 // Finds a function, that is already present in the CF graph, and returns a pointer to it.
 // If setActive is true, sets it as the active function.
 CFFunction *cf_get_function(const char *name, bool setActive);
@@ -187,6 +153,10 @@ CFFunction *cf_get_function(const char *name, bool setActive);
 // Creates a function and sets it as the active function.
 // Clears the active statement.
 CFFunction *cf_make_function(const char *name);
+
+// Assigns a pointer to a symbol table to the active function.
+// This can only be on a function with NO root statement!
+void cf_assign_function_symtable(SymbolTable *symbolTable);
 
 // Adds an argument to the active function.
 void cf_add_argument(const char *name, CFDataType type);
@@ -198,14 +168,22 @@ void cf_add_return_value(const char *name, CFDataType type);
 
 // Creates a statement in the current function and sets it as the active statement.
 // Links it with the function and the previous active statement.
+// The created statement inherits its parent's symbol table. If this is a root statement of the active function,
+// or when its parent has no symbol table assigned, it inherits the function's top-most global table.
 // If the statementType is RETURN, creates a new AST_LIST type AST with the amount of data nodes
 // equal to the number of arguments of the current function.
 CFStatement *cf_make_next_statement(CFStatementType statementType);
 
 // Assigns a pointer to a symbol table to the active statement.
-void cf_assign_symtable(SymbolTable *symbolTable);
+// This can only be done on a statement with NO following statement!
+void cf_assign_statement_symtable(SymbolTable *symbolTable);
 
-/* Uses the active AST as the AST of the active statement.
+// Deprecated.
+// Uses the specified AST as the AST of the active statement.
+// The semantics of cf_use_ast_explicit() apply.
+void cf_use_ast(CFASTTarget target);
+
+/* Uses the specified AST as the AST of the active statement.
  * If the active statement is a basic statement:
  *  - The target parameter must be STATEMENT_BODY.
  *  - The type of the AST must be DEFINE, ASSIGN or FUNC_CALL.
@@ -224,7 +202,7 @@ void cf_assign_symtable(SymbolTable *symbolTable);
  *  - The target parameter must be RETURN_LIST.
  *  - The type of the AST must be AST_LIST.
 **/
-void cf_use_ast(CFASTTarget target);
+void cf_use_ast_explicit(ASTNode *node, CFASTTarget target);
 
 // Finds the closest parent IF or FOR statement and sets it as the active statement.
 CFStatement *cf_pop_previous_branched_statement();
@@ -240,6 +218,8 @@ CFStatement *cf_make_if_else_statement(CFStatementType statementType);
 // Creates a statement and sets it as the body statement for the currently active FOR statement.
 // If the active statement is not an FOR statement, throws an error.
 CFStatement *cf_make_for_body_statement(CFStatementType statementType);
+
+// ---- Deprecated functions ----
 
 // Creates a new AST and sets it as the active AST node.
 // If target is not ROOT, links it to the currently active AST node.

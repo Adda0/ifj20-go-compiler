@@ -10,8 +10,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdarg.h>
 #include "mutable_string.h"
-
 
 bool mstr_init(MutableString *string, size_t initial_size) {
     string->array = NULL;
@@ -25,6 +25,43 @@ bool mstr_init(MutableString *string, size_t initial_size) {
         return false;
     }
     string->array[0] = '\0';
+    return true;
+}
+
+bool mstr_make(MutableString *string, unsigned count, const char *first, ...) {
+#ifdef _MSC_VER
+    const char *ptrs[16];
+    unsigned lens[16];
+#else
+    const char *ptrs[count];
+    unsigned lens[count];
+#endif
+    ptrs[0] = first;
+
+    unsigned total_len = strlen(first);
+    lens[0] = total_len;
+
+    va_list arguments;
+    va_start(arguments, first);
+
+    for (unsigned i = 1; i < count; i++) {
+        const char *str = va_arg(arguments, const char*);
+        lens[i] = strlen(str);
+        total_len += lens[i];
+        ptrs[i] = str;
+    }
+
+    va_end(arguments);
+
+    if (!mstr_init(string, total_len + 1)) return false;
+
+    unsigned pos = 0;
+    for (unsigned i = 0; i < count; i++) {
+        memcpy(string->array + pos, ptrs[i], lens[i]);
+        pos += lens[i];
+    }
+
+    string->array[pos] = '\0';
     return true;
 }
 
