@@ -172,12 +172,14 @@ MutableString make_var_name(const char *id, CFStatement *stat, bool isTF) {
     return str;
 }
 
-void print_var_name(ASTNode *idAstNode, CFStatement *stat) {
-    STSymbol *st = idAstNode->data[0].symbolTableItemPtr;
-    const char *id = st->identifier;
-
+void print_var_name_id(const char *id, CFStatement *stat) {
     SymbolTable *symtab = find_sym_table(id, stat);
     out_nnl("%s@$%u_%s", "LF", symtab->symbol_prefix, id);
+}
+
+void print_var_name(ASTNode *idAstNode, CFStatement *stat) {
+    STSymbol *st = idAstNode->data[0].symbolTableItemPtr;
+    print_var_name_id(st->identifier, stat);
 }
 
 void print_var_name_or_const(ASTNode *node, CFStatement *stat) {
@@ -929,16 +931,15 @@ void generate_assignment(ASTNode *asgAst, CFStatement *stat) {
             }
 
             generate_func_call(asgAst->right->data[0].astPtr, stat);
-            for (unsigned i = 0; i < asgAst->left->dataCount; i++) {
-                unsigned parI = asgAst->left->dataCount - i - 1;
 
-                if (asgAst->left->data[parI].astPtr->inheritedDataType == CF_BLACK_HOLE) {
+            for (unsigned i = 0; i < asgAst->left->dataCount; i++) {
+                if (asgAst->left->data[i].astPtr->inheritedDataType == CF_BLACK_HOLE) {
                     out("POPS %s", REG_1);
                     continue;
                 }
 
                 MutableString varName = make_var_name(
-                        asgAst->left->data[parI].astPtr->data[0].symbolTableItemPtr->identifier, stat, false);
+                        asgAst->left->data[i].astPtr->data[0].symbolTableItemPtr->identifier, stat, false);
                 out("POPS %s", mstr_content(&varName));
                 mstr_free(&varName);
             }
@@ -983,57 +984,80 @@ void generate_definition(ASTNode *defAst, CFStatement *stat) {
 }
 
 void generate_return_statement(CFStatement *stat) {
+    ASTNode *retAstList = stat->data.bodyAst;
+
     if (currentFunction.isMain && !currentFunction.generateMainAsFunction) {
+        if (retAstList != NULL && retAstList->dataCount != 0) {
+            stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
+                           "Expected an empty return statement for function 'main'.\n");
+            return;
+        }
+
         out("EXIT int@0");
         stat->parentFunction->terminated = true;
         return;
     }
 
-    // TODO: named return values
-    // Evaluate return values
-    ASTNode *retAstList = stat->data.bodyAst;
+    bool hasNamedReturnValues = currentFunction.function->returnValues != NULL
+                                && currentFunction.function->returnValues->variable.name != NULL;
 
     if (stat->parentFunction->returnValuesCount == 0) {
         if (retAstList != NULL && retAstList->dataCount > 0) {
             stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
-                           "Return statement for function '%s' with no return values has a non-empty AST_LIST.\n",
+                           "Expected an empty return statement for function '%s'.\n",
                            stat->parentFunction->name);
             return;
         }
     } else {
-        bool hasNamedReturnValues = currentFunction.function->returnValues->variable.name != NULL;
-
         if (retAstList->actionType != AST_LIST) {
             stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
                            "Unexpected AST in RETURN statement.\n");
             return;
         }
 
-        if (retAstList->dataCount != stat->parentFunction->returnValuesCount) {
+        if (hasNamedReturnValues && retAstList->dataCount != 0
+            && retAstList->dataCount != stat->parentFunction->returnValuesCount) {
+            stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
+                           "Return statement of the function '%s' with named return values should either explicitly specify all return values or contain none.\n",
+                           stat->parentFunction->name);
+            return;
+        }
+
+        if (!hasNamedReturnValues && retAstList->dataCount != stat->parentFunction->returnValuesCount) {
             stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
                            "Return statement data count doesn't match function's '%s' return values count.\n",
                            stat->parentFunction->name);
             return;
         }
-
     }
 
     CFVarListNode *argNode = currentFunction.function->returnValues;
-    for (unsigned i = 0; i < retAstList->dataCount; i++) {
-        ASTNode *ast = retAstList->data[i].astPtr;
-        if (!ast_infer_node_type(ast)) {
-            return;
-        }
+    if (!hasNamedReturnValues || retAstList->dataCount > 0) {
+        for (unsigned i = 0; i < retAstList->dataCount; i++) {
+            ASTNode *ast = retAstList->data[retAstList->dataCount - i - 1].astPtr;
 
-        if (ast->inheritedDataType != argNode->variable.dataType) {
-            stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
-                           "Function '%s': Invalid return value type (return value on index %u).",
-                           currentFunction.function->name, i);
-            return;
-        }
+            if (!ast_infer_node_type(ast)) {
+                return;
+            }
 
-        generate_expression_ast_result(ast, stat);
-        argNode = argNode->next;
+            if (ast->inheritedDataType != argNode->variable.dataType) {
+                stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
+                               "Function '%s': Invalid return value type (return value on index %u).\n",
+                               currentFunction.function->name, retAstList->dataCount - i - 1);
+                return;
+            }
+
+            generate_expression_ast_result(ast, stat);
+            argNode = argNode->next;
+        }
+    } else {
+        for (unsigned i = 0; i < currentFunction.function->returnValuesCount; i++) {
+            out_nnl("PUSHS ");
+            print_var_name_id(argNode->variable.name, stat);
+            out_nl();
+
+            argNode = argNode->next;
+        }
     }
 
     // Delete the local frame
@@ -1162,8 +1186,8 @@ void generate_statement(CFStatement *stat) {
         }
     } else {
         if (compiler_result != COMPILER_RESULT_SUCCESS) {
-            out("Code generation error occurred; omitting the rest.");
-            stderr_message("codegen", ERROR, compiler_result, "Code generation error occurred; omitting the rest.");
+            out("# Code generation error occurred; omitting the rest.");
+            stderr_message("codegen", ERROR, compiler_result, "Code generation error occurred; omitting the rest.\n");
             return;
         }
 
@@ -1303,6 +1327,12 @@ void tcg_generate() {
     if (cf_error) {
         stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
                        "Target code generator called on an erroneous CFG (error code %i).\n", cf_error);
+        return;
+    }
+
+    if (compiler_result != COMPILER_RESULT_SUCCESS) {
+        stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
+                       "Target code generator called with an erroneous compiler state.\n", cf_error);
         return;
     }
 

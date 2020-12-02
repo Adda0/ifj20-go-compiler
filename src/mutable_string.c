@@ -29,8 +29,13 @@ bool mstr_init(MutableString *string, size_t initial_size) {
 }
 
 bool mstr_make(MutableString *string, unsigned count, const char *first, ...) {
+#ifdef _MSC_VER
+    const char *ptrs[16];
+    unsigned lens[16];
+#else
     const char *ptrs[count];
     unsigned lens[count];
+#endif
     ptrs[0] = first;
 
     unsigned total_len = strlen(first);

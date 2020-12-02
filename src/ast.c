@@ -18,7 +18,7 @@
 
 #include <signal.h>
 
-#define print_error(result, msg, ...) stderr_message("ast", ERROR, (result), (msg),##__VA_ARGS__); raise(SIGTRAP)
+#define print_error(result, msg, ...) stderr_message("ast", ERROR, (result), (msg),##__VA_ARGS__)
 #else
 #define print_error(result, msg, ...) stderr_message("ast", ERROR, (result), (msg),##__VA_ARGS__)
 #endif
@@ -414,6 +414,9 @@ bool assignment_inference_list_func_call(ASTNode *node) {
     for (unsigned i = 0; i < leftIdListNode->dataCount; i++) {
         ASTNode *leftIdNode = leftIdListNode->data[i].astPtr;
 
+        bool strictInferenceState = strictInference;
+        strictInference = false;
+
         if (!ast_infer_node_type(leftIdNode)) {
             print_error(COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
                         "Error deducing type for variable '%s'.\n",
@@ -421,6 +424,7 @@ bool assignment_inference_list_func_call(ASTNode *node) {
             // TODO: error code
             ast_uninferrable(node);
         }
+        strictInference = strictInferenceState;
 
         if (leftIdNode->inheritedDataType == CF_BLACK_HOLE) {
             continue;

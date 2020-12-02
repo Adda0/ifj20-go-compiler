@@ -524,6 +524,14 @@ int return_follow() {
             }
         case TOKEN_CURLY_RIGHT_BRACKET:
             // rule <return_follow> -> eps
+            if (semantic_enabled) {
+                ASTNode *emptyList = ast_node_list(0);
+                if (emptyList == NULL) {
+                    return COMPILER_RESULT_ERROR_INTERNAL;
+                }
+
+                cf_use_ast_explicit(emptyList, CF_RETURN_LIST);
+            }
             syntax_ok();
         default:
             if (token.context.eol_read) {

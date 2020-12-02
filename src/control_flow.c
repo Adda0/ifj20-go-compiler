@@ -167,15 +167,13 @@ CFStatement *cf_make_next_statement(CFStatementType statementType) {
 
     switch (statementType) {
         case CF_BASIC:
+        case CF_RETURN:
             break;
         case CF_IF:
             newStat->data.ifData = calloc(1, sizeof(CFStatementIf));
             break;
         case CF_FOR:
             newStat->data.forData = calloc(1, sizeof(CFStatementFor));
-            break;
-        case CF_RETURN:
-            newStat->data.bodyAst = cf_ast_init_with_data(AST_ROOT, AST_LIST, activeFunc->returnValuesCount);
             break;
         default:
             cf_error = CF_ERROR_INVALID_ENUM_VALUE;
