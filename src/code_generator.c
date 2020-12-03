@@ -66,7 +66,7 @@ struct {
     bool reg3Used;
 } symbs;
 
-#define find_internal_symbol(symbol) (it = symtable_find(globSt, (symbol))) == NULL ? NULL : &it->data
+#define find_internal_symbol(symbol) (it = symtable_find(globSt, (symbol))) == NULL ? NULL : (&it->data)
 
 void find_internal_symbols(SymbolTable *globSt) {
     STItem *it;
@@ -140,9 +140,18 @@ char *convert_to_target_string_form(const char *input) {
     return bufRet;
 }
 
+bool onlyFindDefinedSymbols = false;
+
 SymbolTable *find_sym_table(const char *id, CFStatement *stat) {
     while (stat != NULL) {
-        if (symtable_find(stat->localSymbolTable, id) != NULL) return stat->localSymbolTable;
+        STItem *it;
+
+        if ((it = symtable_find(stat->localSymbolTable, id)) != NULL) {
+            if (!onlyFindDefinedSymbols || it->data.data.var_data.defined) {
+                return stat->localSymbolTable;
+            }
+        }
+
         stat = stat->parentStatement;
     }
 
@@ -1065,7 +1074,10 @@ void generate_assignment(ASTNode *asgAst, CFStatement *stat) {
         generate_assignment_for_varname(NULL, stat, asgAst->right);
     } else {
         MutableString varName = make_var_name(asgAst->left->data[0].symbolTableItemPtr->identifier, stat, false);
+        onlyFindDefinedSymbols = true;
         generate_assignment_for_varname(mstr_content(&varName), stat, asgAst->right);
+        onlyFindDefinedSymbols = false;
+        asgAst->left->data[0].symbolTableItemPtr->data.var_data.defined = true;
         mstr_free(&varName);
     }
 }
@@ -1263,7 +1275,7 @@ void generate_basic_statement(CFStatement *stat) {
 
     switch (stat->data.bodyAst->actionType) {
         case AST_FUNC_CALL:
-            if(stat->data.bodyAst->left->data[0].symbolTableItemPtr->data.func_data.ret_types_count > 0) {
+            if (stat->data.bodyAst->left->data[0].symbolTableItemPtr->data.func_data.ret_types_count > 0) {
                 stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
                                "Unexpected call outside an assigment or an expression to a function that returns values.");
                 return;

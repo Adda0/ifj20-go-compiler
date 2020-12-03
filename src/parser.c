@@ -262,6 +262,7 @@ int params_n(STItem *current_function, bool ret_type, bool already_found, STPara
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
                 var->data.data.var_data.type = data_type;
+                var->data.data.var_data.defined = true;
 
                 if (ret_type) {
                     var->data.data.var_data.is_return_val_variable = true;
@@ -312,7 +313,7 @@ int params(STItem *current_function, bool ret_type, bool already_found) {
                                            prev_token.context.line_num, prev_token.context.char_num);
                             return COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE;
                         }
-                        // UPdate the information
+                        // Update the information
                         char *new_buffer = malloc(sizeof(char) * (strlen(mstr_content(&id)) + 1));
                         if (new_buffer == NULL) {
                             return COMPILER_RESULT_ERROR_INTERNAL;
@@ -333,6 +334,7 @@ int params(STItem *current_function, bool ret_type, bool already_found) {
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
                 var->data.data.var_data.type = data_type;
+                var->data.data.var_data.defined = true;
 
                 if (ret_type) {
                     var->data.data.var_data.is_return_val_variable = true;

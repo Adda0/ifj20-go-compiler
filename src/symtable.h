@@ -44,7 +44,7 @@ typedef struct st_function_data {
     STParam *params;             /**< Pointer to first param. */
     unsigned ret_types_count;    /**< Number of return types. */
     STParam *ret_types;          /**< Pointer to first return type. */
-    bool defined;                /**< Whether the function has been defined */
+    bool defined;                /**< Whether the function has been defined. */
 } STFunctionData;
 
 /** A structure representing data for a symbol of type variable. */
@@ -52,6 +52,7 @@ typedef struct st_variable_data {
     STDataType type;             /**< Type of the variable. */
     bool is_argument_variable;   /**< Whether this symbol corresponds to a function's parameter. */
     bool is_return_val_variable; /**< Whether this symbol corresponds to a function's return value. */
+    bool defined;                /**< Whether this variable has been defined yet (code generator flag). */
 } STVariableData;
 
 /** A union containing symbol data. */
