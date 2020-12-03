@@ -230,7 +230,7 @@ TEST_F(ParserScannerTest, RedefinitionOfFuncInFrame2) {
         "func a() {\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL);
 }
 
 TEST_F(ParserScannerTest, PackageTypo) {
@@ -5425,4 +5425,60 @@ TEST_F(ParserScannerTest, RedefinitionOfFuncParam4) {
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, MissingReturn1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    _ = a(1)\n"
+        "}\n"
+        "func a(i int) int {\n"
+        "    i = 2\n"
+        "    if true {\n"
+        "        return 4\n"
+        "    }\n"
+        "    b := i + 3\n"
+        "    return b\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, MissingReturn2) { // not mandatory to implement, won't be tested
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    _ = a(1)\n"
+        "}\n"
+        "func a(i int) int {\n"
+        "    i = 2\n"
+        "    if true {\n"
+        "        i := true\n"
+        "        return 4\n"
+        "    }\n"
+        "    b := i + 3\n"
+         "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL);
+}
+
+TEST_F(ParserScannerTest, MissingReturn3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    _ = a(1)\n"
+        "}\n"
+        "func a(i int) int {\n"
+        "    i = 2\n"
+        "    if true {\n"
+        "        i := true\n"
+        "    }\n"
+        "    b := i + 3\n"
+         "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL);
 }
