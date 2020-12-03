@@ -117,6 +117,7 @@ void ParserScannerTest::ComplexTest(std::string &inputStr, CompilerResult expect
 
         if (compiler_result == COMPILER_RESULT_SUCCESS) {
             tcg_generate();
+            cf_clean_all();
         }
     }
 
