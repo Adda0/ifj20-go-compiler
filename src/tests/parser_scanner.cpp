@@ -3535,6 +3535,20 @@ TEST_F(ParserScannerTest, FunctionCall27) {
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
+TEST_F(ParserScannerTest, FunctionCall28) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := 1 + foo(true)\n"
+        "}\n"
+        "func foo(boolean bool) (int, int) {\n"
+        "    return 1 ,2\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE);
+}
+
 // === Test basic expression parsing ===
 
 TEST_F(ParserScannerTest, BasicExpressionParsing1) {
