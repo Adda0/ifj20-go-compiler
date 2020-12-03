@@ -3546,7 +3546,7 @@ TEST_F(ParserScannerTest, FunctionCall28) {
         "    return 1 ,2\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE, false);
 }
 
 // === Test basic expression parsing ===
@@ -5114,7 +5114,7 @@ TEST_F(ParserScannerTest, ParametersInFunctionCall2) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foo(4, 7, true)\n"
+        "    _ = foo(4, 7, true)\n"
         "}\n"
         "func foo(i int, i2 int, b bool) bool {\n"
         "    return true\n"
@@ -5128,7 +5128,7 @@ TEST_F(ParserScannerTest, ParametersInFunctionCall3) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foo(4, 7, true)\n"
+        "    _ = foo(4, 7, true)\n"
         "}\n"
         "func foo(i int, i2 int, b bool) bool {\n"
         "    return 0\n"
@@ -5142,7 +5142,7 @@ TEST_F(ParserScannerTest, ParametersInFunctionCall4) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foo(4, 7, true)\n"
+        "    _ = foo(4, 7, true)\n"
         "}\n"
         "func foo(i int, b bool) bool {\n"
         "    return true\n"
@@ -5156,7 +5156,7 @@ TEST_F(ParserScannerTest, ParametersInFunctionCall5) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foo(4, true)\n"
+        "    _ = foo(4, true)\n"
         "}\n"
         "func foo(i int, i2 int, b bool) bool {\n"
         "    return true\n"
@@ -5170,7 +5170,7 @@ TEST_F(ParserScannerTest, ParametersInFunctionCall6) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foo()\n"
+        "    _ = foo()\n"
         "}\n"
         "func foo(i int, i2 int, b bool) bool {\n"
         "    return true\n"
@@ -5184,7 +5184,7 @@ TEST_F(ParserScannerTest, ParametersInFunctionCall7) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foo(4, 7, true)\n"
+        "    _, _ = foo(4, 7, true)\n"
         "}\n"
         "func foo(i int, i2 int, b bool) (bool, int) {\n"
         "    return true\n"
@@ -5198,7 +5198,7 @@ TEST_F(ParserScannerTest, ParametersInFunctionCall8) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foo(4, 7, true)\n"
+        "    _, _ = foo(4, 7, true)\n"
         "}\n"
         "func foo(i int, i2 int, b bool) (bool, int) {\n"
         "    return true, 0\n"
@@ -5506,7 +5506,7 @@ TEST_F(ParserScannerTest, MissingReturn3) {
         "    b := i + 3\n"
          "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE);
 }
 
 TEST_F(ParserScannerTest, InvalidFunctionCallWithDefine) {
