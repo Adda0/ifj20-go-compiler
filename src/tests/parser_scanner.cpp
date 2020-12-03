@@ -4125,6 +4125,18 @@ TEST_F(ParserScannerTest, ForLoops15) {
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
+TEST_F(ParserScannerTest, ForLoops16) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    for i, j := 0; j != 10; i += 1 {\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
 // === Test expressions in if-else if-else statements ===
 
 TEST_F(ParserScannerTest, ExpressionInIfStatements1) {
@@ -5481,4 +5493,15 @@ TEST_F(ParserScannerTest, MissingReturn3) {
          "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL);
+}
+
+TEST_F(ParserScannerTest, InvalidFunctionCallWithDefine) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a, b := int2float(5)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE);
 }
