@@ -4694,6 +4694,17 @@ TEST_F(ParserScannerTest, UndefinedVariable4) {
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
 }
 
+TEST_F(ParserScannerTest, UndefinedVariable5) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := a + 6\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
+}
+
 // === Undefined function ===
 
 TEST_F(ParserScannerTest, UndefinedFunction1) {
