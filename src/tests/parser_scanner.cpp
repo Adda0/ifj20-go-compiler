@@ -1831,7 +1831,7 @@ TEST_F(ParserScannerTest, ReturnFormat3) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foobar()\n"
+        "    _ = foobar()\n"
         "}\n"
         "func foobar() bool {\n"
         "    a := false\n"
@@ -1849,7 +1849,7 @@ TEST_F(ParserScannerTest, ReturnFormat4) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foobar()\n"
+        "    _ = foobar()\n"
         "}\n"
         "func foobar() bool {\n"
         "    a := false\n"
@@ -1867,7 +1867,7 @@ TEST_F(ParserScannerTest, ReturnFormat5) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foobar()\n"
+        "    _ = foobar()\n"
         "}\n"
         "func foobar() (int, int, int) {\n"
         "    a, b, g, c := 2, 4, 78, 878\n"
@@ -1888,7 +1888,7 @@ TEST_F(ParserScannerTest, ReturnFormat6) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foobar()\n"
+        "    _ = foobar()\n"
         "}\n"
         "func foobar() (int, string, float64) {\n"
         "    a, b, g, c := 2, false, 78, 878\n"
@@ -1914,7 +1914,7 @@ TEST_F(ParserScannerTest, ReturnFormat7) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foobar()\n"
+        "    _ = foobar()\n"
         "}\n"
         "func foobar() (int, string, float64) {\n"
         "    a, b, g, c := 2, false, 78, 878\n"
@@ -2010,7 +2010,7 @@ TEST_F(ParserScannerTest, ReturnFormat13) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foobar()\n"
+        "    _, _, _ = foobar()\n"
         "}\n"
         "func foobar() (int, string, float64) {\n"
         "    a, b, g, c := 2, false, 78, 878\n"
@@ -2036,7 +2036,7 @@ TEST_F(ParserScannerTest, ReturnFormat14) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foobar()\n"
+        "    _, _, _ = foobar()\n"
         "}\n"
         "func foobar() (int, string, float64) {\n"
         "    a, b, g, c := 2, false, 78, 878\n"
@@ -2062,7 +2062,7 @@ TEST_F(ParserScannerTest, ReturnFormat15) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foobar()\n"
+        "    _, _, _ = foobar()\n"
         "}\n"
         "func foobar() (int, string, float64) {\n"
         "    a, b, g, c := 2, false, 78, 878\n"
@@ -2088,7 +2088,7 @@ TEST_F(ParserScannerTest, ReturnFormat16) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foobar()\n"
+        "    _, _, _ = foobar()\n"
         "}\n"
         "func foobar() (int, string, float64) {\n"
         "    a, b, g, c := 2, false, 78, 878\n"
@@ -2114,7 +2114,7 @@ TEST_F(ParserScannerTest, ReturnFormat17) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foobar()\n"
+        "    _, _, _ = foobar()\n"
         "}\n"
         "func foobar() (int, string, float64) {\n"
         "    a, b, g, c := 2, false, 78, 878\n"
@@ -2140,7 +2140,7 @@ TEST_F(ParserScannerTest, ReturnFormat18) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foobar()\n"
+        "    _ = foobar()\n"
         "}\n"
         "func foobar() int {\n"
         "    a := false\n"
@@ -2158,7 +2158,7 @@ TEST_F(ParserScannerTest, ReturnFormat19) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foobar()\n"
+        "    _ = foobar()\n"
         "}\n"
         "func foobar() int {\n"
         "    a := false\n"
@@ -2190,7 +2190,7 @@ TEST_F(ParserScannerTest, ReturnFormat21) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foobar()\n"
+        "    _, _ = foobar()\n"
         "}\n"
         "func foobar() (bool, int) {\n"
         "    return false\n"
@@ -2204,7 +2204,7 @@ TEST_F(ParserScannerTest, ReturnFormat22) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foobar()\n"
+        "    _ = foobar()\n"
         "}\n"
         "func foobar() bool {\n"
         "    return false, 5\n"
@@ -2218,7 +2218,7 @@ TEST_F(ParserScannerTest, ReturnFormat23) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foobar()\n"
+        "    _ = foobar()\n"
         "}\n"
         "func foobar() bool {\n"
         "}\n";
@@ -2231,7 +2231,7 @@ TEST_F(ParserScannerTest, ReturnFormat24) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    foobar()\n"
+        "    _, _, _ = foobar()\n"
         "}\n"
         "func foobar() (bool, int, string) {\n"
         "}\n";
@@ -3427,6 +3427,34 @@ TEST_F(ParserScannerTest, FunctionCall25) {
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, FunctionCall26) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(true)\n"
+        "}\n"
+        "func foo(boolean bool) (int) {\n"
+        "    return 1 + 2\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL);
+}
+
+TEST_F(ParserScannerTest, FunctionCall27) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    foo(true)\n"
+        "}\n"
+        "func foo(boolean bool) {\n"
+        "    return \n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
 // === Test basic expression parsing ===
