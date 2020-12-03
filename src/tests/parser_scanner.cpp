@@ -145,6 +145,7 @@ TEST_F(ParserScannerTest, MinimalisticIfFunction) {
         "package main\n"
         "\n"
         "func main() {\n"
+        "    a := 1\n"
         "    if a := 0 {\n"
         "    }\n"
         "}\n";
@@ -175,7 +176,7 @@ TEST_F(ParserScannerTest, MissingPackageMain) {
         "    }\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
 
 TEST_F(ParserScannerTest, EOLMissingMainFunc) {
@@ -265,7 +266,7 @@ TEST_F(ParserScannerTest, EOLMissingError6) {
         "    a := false\n"
         "    if a == true {\n"
         "        if a != true {\n"
-        "           a = 5"
+        "           a = false"
         "        }\n"
         "    }\n"
         "}\n";
@@ -282,7 +283,7 @@ TEST_F(ParserScannerTest, EOLMissingError7) {
         "        a := false\n"
         "        abc := true\n"
         "        if !a == abc {\n"
-        "            a = \"String\\n\"\n"
+        "            b := \"String\\n\"\n"
         "        }"
         "    }\n"
         "}\n";
@@ -663,7 +664,7 @@ TEST_F(ParserScannerTest, AssignEOL5) {
         "    a, b := 1\n + two, 2 / three\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL);
 }
 
 TEST_F(ParserScannerTest, AssignEOL6) {
@@ -689,7 +690,7 @@ TEST_F(ParserScannerTest, AssignEOL7) {
         "    a, b := 1 + two\n , 2 / three\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL);
 }
 
 TEST_F(ParserScannerTest, AssignEOL8) {
@@ -784,7 +785,7 @@ TEST_F(ParserScannerTest, AssignStatement5) {
         "    a, b := 1\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL);
 }
 
 TEST_F(ParserScannerTest, AssignStatement6) {
@@ -796,7 +797,7 @@ TEST_F(ParserScannerTest, AssignStatement6) {
 
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL);
 }
 
 TEST_F(ParserScannerTest, AssignStatement7) {
@@ -880,7 +881,7 @@ TEST_F(ParserScannerTest, EOLInDefinitionOfVariable4) {
         "    a, b = 1\n+ two, 2 / three\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL);
 }
 
 TEST_F(ParserScannerTest, EOLInDefinitionOfVariable5) {
@@ -1337,7 +1338,7 @@ TEST_F(ParserScannerTest, EOLInIfElseIfStatement7) {
         "    }\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION);
 }
 
 TEST_F(ParserScannerTest, EOLInIfElseIfStatement8) {
@@ -2704,7 +2705,7 @@ TEST_F(ParserScannerTest, AssignToVoidVariable1) {
         "func main() {\n"
         "   _ = foo()\n"
         "}\n"
-        "func foo() {\n"
+        "func foo() bool {\n"
         "    return true\n"
         "}\n";
 
@@ -3145,7 +3146,7 @@ TEST_F(ParserScannerTest, FunctionCall6) {
         "    a := true\n"
         "    a = foo(4, 5)\n"
         "}\n"
-        "func foo(i1 int, i2 int) (bolean bool) {\n"
+        "func foo(i1 int, i2 int) (boolean bool) {\n"
         "    return false\n"
         "}\n";
 
@@ -3159,7 +3160,7 @@ TEST_F(ParserScannerTest, FunctionCall7) {
         "func main() {\n"
         "    a := foo(true, 7, 5.4)\n"
         "}\n"
-        "func foo(bool1 bool, i1 int, f1 float64) (bolean bool) {\n"
+        "func foo(bool1 bool, i1 int, f1 float64) (boolean bool) {\n"
         "    return false\n"
         "}\n";
 
@@ -3173,7 +3174,7 @@ TEST_F(ParserScannerTest, FunctionCall8) {
         "func main() {\n"
         "    a, b := foo()\n"
         "}\n"
-        "func foo() (bolean bool, integer int) {\n"
+        "func foo() (boolean bool, integer int) {\n"
         "    return false, 6\n"
         "}\n";
 
@@ -3202,7 +3203,7 @@ TEST_F(ParserScannerTest, FunctionCall10) {
         "    a, _ := foo(7 + 4, 3 + 1)\n"
         "}\n"
         "func foo(i1 int, i2 int) (int, int) {\n"
-        "    return i1, i2 + i3\n"
+        "    return i1, i2\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -3309,7 +3310,7 @@ TEST_F(ParserScannerTest, FunctionCall17) {
         "    return 0, 1 + 2, \"\"\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL);
 }
 
 TEST_F(ParserScannerTest, FunctionCall18) {
@@ -3324,7 +3325,7 @@ TEST_F(ParserScannerTest, FunctionCall18) {
         "    return 0, 1 + 2, \"\"\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL);
 }
 
 TEST_F(ParserScannerTest, FunctionCall19) {
@@ -3339,7 +3340,7 @@ TEST_F(ParserScannerTest, FunctionCall19) {
         "    return boolean, 1 + 2, \"\"\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL);
 }
 
 TEST_F(ParserScannerTest, FunctionCall20) {
@@ -3354,7 +3355,7 @@ TEST_F(ParserScannerTest, FunctionCall20) {
         "    return boolean, 1 + 2, \"\"\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL);
 }
 
 TEST_F(ParserScannerTest, FunctionCall21) {
@@ -3948,7 +3949,7 @@ TEST_F(ParserScannerTest, ForLoops8) {
         "    }\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
 }
 
 TEST_F(ParserScannerTest, ForLoops9) {
@@ -4039,6 +4040,7 @@ TEST_F(ParserScannerTest, ForLoops15) {
         "package main\n"
         "\n"
         "func main() {\n"
+        "    j := 0\n"
         "    for i := 0; j := 10; i += 1 {\n"
         "    }\n"
         "}\n";
@@ -4090,6 +4092,7 @@ TEST_F(ParserScannerTest, ExpressionInIfStatements3) {
         "package main\n"
         "\n"
         "func main() {\n"
+        "    a := 1\n"
         "    if a := 3 {\n"
         "        foo := 42\n"
         "    } else if b {\n"
@@ -4139,7 +4142,7 @@ TEST_F(ParserScannerTest, ExpressionInIfStatements6) {
         "    a, b, c, d, t, r := 0, 7, true, false, true, true\n"
         "    if (a - 8) * 7 == b + 8 / 7 {\n"
         "        foo := 42\n"
-        "    } else if \n !b && (c || d) != false || !(t && r) {\n"
+        "    } else if \n !d && (c || d) != false || !(t && r) {\n"
         "        bar := 1\n"
         "    }\n"
         "}\n";
@@ -4152,7 +4155,7 @@ TEST_F(ParserScannerTest, ExpressionInIfStatements7) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    a, b := 0, true, false, true\n"
+        "    a, b, c, d := 0, true, false, true\n"
         "    if a < 4 {\n"
         "        if a < 4 {\n"
         "            if a < 4 {\n"
@@ -4785,7 +4788,7 @@ TEST_F(ParserScannerTest, DataTypeCompatibility2) {
         "func foo(f float64, i2 int, b bool) {\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE);
 }
 
 TEST_F(ParserScannerTest, DataTypeCompatibility3) {
@@ -4813,7 +4816,7 @@ TEST_F(ParserScannerTest, DataTypeCompatibility4) {
         "    return 8\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE);
 }
 
 TEST_F(ParserScannerTest, DataTypeCompatibility5) {
@@ -4829,7 +4832,7 @@ TEST_F(ParserScannerTest, DataTypeCompatibility5) {
         "   return \"str\\n\"\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE);
 }
 
 // === Data type compatibility in expression ===
@@ -4896,7 +4899,7 @@ TEST_F(ParserScannerTest, DataTypeCompatibilityInExpression5) {
         "    a := \"str1 \" - \"str2\\n\"\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION);
 }
 
 TEST_F(ParserScannerTest, DataTypeCompatibilityInExpression6) {
@@ -4971,7 +4974,7 @@ TEST_F(ParserScannerTest, DataTypeCompatibilityInExpression12) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    for i := 0; i < 10; i += 1.2\n"
+        "    for i := 0; i < 10; i += 1.2 {\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION);
