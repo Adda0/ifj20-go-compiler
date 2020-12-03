@@ -5306,7 +5306,7 @@ TEST_F(ParserScannerTest, ZeroDivision1) {
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_DIVISION_BY_ZERO);
 }
 
-TEST_F(ParserScannerTest, ZeroDivision2) {
+TEST_F(ParserScannerTest, ZeroDivision2) { // not mandatory to implement, won't be tested
     std::string inputStr = \
         "package main\n"
         "\n"
@@ -5317,7 +5317,7 @@ TEST_F(ParserScannerTest, ZeroDivision2) {
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_DIVISION_BY_ZERO);
 }
 
-TEST_F(ParserScannerTest, ZeroDivision3) {
+TEST_F(ParserScannerTest, ZeroDivision3) { // not mandatory to implement, won't be tested
     std::string inputStr = \
         "package main\n"
         "\n"
@@ -5326,6 +5326,17 @@ TEST_F(ParserScannerTest, ZeroDivision3) {
         "}\n"
         "func foo() int {\n"
         "    return 0\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_DIVISION_BY_ZERO);
+}
+
+TEST_F(ParserScannerTest, ZeroDivision4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := 4.0 / 0.0\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_DIVISION_BY_ZERO);
