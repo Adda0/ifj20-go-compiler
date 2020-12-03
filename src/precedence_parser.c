@@ -974,7 +974,9 @@ bool reduce(PrecedenceStack *stack, PrecedenceNode *start, int *function_level) 
                 bool sem_res = semantic_actions[i](stack, start);
                 ASTNode *top_ast = stack->top->data.ast;
 
-                if (top_ast != NULL) {
+                // Only infer ID type once it has been used in an expression or definition. Inferring it now could
+                // lead to incorrect type inference.
+                if (top_ast != NULL && top_ast->actionType != AST_ID) {
                     ast_infer_node_type(top_ast);
                 }
 
