@@ -329,6 +329,47 @@ void generate_internal_len(ASTNode *argAst, CFStatement *stat) {
     }
 }
 
+void generate_internal_chr(ASTNode *argAst, CFStatement *stat) {
+    if (argAst->actionType != AST_LIST || argAst->dataCount != 1) {
+        return;
+    }
+
+    argAst = argAst->data[0].astPtr;
+
+    if (argAst->actionType == AST_CONST_INT) {
+        int i = argAst->data[0].intConstantValue;
+        if (i < 0 || i > 255) {
+            out("PUSHS int@1");
+            out("PUSHS string@");
+            return;
+        } else {
+            out("PUSHS string@\\%.3i", i);
+            return;
+        }
+    } else {
+        unsigned counter = currentFunction.jumpingExprCounter;
+        currentFunction.jumpingExprCounter++;
+
+        generate_expression_ast_result(argAst, stat);
+        out("POPS %s", REG_1);
+        out("LT %s %s int@0", COND_RES_VAR, REG_1);
+        out("JUMPIFEQ $%s_chr%i_fail %s bool@true", stat->parentFunction->name, counter, COND_RES_VAR);
+        out("GT %s %s int@255", COND_RES_VAR, REG_1);
+        out("JUMPIFEQ $%s_chr%i_fail %s bool@true", stat->parentFunction->name, counter, COND_RES_VAR);
+
+        out("PUSHS int@0");
+        out("PUSHS %s", REG_1);
+        out("INT2CHARS");
+        out("JUMP $%s_chr%i_end", stat->parentFunction->name, counter);
+
+        out("LABEL $%s_chr%i_fail", stat->parentFunction->name, counter);
+        out("PUSHS int@1");
+        out("PUSHS string@");
+
+        out("LABEL $%s_chr%i_end", stat->parentFunction->name, counter);
+    }
+}
+
 void generate_internal_substr(ASTNode *argAst, CFStatement *stat) {
     ASTNode *strArg = argAst->data[0].astPtr;
     ASTNode *beginIndexArg = argAst->data[1].astPtr;
@@ -389,10 +430,10 @@ void generate_internal_ord(ASTNode *argAst, CFStatement *stat) {
     // move str to REG_1 and str len to REG_2
     if (is_direct_ast(strArg)) {
         out_nnl("STRLEN %s ", REG_2);
-        print_var_name_or_const(argAst, stat);
+        print_var_name_or_const(strArg, stat);
         out_nl();
     } else {
-        generate_expression_ast_result(argAst, stat);
+        generate_expression_ast_result(strArg, stat);
         out("POPS %s", REG_1);
         out_nnl("STRLEN %s %s", REG_2, REG_1);
     }
@@ -477,6 +518,12 @@ bool generate_internal_func_call(ASTNode *funcCallAst, CFStatement *stat) {
         return true;
     } else if (s == symbs.len) {
         generate_internal_len(args, stat);
+        return true;
+    } else if (s == symbs.ord) {
+        generate_internal_ord(args, stat);
+        return true;
+    } else if (s == symbs.chr) {
+        generate_internal_chr(args, stat);
         return true;
     } else if (s == symbs.substr) {
         generate_internal_substr(args, stat);
@@ -722,6 +769,8 @@ char *make_next_logic_label() {
     return a;
 }
 
+bool generate_logic_expression_assignment(ASTNode *exprAst, CFStatement *stat, const char *targetVarName);
+
 bool generate_simple_logic_expression(ASTNode *exprAst, CFStatement *stat, char *trueLabel, char *falseLabel) {
     ASTNode *left = exprAst->left;
     ASTNode *right = exprAst->right;
@@ -798,8 +847,18 @@ bool generate_simple_logic_expression(ASTNode *exprAst, CFStatement *stat, char 
         out("JUMP %s", falseLabel);
         return true;
     } else {
-        generate_expression_ast_result(left, stat);
-        generate_expression_ast_result(right, stat);
+        if (left->inheritedDataType == CF_BOOL && right->inheritedDataType == CF_BOOL) {
+            // This could be optimised quite easily
+            generate_logic_expression_assignment(left, stat, NULL);
+            generate_logic_expression_assignment(right, stat, NULL);
+        } else if (left->inheritedDataType == CF_BOOL || right->inheritedDataType == CF_BOOL) {
+            stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION,
+                           "Unexpected value in logical expression.\n");
+            return false;
+        } else {
+            generate_expression_ast_result(left, stat);
+            generate_expression_ast_result(right, stat);
+        }
 
         if (t == AST_LOG_EQ) {
             out("EQS");
@@ -808,7 +867,7 @@ bool generate_simple_logic_expression(ASTNode *exprAst, CFStatement *stat, char 
         } else if (t == AST_LOG_NEQ) {
             out("EQS");
             out("PUSHS bool@false");
-            out("JUMPIFNEQS %s", trueLabel);
+            out("JUMPIFEQS %s", trueLabel);
         } else if (t == AST_LOG_LT) {
             out("LTS");
             out("PUSHS bool@true");
@@ -865,8 +924,11 @@ bool generate_logic_expression_tree(ASTNode *exprAst, CFStatement *stat, char *t
 }
 
 bool generate_logic_expression_assignment(ASTNode *exprAst, CFStatement *stat, const char *targetVarName) {
+    unsigned counter = currentFunction.jumpingExprCounter;
+    currentFunction.jumpingExprCounter++;
+
     char i[11];
-    sprintf(i, "%i", currentFunction.jumpingExprCounter);
+    sprintf(i, "%i", counter);
 
     MutableString trueLabelStr, falseLabelStr;
     mstr_make(&trueLabelStr, 5, "$", stat->parentFunction->name, "_", i, "_true");
@@ -880,7 +942,7 @@ bool generate_logic_expression_assignment(ASTNode *exprAst, CFStatement *stat, c
         out("MOVE %s bool@true", targetVarName);
     }
 
-    out("JUMP $%s_%i_end", stat->parentFunction->name, currentFunction.jumpingExprCounter);
+    out("JUMP $%s_%i_end", stat->parentFunction->name, counter);
 
     out("LABEL %s", mstr_content(&falseLabelStr));
     if (targetVarName == NULL) {
@@ -889,8 +951,7 @@ bool generate_logic_expression_assignment(ASTNode *exprAst, CFStatement *stat, c
         out("MOVE %s bool@false", targetVarName);
     }
 
-    out("LABEL $%s_%i_end", stat->parentFunction->name, currentFunction.jumpingExprCounter);
-    currentFunction.jumpingExprCounter++;
+    out("LABEL $%s_%i_end", stat->parentFunction->name, counter);
 
     mstr_free(&trueLabelStr);
     mstr_free(&falseLabelStr);
@@ -1039,7 +1100,7 @@ void generate_return_statement(CFStatement *stat) {
             return;
         }
     } else {
-        if (retAstList->actionType != AST_LIST) {
+        if (retAstList == NULL || retAstList->actionType != AST_LIST) {
             stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
                            "Unexpected AST in RETURN statement.\n");
             return;
@@ -1062,7 +1123,7 @@ void generate_return_statement(CFStatement *stat) {
     }
 
     CFVarListNode *argNode = currentFunction.function->returnValues;
-    if (!hasNamedReturnValues || retAstList->dataCount > 0) {
+    if (retAstList != NULL && (!hasNamedReturnValues || retAstList->dataCount > 0)) {
         for (unsigned i = 0; i < retAstList->dataCount; i++) {
             ASTNode *ast = retAstList->data[retAstList->dataCount - i - 1].astPtr;
 
@@ -1202,6 +1263,12 @@ void generate_basic_statement(CFStatement *stat) {
 
     switch (stat->data.bodyAst->actionType) {
         case AST_FUNC_CALL:
+            if(stat->data.bodyAst->left->data[0].symbolTableItemPtr->data.func_data.ret_types_count > 0) {
+                stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+                               "Unexpected call outside an assigment or an expression to a function that returns values.");
+                return;
+            }
+
             generate_func_call(stat->data.bodyAst, stat);
             break;
         case AST_DEFINE:
@@ -1359,6 +1426,7 @@ void generate_function(CFFunction *fun) {
     // Return from the function will be generated from the first RETURN statement
     if (!fun->terminated) {
         if (fun->returnValuesCount == 0) {
+            fun->rootStatement->data.bodyAst = NULL;
             generate_return_statement(fun->rootStatement);
         } else {
             stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
