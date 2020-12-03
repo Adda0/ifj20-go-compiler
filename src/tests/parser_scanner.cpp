@@ -4157,7 +4157,7 @@ TEST_F(ParserScannerTest, ForLoops16) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    for i, j := 0; j != 10; i += 1 {\n"
+        "    for i, j := 0, 1; j != 10; i += 1 {\n"
         "    }\n"
         "}\n";
 
