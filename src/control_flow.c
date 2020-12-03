@@ -151,11 +151,19 @@ CFStatement *cf_make_next_statement(CFStatementType statementType) {
     newStat->parentStatement = activeStat;
     newStat->statementType = statementType;
 
-    if (activeStat != NULL && activeStat->localSymbolTable != NULL) {
-        newStat->localSymbolTable = activeStat->localSymbolTable;
+    if (activeStat != NULL) {
+        if (activeStat->statementType == CF_FOR) {
+            if (activeStat->parentStatement == NULL) {
+                newStat->localSymbolTable = activeFunc->symbolTable;
+            } else {
+                newStat->localSymbolTable = activeStat->parentStatement->localSymbolTable;
+            }
+        } else if (activeStat->localSymbolTable != NULL) {
+            newStat->localSymbolTable = activeStat->localSymbolTable;
+        }
     } else {
         newStat->localSymbolTable = activeFunc->symbolTable;
-    };
+    }
 
     if (activeFunc->rootStatement == NULL) {
         activeFunc->rootStatement = newStat;
@@ -427,7 +435,7 @@ static void clean_stat(CFStatement *stat) {
 }
 
 static void clean_varlist(CFVarListNode *begin) {
-    while(begin != NULL) {
+    while (begin != NULL) {
         CFVarListNode *next = begin->next;
         free(begin);
         begin = next;
