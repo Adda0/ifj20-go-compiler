@@ -1103,6 +1103,12 @@ int parse_expression(AssignRule assign_rule, bool eol_before_allowed, ASTNode **
     bool eol_allowed = true;
     bool done = false;
     while (!done) {
+        if (assign_rule == PURE_EXPRESSION && assignments + definitions > 0) {
+            stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL,
+                           "Line %u: expected pure expression (no definitions or assignments)\n",
+                           token.context.line_num);
+            syntax_error();
+        }
         StackSymbol current_symbol = copy_token_to_symbol();
         PrecedenceNode *top = precedence_stack_top(&stack);
         PrecedenceNode *to_reduce;
