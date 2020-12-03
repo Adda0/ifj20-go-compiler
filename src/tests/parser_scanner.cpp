@@ -163,11 +163,39 @@ TEST_F(ParserScannerTest, MinimalisticIfFunction) {
         "\n"
         "func main() {\n"
         "    a := 1\n"
-        "    if a := 0 {\n"
+        "    if a := 1 {\n"
         "    }\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, RedefinitionInNestedFrame) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := 1\n"
+        "    if a == 1 {\n"
+        "        a := true\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, RedefinitionInFrame) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a := 1\n"
+        "    if a == 1 {\n"
+        "    }\n"
+        "    a := true\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
 }
 
 TEST_F(ParserScannerTest, PackageTypo) {
@@ -2152,7 +2180,7 @@ TEST_F(ParserScannerTest, ReturnFormat17) {
         "    }\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
 }
 
 TEST_F(ParserScannerTest, ReturnFormat18) {
@@ -4484,7 +4512,6 @@ TEST_F(ParserScannerTest, ExpressionInIfStatements18) {
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
-
 
 // === Test redefinition of variable ===
 
