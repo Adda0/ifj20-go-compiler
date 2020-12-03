@@ -12,7 +12,7 @@
 // 1 – info about processed tokens
 // 2 – all info excluding character reads and buffer clearing
 // 3 – all info
-#define VERBOSE 1
+#define VERBOSE 2
 
 #include <iostream>
 #include <array>
@@ -24,16 +24,20 @@ extern "C" {
 #include "parser.h"
 #include "control_flow.h"
 #include "ast.h"
+#include "code_generator.h"
 }
+
 
 class ParserScannerTest : public StdinMockingScannerTest {
 protected:
     void ComplexTest(std::string &inputStr, CompilerResult expected_compiler_result);
+    void ComplexTest(std::string &inputStr, CompilerResult expected_compiler_result, bool enable_ast_checks);
 
     void CheckStatementRecursively(CFStatement *st);
 
     void SetUp() override {
         StdinMockingScannerTest::SetUp();
+        cf_error = CF_NO_ERROR;
         ast_set_strict_inference_state(false);
     }
 };
@@ -44,17 +48,17 @@ void ParserScannerTest::CheckStatementRecursively(CFStatement *st) {
     switch (st->statementType) {
         case CF_RETURN:
         case CF_BASIC:
-            if(st->data.bodyAst == NULL) {
+            if (st->data.bodyAst == NULL) {
                 if (st->followingStatement != NULL) {
                     CheckStatementRecursively(st->followingStatement);
                 }
                 return;
             }
 
-            ASSERT_TRUE(ast_infer_node_type(st->data.bodyAst));
+            EXPECT_TRUE(ast_infer_node_type(st->data.bodyAst));
             return;
         case CF_IF:
-            ASSERT_TRUE(ast_infer_node_type(st->data.ifData->conditionalAst));
+            EXPECT_TRUE(ast_infer_node_type(st->data.ifData->conditionalAst));
 
             if (st->data.ifData->thenStatement != NULL)
                 CheckStatementRecursively(st->data.ifData->thenStatement);
@@ -64,11 +68,11 @@ void ParserScannerTest::CheckStatementRecursively(CFStatement *st) {
             return;
         case CF_FOR:
             if (st->data.forData->conditionalAst != NULL)
-                ASSERT_TRUE(ast_infer_node_type(st->data.forData->conditionalAst));
+                EXPECT_TRUE(ast_infer_node_type(st->data.forData->conditionalAst));
             if (st->data.forData->afterthoughtAst != NULL)
-                ASSERT_TRUE(ast_infer_node_type(st->data.forData->afterthoughtAst));
+                EXPECT_TRUE(ast_infer_node_type(st->data.forData->afterthoughtAst));
             if (st->data.forData->definitionAst != NULL)
-                ASSERT_TRUE(ast_infer_node_type(st->data.forData->definitionAst));
+                EXPECT_TRUE(ast_infer_node_type(st->data.forData->definitionAst));
 
             CheckStatementRecursively(st->data.forData->bodyStatement);
             return;
@@ -76,6 +80,10 @@ void ParserScannerTest::CheckStatementRecursively(CFStatement *st) {
 }
 
 void ParserScannerTest::ComplexTest(std::string &inputStr, CompilerResult expected_compiler_result) {
+    ComplexTest(inputStr, expected_compiler_result, true);
+}
+
+void ParserScannerTest::ComplexTest(std::string &inputStr, CompilerResult expected_compiler_result, bool enable_ast_checks) {
 #if VERBOSE
     std::cout << "[TEST] Input string:\n" << inputStr << "\n[START]\n";
 #endif
@@ -83,28 +91,37 @@ void ParserScannerTest::ComplexTest(std::string &inputStr, CompilerResult expect
     buffer->sputc(EOF);
 
     CompilerResult parserRes = parser_parse();
+    std::cout << "[RESULT] Compiler result: " << resultNames.find(parserRes)->second << '\n';
 
-    if (parserRes == COMPILER_RESULT_SUCCESS) {
-        ast_set_strict_inference_state(true);
-        CFProgram *prog = get_program();
-        ASSERT_NE(prog, nullptr);
+    if (compiler_result == COMPILER_RESULT_SUCCESS) {
+        if(enable_ast_checks) {
+            ast_set_strict_inference_state(true);
+            CFProgram *prog = get_program();
+            ASSERT_NE(prog, nullptr);
 
-        CFFuncListNode *fn = prog->functionList;
-        while (fn != NULL) {
-            CFFunction *f = &fn->fun;
-            ASSERT_NE(f, nullptr);
+            CFFuncListNode *fn = prog->functionList;
+            while (fn != NULL) {
+                CFFunction *f = &fn->fun;
+                ASSERT_NE(f, nullptr);
 
-            CFStatement *st = f->rootStatement;
+                CFStatement *st = f->rootStatement;
 
-            while (st != NULL) {
-                CheckStatementRecursively(st);
-                st = st->followingStatement;
+                while (st != NULL) {
+                    CheckStatementRecursively(st);
+                    st = st->followingStatement;
+                }
+
+                fn = fn->next;
             }
+        }
 
-            fn = fn->next;
+        if (compiler_result == COMPILER_RESULT_SUCCESS) {
+            tcg_generate();
         }
     }
 
+    std::cout << "[RESULT] Expected: " << resultNames.find(expected_compiler_result)->second << ", Actual: "
+              << resultNames.find(compiler_result)->second << '\n';
     ASSERT_EQ(compiler_result, expected_compiler_result);
 }
 
@@ -1696,12 +1713,13 @@ TEST_F(ParserScannerTest, EOLInFunctionCall19) {
         " a := 6\n"
         " var := 6\n"
         " var2 := 6\n"
-        "    foo(((a + bar(7) + (-9)) < 0) && !true , var * 8 - (var2))\n"
+        " foo(((a + bar(7) + (-9)) < 0) && !true , var * 8 - (var2))\n"
         "}\n"
         "\n"
         "func foo(boolean bool, integer int) {\n"
         "}\n"
-        "func bar(integer int) {\n"
+        "func bar(integer int) int {\n"
+        " return 1\n"
         "}\n";
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
@@ -1868,7 +1886,7 @@ TEST_F(ParserScannerTest, ReturnFormat5) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    _ = foobar()\n"
+        "    _, _, _ = foobar()\n"
         "}\n"
         "func foobar() (int, int, int) {\n"
         "    a, b, g, c := 2, 4, 78, 878\n"
@@ -1889,9 +1907,9 @@ TEST_F(ParserScannerTest, ReturnFormat6) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    _ = foobar()\n"
+        "    _, _, _ = foobar()\n"
         "}\n"
-        "func foobar() (int, string, float64) {\n"
+        "func foobar() (int, bool, float64) {\n"
         "    a, b, g, c := 2, false, 78, 878\n"
         "    return a + foo(a), b || bar(b, foo(g + 5 * c)) && true, 7.4/8.7*9.0+8.0+5982.4\n"
         "}\n"
@@ -2013,7 +2031,7 @@ TEST_F(ParserScannerTest, ReturnFormat13) {
         "func main() {\n"
         "    _, _, _ = foobar()\n"
         "}\n"
-        "func foobar() (int, string, float64) {\n"
+        "func foobar() (int, bool, float64) {\n"
         "    a, b, g, c := 2, false, 78, 878\n"
         "    return a +\n foo(\na),\n b ||\n bar(\nb,\n foo(\ng +\n5 *\n c)) &&\n true,\n 7.4/\n8.7*\n9.0+\n8.0+\n5982.4\n"
         "}\n"
@@ -2039,7 +2057,7 @@ TEST_F(ParserScannerTest, ReturnFormat14) {
         "func main() {\n"
         "    _, _, _ = foobar()\n"
         "}\n"
-        "func foobar() (int, string, float64) {\n"
+        "func foobar() (int, bool, float64) {\n"
         "    a, b, g, c := 2, false, 78, 878\n"
         "    return (a + foo(a)), (b || bar(b, foo(g + 5 * c)) && true), (7.4/8.7*9.0+8.0+5982.4)\n"
         "}\n"
@@ -2117,7 +2135,7 @@ TEST_F(ParserScannerTest, ReturnFormat17) {
         "func main() {\n"
         "    _, _, _ = foobar()\n"
         "}\n"
-        "func foobar() (int, string, float64) {\n"
+        "func foobar() (int, bool, float64) {\n"
         "    a, b, g, c := 2, false, 78, 878\n"
         "    return a + foo(a), b || bar(b, foo\n(g + 5 * c)) && true, 7.4/8.7*9.0+8.0+5982.4\n"
         "}\n"
@@ -2169,7 +2187,7 @@ TEST_F(ParserScannerTest, ReturnFormat19) {
         "func foo(boolean bool) int {\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION, false);
 }
 
 TEST_F(ParserScannerTest, ReturnFormat20) {
@@ -2722,7 +2740,7 @@ TEST_F(ParserScannerTest, AssignToVoidVariable2) {
         "    return true, true, false\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL); //TODO which error code should be returned?
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL, false); //TODO which error code should be returned?
 }
 
 TEST_F(ParserScannerTest, AssignToVoidVariable3) {
@@ -2790,7 +2808,7 @@ TEST_F(ParserScannerTest, TextAtTheEndOfFile2) {
         "package main\n"
         "func main() {\n"
         "    a, b := 0, 5\n"
-         "}\n"
+        "}\n"
         "/*comment*/\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -4802,7 +4820,7 @@ TEST_F(ParserScannerTest, DataTypeCompatibility3) {
         "    return 8\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION, false);
 }
 
 TEST_F(ParserScannerTest, DataTypeCompatibility4) {
@@ -4832,7 +4850,7 @@ TEST_F(ParserScannerTest, DataTypeCompatibility5) {
         "   return \"str\\n\"\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE, false);
 }
 
 // === Data type compatibility in expression ===
@@ -4877,7 +4895,7 @@ TEST_F(ParserScannerTest, DataTypeCompatibilityInExpression3) {
         "   return \"str\\n\"\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION, false);
 }
 
 TEST_F(ParserScannerTest, DataTypeCompatibilityInExpression4) {
@@ -4975,9 +4993,10 @@ TEST_F(ParserScannerTest, DataTypeCompatibilityInExpression12) {
         "\n"
         "func main() {\n"
         "    for i := 0; i < 10; i += 1.2 {\n"
+        "    }\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION, false);
 }
 
 // === Parameters in function call ===
@@ -5134,7 +5153,7 @@ TEST_F(ParserScannerTest, ParametersInFunctionCall11) {
         "    return 1\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE, false);
 }
 
 // === Test function main definition ===
@@ -5242,23 +5261,6 @@ TEST_F(ParserScannerTest, ZeroDivision3) {
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_DIVISION_BY_ZERO);
 }
-
-TEST_F(ParserScannerTest, ZeroDivision4) {
-    std::string inputStr = \
-        "package main\n"
-        "\n"
-        "func main() {\n"
-        "    b := 7\n"
-        "    a := 4 / (b - foo(5))\n"
-        "}\n"
-        "func foo(i int) int {\n"
-        "    return i + 2\n"
-        "}\n";
-
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_DIVISION_BY_ZERO);
-}
-
-// === Test MULTIVAL definition ===
 
 TEST_F(ParserScannerTest, MultivalDefinition1) {
     std::string inputStr = \
