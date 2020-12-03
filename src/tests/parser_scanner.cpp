@@ -3944,6 +3944,19 @@ TEST_F(ParserScannerTest, UnaryOperators13) {
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
+TEST_F(ParserScannerTest, UnaryOperators14) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        " foo(-1)\n"
+        "}\n"
+        "func foo(i int) {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
 // === Test expressions in for loops ===
 
 TEST_F(ParserScannerTest, ForLoops1) {
