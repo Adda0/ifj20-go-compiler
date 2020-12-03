@@ -703,6 +703,12 @@ bool reduce_function(PrecedenceStack *stack, PrecedenceNode *start) {
 
     char *func_name = mstr_content(&start->rptr->data.data.str_val);
     STItem *function = symtable_find(function_table, func_name);
+    STItem *var = symtable_stack_find_symbol(&symtable_stack, func_name);
+    if (var != NULL) {
+        stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+                       "Line %u: function %s shadowed by a variable\n", start->rptr->data.context.line_num, func_name);
+        return false;
+    }
     ASTNode *params = ast_node_list(params_count);
     if (params == NULL) {
         return false;
