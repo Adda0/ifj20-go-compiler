@@ -21,7 +21,7 @@
 #define out_nnl(...) printf(__VA_ARGS__)
 #define out_nl() putchar('\n')
 
-#define is_direct_ast(ast) (ast->actionType > AST_VALUE)
+#define is_direct_ast(ast) ((ast)->actionType > AST_VALUE)
 
 #if TCG_DEBUG
 #define dbg(msg, ...) printf("# --> "); printf((msg),##__VA_ARGS__); putchar('\n'); fflush(stdout)
@@ -293,16 +293,29 @@ void generate_internal_inputx(const char *expType, CFStatement *stat) {
 }
 
 void generate_internal_int2float(ASTNode *argAst, CFStatement *stat) {
-    generate_expression_ast_result(argAst, stat);
+    if (argAst->actionType != AST_LIST || argAst->dataCount != 1) {
+        return;
+    }
+
+    generate_expression_ast_result(argAst->data[0].astPtr, stat);
     out("INT2FLOATS");
 }
 
 void generate_internal_float2int(ASTNode *argAst, CFStatement *stat) {
-    generate_expression_ast_result(argAst, stat);
+    if (argAst->actionType != AST_LIST || argAst->dataCount != 1) {
+        return;
+    }
+
+    generate_expression_ast_result(argAst->data[0].astPtr, stat);
     out("FLOAT2INTS");
 }
 
 void generate_internal_len(ASTNode *argAst, CFStatement *stat) {
+    if (argAst->actionType != AST_LIST || argAst->dataCount != 1) {
+        return;
+    }
+    argAst = argAst->data[0].astPtr;
+
     if (argAst->actionType == AST_ID || argAst->actionType == AST_CONST_STRING) {
         out_nnl("STRLEN %s ", REG_1);
         print_var_name_or_const(argAst, stat);
@@ -324,10 +337,10 @@ void generate_internal_substr(ASTNode *argAst, CFStatement *stat) {
     // move str len to REG_1
     if (is_direct_ast(strArg)) {
         out_nnl("STRLEN %s ", REG_1);
-        print_var_name_or_const(argAst, stat);
+        print_var_name_or_const(strArg, stat);
         out_nl();
     } else {
-        generate_expression_ast_result(argAst, stat);
+        generate_expression_ast_result(strArg, stat);
         out("POPS %s", REG_1);
         out_nnl("STRLEN %s %s", REG_1, REG_1);
     }
@@ -861,10 +874,21 @@ bool generate_logic_expression_assignment(ASTNode *exprAst, CFStatement *stat, c
 
     generate_logic_expression_tree(exprAst, stat, mstr_content(&trueLabelStr), mstr_content(&falseLabelStr));
     out("LABEL %s", mstr_content(&trueLabelStr));
-    out("MOVE %s bool@true", targetVarName);
+    if (targetVarName == NULL) {
+        out("PUSHS bool@true");
+    } else {
+        out("MOVE %s bool@true", targetVarName);
+    }
+
     out("JUMP $%s_%i_end", stat->parentFunction->name, currentFunction.jumpingExprCounter);
+
     out("LABEL %s", mstr_content(&falseLabelStr));
-    out("MOVE %s bool@false", targetVarName);
+    if (targetVarName == NULL) {
+        out("PUSHS bool@false");
+    } else {
+        out("MOVE %s bool@false", targetVarName);
+    }
+
     out("LABEL $%s_%i_end", stat->parentFunction->name, currentFunction.jumpingExprCounter);
     currentFunction.jumpingExprCounter++;
 
@@ -1043,6 +1067,9 @@ void generate_return_statement(CFStatement *stat) {
             ASTNode *ast = retAstList->data[retAstList->dataCount - i - 1].astPtr;
 
             if (!ast_infer_node_type(ast)) {
+                stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION,
+                               "Types of values in return statement of function '%s' couldn't be inferred.\n",
+                               stat->parentFunction->name);
                 return;
             }
 
@@ -1053,7 +1080,12 @@ void generate_return_statement(CFStatement *stat) {
                 return;
             }
 
-            generate_expression_ast_result(ast, stat);
+            if (ast->actionType >= AST_LOGIC && ast->actionType < AST_CONTROL) {
+                generate_logic_expression_assignment(ast, stat, REG_1);
+            } else {
+                generate_expression_ast_result(ast, stat);
+            }
+
             argNode = argNode->next;
         }
     } else {
@@ -1283,15 +1315,24 @@ void generate_function(CFFunction *fun) {
     struct cfgraph_program_structure *prog = get_program();
     STItem *funcSymbol = symtable_find(prog->globalSymtable, fun->name);
     if (funcSymbol->data.reference_counter == 0) {
-        dbg("Function not used, omitting");
+        dbg("Function not used");
         stderr_message("codegen", WARNING, COMPILER_RESULT_SUCCESS, "Function '%s' is not used anywhere.\n",
                        fun->name);
-        return;
+        //return;
     }
 
     if (is_statement_empty(fun->rootStatement)) {
-        dbg("Function empty, omitting");
         stderr_message("codegen", WARNING, COMPILER_RESULT_SUCCESS, "Function '%s' is empty.\n", fun->name);
+
+        if (fun->returnValuesCount > 0 && fun->returnValues->variable.name == NULL) {
+            stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
+                           "Empty function with parameters is missing a return statement.");
+            return;
+        }
+
+        out("LABEL %s", fun->name);
+        dbg("Function empty");
+        out("RETURN");
         return;
     }
 
@@ -1374,7 +1415,6 @@ void tcg_generate() {
     if (is_statement_empty(prog->mainFunc->rootStatement)) {
         stderr_message("codegen", WARNING, COMPILER_RESULT_SUCCESS, "Empty main function.\n");
         out("EXIT int@0");
-        return;
     }
 
     if (generateMainAsFunc) {
