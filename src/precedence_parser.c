@@ -479,6 +479,7 @@ bool reduce_assign(PrecedenceStack *stack, PrecedenceNode *start) {
                     return false;
                 }
 
+                mstr_free(&current->data.data.str_val);
                 current->data.ast->data[0].symbolTableItemPtr = &id_st_item->data;
                 ast_push_to_list(id_list, current->data.ast);
             } else {
@@ -549,6 +550,7 @@ bool reduce_define(PrecedenceStack *stack, PrecedenceNode *start) {
                         newly_defined++;
                     }
                 }
+                mstr_free(&current->data.data.str_val);
                 ast_push_to_list(id_list, current->data.ast);
             } else {
                 ast_push_to_list(expression_list, current->data.ast);
@@ -617,6 +619,7 @@ bool reduce_modify_assign(PrecedenceStack *stack, PrecedenceNode *start) {
     assign_node->left = target->data.ast;
     assign_node->right = op_node;
 
+    mstr_free(&start->rptr->data.data.str_val);
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .ast=assign_node};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
@@ -656,6 +659,10 @@ bool reduce_id(PrecedenceStack *stack, PrecedenceNode *start) {
         }
 
         new_node->data[0].symbolTableItemPtr = current_symbol;
+    }
+    if (right_hand_side) {
+        // no longer necessary to store ID of RHS variable
+        mstr_free(&start->rptr->data.data.str_val);
     }
     new_nonterminal.ast = new_node;
     precedence_stack_pop_from(stack, start);
@@ -748,6 +755,7 @@ bool reduce_function(PrecedenceStack *stack, PrecedenceNode *start) {
             current = current->rptr;
         }
     }
+    mstr_free(&start->rptr->data.data.str_val);
     ASTNode *func_call = ast_node_func_call(&function->data, params);
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .ast=func_call};
     precedence_stack_pop_from(stack, start);
