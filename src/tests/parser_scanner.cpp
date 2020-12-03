@@ -5519,3 +5519,19 @@ TEST_F(ParserScannerTest, InvalidFunctionCallWithDefine) {
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE);
 }
+
+TEST_F(ParserScannerTest, MultivalKrivkaTest) {
+    std::string inputStr = \
+        "package main\n"
+        "func main() {\n"
+        "    i := 3\n"
+        "    j := 2\n"
+        "    for i, j := 1, j; i<5; i = i+1 {  // j := j inicializuje novou proměnnou j hodnotou proměnné j z 3. řádku\n"
+        "        print(\"V cyklu: \", i, \" \", j, \"\\n\")\n"
+        "        j = j + 1\n"
+        "    }\n"
+        "    print(\"Po cyklu: \", i, \" \", j, \"\\n\")  // zde se vypíši původní hodnoty i a j\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
