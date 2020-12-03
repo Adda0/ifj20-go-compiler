@@ -5341,3 +5341,66 @@ TEST_F(ParserScannerTest, MultivalDefinition2) {
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
 }
+
+TEST_F(ParserScannerTest, RedefinitionOfFuncParam1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a(1)\n"
+        "}\n"
+        "func a(i int) {\n"
+        "    i = 2\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, RedefinitionOfFuncParam2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a(1)\n"
+        "}\n"
+        "func a(i int) {\n"
+        "    i := 2\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
+}
+
+TEST_F(ParserScannerTest, RedefinitionOfFuncParam3) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a(1)\n"
+        "}\n"
+        "func a(i int) {\n"
+        "    i = 2\n"
+        "    if true {\n"
+        "        i := true\n"
+        "    }\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, RedefinitionOfFuncParam4) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a(1)\n"
+        "}\n"
+        "func a(i int) {\n"
+        "    i = 2\n"
+        "    if true {\n"
+        "        i := true\n"
+        "    }\n"
+        "    b := i + 3\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
