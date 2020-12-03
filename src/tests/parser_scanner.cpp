@@ -5535,3 +5535,58 @@ TEST_F(ParserScannerTest, MultivalKrivkaTest) {
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
+
+TEST_F(ParserScannerTest, Brackets1) {
+    std::string inputStr = \
+        "package main\n"
+        "func main() {\n"
+        "    (i := 3)\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, Brackets2) {
+    std::string inputStr = \
+        "package main\n"
+        "func main() {\n"
+        "    (i) := 3\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, Brackets3) {
+    std::string inputStr = \
+        "package main\n"
+        "func main() {\n"
+        "    (i :=) 3\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
+TEST_F(ParserScannerTest, Brackets4) {
+    std::string inputStr = \
+        "package main\n"
+        "func main() {\n"
+        "    i := (foo())\n"
+        "}\n"
+        "func foo() int {\n"
+        "    return 4\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, Brackets5) {
+    std::string inputStr = \
+        "package main\n"
+        "func main() {\n"
+        "    (foo())\n"
+        "}\n"
+        "func foo() {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
