@@ -198,6 +198,41 @@ TEST_F(ParserScannerTest, RedefinitionInFrame) {
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
 }
 
+TEST_F(ParserScannerTest, RedefinitionOfFuncInFrame1) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a()\n"
+        "    a := 1\n"
+        "    if a == 1 {\n"
+        "    a := true\n"
+        "    }\n"
+        "}\n"
+        "func a() {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ParserScannerTest, RedefinitionOfFuncInFrame2) {
+    std::string inputStr = \
+        "package main\n"
+        "\n"
+        "func main() {\n"
+        "    a()\n"
+        "    a := 1\n"
+        "    if a == 1 {\n"
+        "    a := true\n"
+        "    }\n"
+        "    a()\n"
+        "}\n"
+        "func a() {\n"
+        "}\n";
+
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+}
+
 TEST_F(ParserScannerTest, PackageTypo) {
     std::string inputStr = \
         "pckage main\n"
