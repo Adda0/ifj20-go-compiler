@@ -616,7 +616,7 @@ bool reduce_modify_assign(PrecedenceStack *stack, PrecedenceNode *start) {
     if (target_node == NULL) {
         return false;
     }
-    assign_node->left = target->data.ast;
+    assign_node->left = target_node;
     assign_node->right = op_node;
 
     mstr_free(&start->rptr->data.data.str_val);
