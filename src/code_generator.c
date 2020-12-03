@@ -969,8 +969,6 @@ bool generate_logic_expression_assignment(ASTNode *exprAst, CFStatement *stat, c
 }
 
 void generate_assignment_for_varname(const char *varName, CFStatement *stat, ASTNode *value) {
-    ASTNodeData data = value->data[0];
-
     if (varName == NULL) {
         if (value->actionType >= AST_LOGIC && value->actionType < AST_CONTROL) {
             generate_logic_expression_assignment(value, stat, REG_1);
@@ -986,16 +984,16 @@ void generate_assignment_for_varname(const char *varName, CFStatement *stat, AST
     switch (value->actionType) {
         // If the right side is a CONST or ID, generate a simple MOVE
         case AST_CONST_INT:
-        out("MOVE %s int@%li", varName, data.intConstantValue);
+        out("MOVE %s int@%li", varName, value->data[0].intConstantValue);
             break;
         case AST_CONST_FLOAT:
-        out("MOVE %s float@%a", varName, data.floatConstantValue);
+        out("MOVE %s float@%a", varName, value->data[0].floatConstantValue);
             break;
         case AST_CONST_BOOL:
-        out("MOVE %s bool@%s", varName, data.boolConstantValue ? "true" : "false");
+        out("MOVE %s bool@%s", varName, value->data[0].boolConstantValue ? "true" : "false");
             break;
         case AST_CONST_STRING: {
-            char *s = convert_to_target_string_form(data.stringConstantValue);
+            char *s = convert_to_target_string_form(value->data[0].stringConstantValue);
             out("MOVE %s string@%s", varName, s);
             free(s);
         }
@@ -1438,8 +1436,10 @@ void generate_function(CFFunction *fun) {
     // Return from the function will be generated from the first RETURN statement
     if (!fun->terminated) {
         if (fun->returnValuesCount == 0) {
+            ASTNode *astBackup = fun->rootStatement->data.bodyAst;
             fun->rootStatement->data.bodyAst = NULL;
             generate_return_statement(fun->rootStatement);
+            fun->rootStatement->data.bodyAst = astBackup;
         } else {
             stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
                            "Function '%s' is missing a return statement.\n", fun->name);

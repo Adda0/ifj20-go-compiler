@@ -399,7 +399,7 @@ static void clean_ast(ASTNode *node) {
     free(node);
 }
 
-static void clean_stat(CFStatement *stat) {
+static void clean_stat(CFStatement *stat, SymbolTable *parentTable) {
     if (stat == NULL) return;
     switch (stat->statementType) {
         case CF_BASIC:
@@ -407,30 +407,48 @@ static void clean_stat(CFStatement *stat) {
             clean_ast(stat->data.bodyAst);
             break;
         case CF_IF:
+            if (stat->data.ifData == NULL) break;
+
             clean_ast(stat->data.ifData->conditionalAst);
-            clean_stat(stat->data.ifData->thenStatement);
-            clean_stat(stat->data.ifData->elseStatement);
+
+            if (stat->data.ifData->thenStatement != NULL) {
+                symtable_free(stat->data.ifData->thenStatement->localSymbolTable);
+                clean_stat(stat->data.ifData->thenStatement, stat->data.ifData->thenStatement->localSymbolTable);
+            }
+
+            if (stat->data.ifData->elseStatement != NULL) {
+                if (stat->data.ifData->elseStatement->statementType == CF_IF) {
+                    clean_stat(stat->data.ifData->elseStatement, stat->data.ifData->elseStatement->localSymbolTable);
+                } else {
+                    symtable_free(stat->data.ifData->elseStatement->localSymbolTable);
+                    clean_stat(stat->data.ifData->elseStatement, stat->data.ifData->elseStatement->localSymbolTable);
+                }
+            }
+
+            free(stat->data.ifData);
             break;
         case CF_FOR:
+            if (stat->data.forData == NULL) break;
+
             clean_ast(stat->data.forData->conditionalAst);
             clean_ast(stat->data.forData->definitionAst);
             clean_ast(stat->data.forData->afterthoughtAst);
-            clean_stat(stat->data.forData->bodyStatement);
+
+            if (stat->data.forData->bodyStatement != NULL) {
+                symtable_free(stat->data.forData->bodyStatement->localSymbolTable);
+                clean_stat(stat->data.forData->bodyStatement, stat->data.forData->bodyStatement->localSymbolTable);
+            }
+
+            free(stat->data.forData);
             break;
     }
 
-    if (stat->localSymbolTable != NULL && stat->localSymbolTable != stat->parentFunction->symbolTable) {
+    if (stat->localSymbolTable != NULL && stat->localSymbolTable != parentTable) {
         symtable_free(stat->localSymbolTable);
-        if (stat->followingStatement != NULL && stat->followingStatement->localSymbolTable == stat->localSymbolTable) {
-            stat->followingStatement->localSymbolTable = NULL;
-        }
-    } else {
-        if (stat->followingStatement != NULL) {
-            stat->followingStatement->localSymbolTable = NULL;
-        }
     }
-
-    clean_stat(stat->followingStatement);
+    clean_stat(stat->followingStatement, parentTable);
+    //static int a = 0;
+    //fprintf(stderr, "Freeing stat #%i, type %i, ptr %p\n", a++, stat->statementType, stat);
     free(stat);
 }
 
@@ -443,19 +461,27 @@ static void clean_varlist(CFVarListNode *begin) {
 }
 
 void cf_clean_all() {
+    if (program == NULL) return;
+
     CFFuncListNode *n = program->functionList;
 
     while (n != NULL) {
-        symtable_free(n->fun.symbolTable);
-        clean_stat(n->fun.rootStatement);
+        if (n->fun.symbolTable != NULL) {
+            symtable_free(n->fun.symbolTable);
+        }
+
+        clean_stat(n->fun.rootStatement, n->fun.symbolTable);
         clean_varlist(n->fun.arguments);
         clean_varlist(n->fun.returnValues);
         CFFuncListNode *toFree = n;
         n = n->next;
+        free((void *) toFree->fun.name);
         free(toFree);
     }
 
-    symtable_free(program->globalSymtable);
+    if (program->globalSymtable != NULL) {
+        symtable_free(program->globalSymtable);
+    }
     free(program);
 }
 
