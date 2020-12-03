@@ -1732,13 +1732,13 @@ TEST_F(ParserScannerTest, EOLInFunctionCall20) {
         " a := 6\n"
         " var := 6\n"
         " var2 := 6\n"
-        "    foo(((a + bar(7, 42, bar(54 / 6, 6-9, true)) + (-9)) < 0) && !true , var * 8 - (var2))\n"
+        "    foo(((a + bar(7, bar(54 / 6, 6-9)) + (-9)) < 0) && !true , var * 8 - (var2))\n"
         "}\n"
         "\n"
         "func foo(boolean bool, integer int) {\n"
         "}\n"
-        "func bar(integer int, integer2 int) (boolean bool) {\n"
-        "    return true\n"
+        "func bar(integer int, integer2 int) (i int) {\n"
+        "    return integer + integer2\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -1858,6 +1858,7 @@ TEST_F(ParserScannerTest, ReturnFormat3) {
         "}\n"
         "\n"
         "func foo(boolean bool) bool {\n"
+        "    return true\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -2185,6 +2186,7 @@ TEST_F(ParserScannerTest, ReturnFormat19) {
         "}\n"
         "\n"
         "func foo(boolean bool) int {\n"
+        "    return 1\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION, false);
@@ -2760,26 +2762,20 @@ TEST_F(ParserScannerTest, DefineToVoidVariable1) {
     std::string inputStr = \
         "package main\n"
         "func main() {\n"
-        "   _ := foo()\n"
-        "}\n"
-        "func foo() bool {\n"
-        "    return true\n"
+        "   _ := true\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL); //TODO which error code should be returned?
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE); //TODO which error code should be returned?
 }
 
 TEST_F(ParserScannerTest, DefineToVoidVariable2) {
     std::string inputStr = \
         "package main\n"
         "func main() {\n"
-        "   _, _, _ := foo()\n"
-        "}\n"
-        "func foo() bool, bool, bool {\n"
-        "    return true, true, false\n"
+        "   _, _, _ := true, true, true\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
 }
 
 TEST_F(ParserScannerTest, VoidVariableInExpression) {
@@ -3238,7 +3234,7 @@ TEST_F(ParserScannerTest, FunctionCall11) {
         "    return 1, 1 + 2\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE);
 }
 
 TEST_F(ParserScannerTest, FunctionCall12) {
@@ -3309,8 +3305,8 @@ TEST_F(ParserScannerTest, FunctionCall16) {
         "    a, b := true, false\n"
         "    a, _, _ = foo((a && b))\n"
         "}\n"
-        "func foo(boolean bool) (int, int, string) {\n"
-        "    return 0, 1 + 2, \"\"\n"
+        "func foo(boolean bool) (bool, int, string) {\n"
+        "    return true, 1 + 2, \"\"\n"
         "}\n";
 
     ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
@@ -3373,7 +3369,7 @@ TEST_F(ParserScannerTest, FunctionCall20) {
         "    return boolean, 1 + 2, \"\"\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL);
+    ComplexTest(inputStr, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION);
 }
 
 TEST_F(ParserScannerTest, FunctionCall21) {
@@ -3381,7 +3377,7 @@ TEST_F(ParserScannerTest, FunctionCall21) {
         "package main\n"
         "\n"
         "func main() {\n"
-        "    +5 - (-5) / !foo(a && b)\n"
+        "    a := +5 - (-5) / !foo(true && false)\n"
         "}\n"
         "func foo(boolean bool) (bool) {\n"
         "    return boolean\n"
@@ -3617,7 +3613,7 @@ TEST_F(ParserScannerTest, EOLInExpression5) {
         "package main\n"
         "\n"
         "func main() {\n"
-        " a := \n foo()\n"
+        " a := \n 3\n"
         "}\n"
         "func foo() {\n"
         "}\n";
@@ -4111,7 +4107,7 @@ TEST_F(ParserScannerTest, ExpressionInIfStatements3) {
         "\n"
         "func main() {\n"
         "    a := 1\n"
-        "    if a := 3 {\n"
+        "    if a = 3 {\n"
         "        foo := 42\n"
         "    } else if b {\n"
         "        bar := 1\n"
