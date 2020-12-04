@@ -900,6 +900,12 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
                        "Line %llu, col %llu: String wasn't properly ended, when EOF was read: '%s'. \n",
                        line_num, char_num, mstr_content(mutable_string));
+                        *automaton_state = STATE_STRING_INVALID;
+            } else if ((int)read_char <= 31) {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
+                       "Line %llu, col %llu: Unexpected character in a string following '%s'. \n",
+                       line_num, char_num, mstr_content(mutable_string));
+                       *automaton_state = STATE_STRING_INVALID;
             } else {
                 mstr_append(mutable_string, read_char);
             }

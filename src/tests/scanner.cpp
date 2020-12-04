@@ -1726,3 +1726,67 @@ TEST_F(ScannerTest, Colon) {
 
     ComplexTest(inputStr, expectedResult, COMPILER_RESULT_ERROR_LEXICAL);
 }
+
+TEST_F(ScannerTest, InvalidCharacter1) {
+    LEX("$ ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, InvalidCharacter2) {
+    std::string inputStr = "func main($$) { \n }";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET),
+    };
+
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, InvalidCharacter3) {
+    std::string inputStr = "func main() ${$ \n }";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(TOKEN_ID, {.strVal = "main"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET),
+    };
+
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, InvalidCharacter4) {
+    std::string inputStr = "func $ma$in() { \n }";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_KEYWORD, {.kw = KEYWORD_FUNC}),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+            ExpectedToken(TOKEN_ID, {.strVal = "ma"}),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+            ExpectedToken(TOKEN_ID, {.strVal = "in"}),
+            ExpectedToken(TOKEN_LEFT_BRACKET),
+            ExpectedToken(TOKEN_RIGHT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_LEFT_BRACKET),
+            ExpectedToken(TOKEN_CURLY_RIGHT_BRACKET),
+    };
+
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, InvalidCharacter5) {
+    LEX("\"str\x1F\" ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, InvalidCharacter6) {
+    LEX("\"str\x1A\" ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING, COMPILER_RESULT_ERROR_LEXICAL);
+}
