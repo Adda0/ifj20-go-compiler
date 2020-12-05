@@ -1104,6 +1104,7 @@ void generate_assignment(ASTNode *asgAst, CFStatement *stat) {
                 MutableString varName = make_var_name(
                         asgAst->left->data[i].astPtr->data[0].symbolTableItemPtr->identifier, stat, false);
                 out("POPS %s", mstr_content(&varName));
+                asgAst->left->data[i].astPtr->data[0].symbolTableItemPtr->data.var_data.defined = true;
                 mstr_free(&varName);
             }
 
