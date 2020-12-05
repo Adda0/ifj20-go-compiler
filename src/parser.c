@@ -808,7 +808,7 @@ int ret_type(STItem *current_function) {
             syntax_ok();
         case TOKEN_LEFT_BRACKET:
             // rule <ret_type> -> ( <ret_type_inner> )
-            check_new_token(EOL_FORBIDDEN);
+            check_new_token(EOL_OPTIONAL);
             check_nonterminal(ret_type_inner(current_function));
             if (token.type != TOKEN_RIGHT_BRACKET) {
                 token_error("expected ) after multiple function return types, got %s\n");
@@ -873,7 +873,7 @@ int execution() {
                 return COMPILER_RESULT_ERROR_INTERNAL;
             }
         }
-        check_new_token(EOL_FORBIDDEN);
+        check_new_token(EOL_OPTIONAL);
         check_nonterminal(params(function, false, already_found));
 
         if (token.type != TOKEN_RIGHT_BRACKET) {
@@ -1008,7 +1008,7 @@ int program() {
         token_error("expected package keyword at the beginning of file, got %s\n");
         syntax_error();
     }
-    check_new_token(EOL_FORBIDDEN);
+    check_new_token(EOL_OPTIONAL);
     if (token.type != TOKEN_ID || strcmp("main", mstr_content(&token.data.str_val)) != 0) {
         token_error("expected main identifier after package keyword, got %s\n");
         syntax_error();
