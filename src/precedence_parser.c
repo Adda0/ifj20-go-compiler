@@ -703,6 +703,7 @@ bool reduce_float(PrecedenceStack *stack, PrecedenceNode *start) {
 bool reduce_string(PrecedenceStack *stack, PrecedenceNode *start) {
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_STRING, .data=start->rptr->data.data,
             .ast=ast_leaf_consts(mstr_content(&start->rptr->data.data.str_val)), .context=start->rptr->data.context};
+    mstr_free(&start->rptr->data.data.str_val);
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }

@@ -866,6 +866,7 @@ int execution() {
             check_cf(cf_make_function(mstr_content(&token.data.str_val)));
         }
 
+        clear_token();
         check_new_token(EOL_FORBIDDEN);
         if (token.type != TOKEN_LEFT_BRACKET) {
             token_error("expected ( after function identifier, got %s\n");
