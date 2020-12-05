@@ -271,6 +271,7 @@ int params_n(STItem *current_function, bool ret_type, bool already_found, STPara
                     var->data.data.var_data.is_argument_variable = true;
                 }
             }
+            mstr_free(&id);
             return params_n(current_function, ret_type, already_found, next_param);
         default:
             token_error("expected ) or , when parsing parameters, got %s\n");
@@ -344,6 +345,7 @@ int params(STItem *current_function, bool ret_type, bool already_found) {
                     var->data.data.var_data.is_argument_variable = true;
                 }
             }
+            mstr_free(&id);
             return params_n(current_function, ret_type, already_found, next_param);
         default:
             token_error("expected ) or identifier when parsing parameters, got %s\n");
