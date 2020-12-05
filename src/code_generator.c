@@ -291,7 +291,7 @@ void generate_print(ASTNode *argAstList, CFStatement *stat) {
     }
 }
 
-void generate_internal_inputx(const char *expType, CFStatement *stat) {
+void generate_internal_inputx(const char *expType, CFStatement *stat, const char *defaultValue) {
     unsigned counter = currentFunction.jumpingExprCounter++;
 
     // Read value into REG_1
@@ -310,7 +310,7 @@ void generate_internal_inputx(const char *expType, CFStatement *stat) {
     // Type doesn't match -> push default value of target type and 1
     out("LABEL $%s_input%i_error", stat->parentFunction->name, counter);
     out("PUSHS int@1");
-    out("PUSHS %s@", expType);
+    out("PUSHS %s@%s", expType, defaultValue);
 
     out("LABEL $%s_input%i_end", stat->parentFunction->name, counter);
 }
@@ -596,16 +596,16 @@ bool generate_internal_func_call(ASTNode *funcCallAst, CFStatement *stat) {
         generate_internal_substr(args, stat);
         return true;
     } else if (s == symbs.inputi) {
-        generate_internal_inputx("int", stat);
+        generate_internal_inputx("int", stat, "0");
         return true;
     } else if (s == symbs.inputb) {
-        generate_internal_inputx("bool", stat);
+        generate_internal_inputx("bool", stat, "false");
         return true;
     } else if (s == symbs.inputs) {
-        generate_internal_inputx("string", stat);
+        generate_internal_inputx("string", stat, "");
         return true;
     } else if (s == symbs.inputf) {
-        generate_internal_inputx("float", stat);
+        generate_internal_inputx("float", stat, "0x0p+0");
         return true;
     }
 
