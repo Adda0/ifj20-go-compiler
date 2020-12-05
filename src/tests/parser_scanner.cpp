@@ -574,7 +574,7 @@ TEST_F(ParserScannerTest, EOLInFuncDefinitionForbidden3) {
         "func main(\n) {\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
 TEST_F(ParserScannerTest, EOLInFuncDefinitionForbidden4) {
@@ -2044,7 +2044,7 @@ TEST_F(ParserScannerTest, ReturnFormat9) {
         "    return 5\n"
         "}\n";
 
-    ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
 }
 
 TEST_F(ParserScannerTest, ReturnFormat10) {
