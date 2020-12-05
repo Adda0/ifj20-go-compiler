@@ -553,7 +553,8 @@ bool reduce_define(PrecedenceStack *stack, PrecedenceNode *start) {
         if (current->data.type == SYMB_NONTERMINAL) {
             if (lhs) {
                 char *id = mstr_content(&current->data.data.str_val);
-                if (symtable_find(table, id) == NULL) {
+                STItem *item = symtable_find(table, id);
+                if (item == NULL) {
                     if (strcmp("_", id) != 0) {
                         STItem *new = symtable_add(table, mstr_content(&current->data.data.str_val), ST_SYMBOL_VAR);
                         if (new == NULL) {
@@ -562,6 +563,8 @@ bool reduce_define(PrecedenceStack *stack, PrecedenceNode *start) {
                         current->data.ast->data[0].symbolTableItemPtr = &new->data;
                         newly_defined++;
                     }
+                } else {
+                    current->data.ast->data[0].symbolTableItemPtr = &item->data;
                 }
                 mstr_free(&current->data.data.str_val);
                 ast_push_to_list(id_list, current->data.ast);
@@ -589,7 +592,8 @@ bool reduce_define(PrecedenceStack *stack, PrecedenceNode *start) {
 }
 
 bool reduce_modify_assign(PrecedenceStack *stack, PrecedenceNode *start) {
-    if (symtable_stack_find_symbol(&symtable_stack, mstr_content(&start->rptr->data.data.str_val)) == NULL) {
+    STItem *target_symbol = symtable_stack_find_symbol(&symtable_stack, mstr_content(&start->rptr->data.data.str_val));
+    if (target_symbol == NULL) {
         stderr_message("precedence_parser", ERROR,
                        COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE, "Line %u: "
                        "assignment to undefined variable \n", start->rptr->data.context.line_num);
@@ -618,6 +622,7 @@ bool reduce_modify_assign(PrecedenceStack *stack, PrecedenceNode *start) {
     if (op_node == NULL) {
         return false;
     }
+    target->data.ast->data[0].symbolTableItemPtr = &target_symbol->data;
     op_node->left = target->data.ast;
     op_node->right = to_add->data.ast;
 
@@ -625,11 +630,7 @@ bool reduce_modify_assign(PrecedenceStack *stack, PrecedenceNode *start) {
     if (assign_node == NULL) {
         return false;
     }
-    ASTNode *target_node = ast_node_data(AST_ID, 1);
-    if (target_node == NULL) {
-        return false;
-    }
-    target_node->data[0].symbolTableItemPtr = target->data.ast->data[0].symbolTableItemPtr;
+    ASTNode *target_node = ast_leaf_id(&target_symbol->data);
     if (target_node == NULL) {
         return false;
     }
@@ -651,9 +652,10 @@ bool reduce_brackets(PrecedenceStack *stack, PrecedenceNode *start) {
 bool reduce_id(PrecedenceStack *stack, PrecedenceNode *start) {
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_UNKNOWN, .data=start->rptr->data.data,
                                    .context=start->rptr->data.context};
-    STItem *item = symtable_stack_find_symbol(&symtable_stack, mstr_content(&start->rptr->data.data.str_val));
+    STItem *item = NULL;
     if (right_hand_side) {
         // Variables on RHS must be already defined
+        item = symtable_stack_find_symbol(&symtable_stack, mstr_content(&start->rptr->data.data.str_val));
         if (item == NULL) {
             stderr_message("precedence_parser", ERROR,
                            COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE, "Line %u: "
@@ -670,11 +672,10 @@ bool reduce_id(PrecedenceStack *stack, PrecedenceNode *start) {
         new_node = ast_leaf_black_hole();
     } else {
         STSymbol *current_symbol = item == NULL ? NULL : &item->data;
-        new_node = ast_node_data(AST_ID, 1);
+        new_node = ast_leaf_id(current_symbol);
         if (new_node == NULL) {
             return false;
         }
-        new_node->data[0].symbolTableItemPtr = current_symbol;
     }
     if (right_hand_side) {
         // no longer necessary to store ID of RHS variable
