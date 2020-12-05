@@ -29,7 +29,8 @@ int main() {
     if (compiler_result == COMPILER_RESULT_SUCCESS) {
         optimiser_optimise();
         tcg_generate();
-        cf_clean_all();
     }
+
+    cf_clean_all();
     return compiler_result;
 }

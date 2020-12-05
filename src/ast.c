@@ -57,7 +57,6 @@ ASTNode *ast_node_list(unsigned dataCount) {
 }
 
 ASTNode *ast_leaf_id(STSymbol *idSymbolPtr) {
-    idSymbolPtr->reference_counter++;
     return ast_leaf_single_data(AST_ID, (ASTNodeData) {.symbolTableItemPtr = idSymbolPtr});
 }
 
@@ -94,7 +93,9 @@ ASTNode *ast_leaf_constf(double f) {
 }
 
 ASTNode *ast_leaf_consts(const char *s) {
-    return ast_leaf_single_data(AST_CONST_STRING, (ASTNodeData) {.stringConstantValue = s});
+    char *sCopy = malloc(strlen(s) + 1);
+    strcpy(sCopy, s);
+    return ast_leaf_single_data(AST_CONST_STRING, (ASTNodeData) {.stringConstantValue = sCopy});
 }
 
 ASTNode *ast_leaf_constb(bool b) {
@@ -244,21 +245,21 @@ bool check_binary_node_children(ASTNode *node) {
         return false;
     }
 
-    if (node->left->inheritedDataType == CF_UNKNOWN) {
+    //if (node->left->inheritedDataType == CF_UNKNOWN) {
         if (!ast_infer_node_type(node->left)) {
             node->inheritedDataType = CF_UNKNOWN_UNINFERRABLE;
             // TODO: error code
             return false;
         }
-    }
+    //}
 
-    if (node->right->inheritedDataType == CF_UNKNOWN) {
+    //if (node->right->inheritedDataType == CF_UNKNOWN) {
         if (!ast_infer_node_type(node->right)) {
             node->inheritedDataType = CF_UNKNOWN_UNINFERRABLE;
             // TODO: error code
             return false;
         }
-    }
+    //}
 
     if (node->left->inheritedDataType == CF_BLACK_HOLE) {
         if (node->actionType == AST_ASSIGN || node->actionType == AST_DEFINE) {
@@ -366,20 +367,26 @@ ASTDataType check_nodes_matching(ASTNode *left, ASTNode *right, ASTNodeType root
 
 #define ast_check_arithmetic(node) \
     if ((node)->inheritedDataType != CF_INT && (node)->inheritedDataType != CF_FLOAT && (node)->inheritedDataType != CF_UNKNOWN) { \
-        ast_error = AST_ERROR_INVALID_CHILDREN_TYPE_FOR_OP; \
+        stderr_message("ast", ERROR, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION,                                     \
+            "Unexpected or incompatible operands for arithmetic operator.\n");                                                     \
+        ast_error = AST_ERROR_INVALID_CHILDREN_TYPE_FOR_OP;                                                                        \
         ast_uninferrable(node); \
 }
 
 #define ast_check_arithmetic_or_str(node) \
-    if ((node)->inheritedDataType != CF_INT && (node)->inheritedDataType != CF_FLOAT \
+    if ((node)->inheritedDataType != CF_INT && (node)->inheritedDataType != CF_FLOAT                \
             && (node)->inheritedDataType != CF_STRING && (node)->inheritedDataType != CF_UNKNOWN) { \
-        ast_error = AST_ERROR_INVALID_CHILDREN_TYPE_FOR_OP; \
+        stderr_message("ast", ERROR, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION,      \
+            "Unexpected or incompatible operands for arithmetic operator.\n");                          \
+        ast_error = AST_ERROR_INVALID_CHILDREN_TYPE_FOR_OP;                                         \
         ast_uninferrable(node); \
 }
 
 #define ast_check_logic(node) \
-    if ((node)->inheritedDataType != CF_BOOL && (node)->inheritedDataType != CF_UNKNOWN) { \
-        ast_error = AST_ERROR_INVALID_CHILDREN_TYPE_FOR_OP; \
+    if ((node)->inheritedDataType != CF_BOOL && (node)->inheritedDataType != CF_UNKNOWN) {     \
+        stderr_message("ast", ERROR, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION, \
+            "Unexpected or incompatible operands for arithmetic operator.\n");                 \
+        ast_error = AST_ERROR_INVALID_CHILDREN_TYPE_FOR_OP;                                    \
         ast_uninferrable(node); \
 }
 
@@ -403,7 +410,7 @@ bool assignment_inference_list_func_call(ASTNode *node) {
     }
 
     if (leftIdListNode->dataCount != funcSymb->data.func_data.ret_types_count) {
-        print_error(COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+        print_error(COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
                     "Assignment left-hand side variables don't match return values of the right-hand side function '%s'.\n",
                     funcSymb->identifier);
         // TODO: error code
@@ -427,6 +434,7 @@ bool assignment_inference_list_func_call(ASTNode *node) {
         strictInference = strictInferenceState;
 
         if (leftIdNode->inheritedDataType == CF_BLACK_HOLE) {
+            funcRetType = funcRetType->next;
             continue;
         }
 
@@ -474,7 +482,7 @@ bool assignment_inference_semantic_checks(ASTNode *node) {
 
             if (!ast_infer_node_type(leftIdNode)
                 || !ast_infer_node_type(rightValueNode)) {
-                print_error(COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+                print_error(COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION,
                             "Error deducing type for variable '%s'.\n",
                             leftIdNode->data[0].symbolTableItemPtr->identifier);
                 // TODO: error code
@@ -497,15 +505,15 @@ bool assignment_inference_semantic_checks(ASTNode *node) {
             ast_uninferrable(node);
         }
 
-        if (!ast_infer_node_type(node->left) || !ast_infer_node_type(node->right)) {
-            print_error(COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+        if (!ast_infer_node_type(node->left)) {
+            print_error(COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION,
                         "Error deducing type for variable '%s'.\n", node->left->data[0].symbolTableItemPtr->identifier);
             // TODO: error code
             ast_uninferrable(node);
         }
 
         if (!check_binary_node_children(node)) {
-            print_error(COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+            print_error(COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION,
                         "Type of left-hand side variable '%s' doesn't match its corresponding right-hand side.\n",
                         node->left->data[0].symbolTableItemPtr->identifier);
             // TODO: error code
@@ -586,7 +594,7 @@ bool func_call_inference_semantic_checks(ASTNode *node) {
 
             ASTNode *parAst = rightFuncParamsNode->data[i].astPtr;
             if (!ast_infer_node_type(parAst)) {
-                print_error(COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+                print_error(COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION,
                             "Error deducing type for the argument number %u of function '%s'.\n", i,
                             funcSymbol->identifier);
                 // TODO: error code
@@ -650,7 +658,7 @@ bool func_call_inference_semantic_checks(ASTNode *node) {
         }
 
         if (!ast_infer_node_type(rightFuncParamsNode)) {
-            print_error(COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+            print_error(COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION,
                         "Error deducing type for an argument of function '%s'.\n", funcSymbol->identifier);
             // TODO: error code
             ast_uninferrable(node);
@@ -679,9 +687,13 @@ bool ast_infer_node_type(ASTNode *node) {
         return false;
     }
 
-    if (node->inheritedDataType != CF_UNKNOWN && node->inheritedDataType != CF_NIL) {
+    // In some cases, the outer node will have a correct type (based on siblings, for example)
+    // while somewhere in the tree, there can still be an UNKNOWN function call.
+    // Without this, a lot of inference steps will be called redundantly, but at this point,
+    // it's better than having type errors. This issue should be looked into nevertheless.
+    /*if (node->inheritedDataType != CF_UNKNOWN && node->inheritedDataType != CF_NIL) {
         return true;
-    }
+    }*/
 
     switch (node->actionType) {
         case AST_ADD:
@@ -761,8 +773,9 @@ bool ast_infer_node_type(ASTNode *node) {
                 node->inheritedDataType = CF_NIL;
             } else if (node->dataCount == 1) {
                 ASTNode *innerNode = node->data[0].astPtr;
-                if (innerNode == NULL ||
-                    (innerNode->inheritedDataType == CF_UNKNOWN && !ast_infer_node_type(innerNode))) {
+                if (innerNode == NULL
+                    || (innerNode->inheritedDataType == CF_UNKNOWN_UNINFERRABLE)
+                    || (!ast_infer_node_type(innerNode))) {
                     // TODO: error code
                     ast_uninferrable(node);
                 } else {
@@ -771,10 +784,14 @@ bool ast_infer_node_type(ASTNode *node) {
             } else {
                 node->inheritedDataType = CF_MULTIPLE;
                 // Run inference for the inner trees
+                bool hasError = false;
                 for (unsigned i = 0; i < node->dataCount; i++) {
-                    ast_infer_node_type(node->data[i].astPtr);
+                    hasError |= ast_infer_node_type(node->data[i].astPtr);
                 }
+
+                return hasError;
             }
+
             return true;
 
         case AST_ID:

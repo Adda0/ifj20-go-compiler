@@ -72,7 +72,9 @@ CFFunction *cf_make_function(const char *name) {
     newNode->previous = NULL;
     CFFunction *newFunctionNode = &newNode->fun;
 
-    newFunctionNode->name = name;
+    newFunctionNode->name = malloc(strlen(name) + 1);
+    CF_ALLOC_CHECK_RN(newFunctionNode->name);
+    strcpy((char *) newFunctionNode->name, name);
 
     if (strcmp(name, "main") == 0) {
         if (program->mainFunc == NULL) {
@@ -105,7 +107,9 @@ void cf_add_argument(const char *name, CFDataType type) {
     newNode->next = n;
     newNode->previous = NULL;
 
-    newNode->variable.name = name;
+    newNode->variable.name = malloc(strlen(name) + 1);
+    strcpy((char *) newNode->variable.name, name);
+
     newNode->variable.dataType = type;
     newNode->variable.position = activeFunc->argumentsCount;
     activeFunc->argumentsCount++;
@@ -135,7 +139,13 @@ void cf_add_return_value(const char *name, CFDataType type) {
     newNode->next = n;
     newNode->previous = NULL;
 
-    newNode->variable.name = name;
+    if (name == NULL) {
+        newNode->variable.name = NULL;
+    } else {
+        newNode->variable.name = malloc(strlen(name) + 1);
+        strcpy((char *) newNode->variable.name, name);
+    }
+
     newNode->variable.dataType = type;
     newNode->variable.position = activeFunc->returnValuesCount;
     activeFunc->returnValuesCount++;
@@ -151,11 +161,25 @@ CFStatement *cf_make_next_statement(CFStatementType statementType) {
     newStat->parentStatement = activeStat;
     newStat->statementType = statementType;
 
-    if (activeStat != NULL && activeStat->localSymbolTable != NULL) {
-        newStat->localSymbolTable = activeStat->localSymbolTable;
+    if (activeStat != NULL) {
+        if (activeStat->statementType == CF_FOR) {
+            if (activeStat->parentStatement == NULL) {
+                newStat->localSymbolTable = activeFunc->symbolTable;
+            } else {
+                newStat->localSymbolTable = activeStat->parentStatement->localSymbolTable;
+            }
+        } else if (activeStat->localSymbolTable != NULL) {
+            newStat->localSymbolTable = activeStat->localSymbolTable;
+        }
+
+        if (activeStat->statementType == CF_IF && activeStat->data.ifData->elseStatement == NULL) {
+            // If this statement is an IF with no else statement, increase its popCount by one
+            // to ensure it cannot be popped into anymore
+            activeStat->popCount++;
+        }
     } else {
         newStat->localSymbolTable = activeFunc->symbolTable;
-    };
+    }
 
     if (activeFunc->rootStatement == NULL) {
         activeFunc->rootStatement = newStat;
@@ -296,8 +320,9 @@ void cf_use_ast_explicit(ASTNode *ast, CFASTTarget target) {
 
 CFStatement *cf_pop_previous_branched_statement() {
     if (activeStat == NULL) return NULL;
+
     CFStatement *n = activeStat->parentStatement;
-    while (n->statementType != CF_IF && n->statementType != CF_FOR) {
+    while (!(n->statementType == CF_IF && n->popCount < 2) && !(n->statementType == CF_FOR && n->popCount < 1)) {
         n = n->parentStatement;
 
         if (n == NULL) {
@@ -306,6 +331,7 @@ CFStatement *cf_pop_previous_branched_statement() {
     }
 
     activeStat = n;
+    n->popCount++;
     return n;
 }
 
@@ -322,6 +348,7 @@ CFStatement *cf_make_if_then_statement(CFStatementType type) {
     // Make a new statement which will be set as active
     CFStatement *newStat = cf_make_next_statement(type);
     if (newStat == NULL) return NULL; // The error has been handled
+    currentActive->popCount--;
 
     // Restore the previously active statement's follower and set the newly created one as thenStatement instead
     currentActive->followingStatement = currentFollowing;
@@ -343,6 +370,7 @@ CFStatement *cf_make_if_else_statement(CFStatementType type) {
     // Make a new statement which will be set as active
     CFStatement *newStat = cf_make_next_statement(type);
     if (newStat == NULL) return NULL; // The error has been handled
+    currentActive->popCount--;
 
     // Restore the previously active statement's follower and set the newly created one as thenStatement instead
     currentActive->followingStatement = currentFollowing;
@@ -391,7 +419,7 @@ static void clean_ast(ASTNode *node) {
     free(node);
 }
 
-static void clean_stat(CFStatement *stat) {
+static void clean_stat(CFStatement *stat, SymbolTable *parentTable) {
     if (stat == NULL) return;
     switch (stat->statementType) {
         case CF_BASIC:
@@ -399,55 +427,81 @@ static void clean_stat(CFStatement *stat) {
             clean_ast(stat->data.bodyAst);
             break;
         case CF_IF:
+            if (stat->data.ifData == NULL) break;
+
             clean_ast(stat->data.ifData->conditionalAst);
-            clean_stat(stat->data.ifData->thenStatement);
-            clean_stat(stat->data.ifData->elseStatement);
+
+            if (stat->data.ifData->thenStatement != NULL) {
+                symtable_free(stat->data.ifData->thenStatement->localSymbolTable);
+                clean_stat(stat->data.ifData->thenStatement, stat->data.ifData->thenStatement->localSymbolTable);
+            }
+
+            if (stat->data.ifData->elseStatement != NULL) {
+                if (stat->data.ifData->elseStatement->statementType == CF_IF) {
+                    clean_stat(stat->data.ifData->elseStatement, stat->data.ifData->elseStatement->localSymbolTable);
+                } else {
+                    symtable_free(stat->data.ifData->elseStatement->localSymbolTable);
+                    clean_stat(stat->data.ifData->elseStatement, stat->data.ifData->elseStatement->localSymbolTable);
+                }
+            }
+
+            free(stat->data.ifData);
             break;
         case CF_FOR:
+            if (stat->data.forData == NULL) break;
+
             clean_ast(stat->data.forData->conditionalAst);
             clean_ast(stat->data.forData->definitionAst);
             clean_ast(stat->data.forData->afterthoughtAst);
-            clean_stat(stat->data.forData->bodyStatement);
+
+            if (stat->data.forData->bodyStatement != NULL) {
+                symtable_free(stat->data.forData->bodyStatement->localSymbolTable);
+                clean_stat(stat->data.forData->bodyStatement, stat->data.forData->bodyStatement->localSymbolTable);
+            }
+
+            free(stat->data.forData);
             break;
     }
 
-    if (stat->localSymbolTable != NULL && stat->localSymbolTable != stat->parentFunction->symbolTable) {
+    if (stat->localSymbolTable != NULL && stat->localSymbolTable != parentTable) {
         symtable_free(stat->localSymbolTable);
-        if (stat->followingStatement != NULL && stat->followingStatement->localSymbolTable == stat->localSymbolTable) {
-            stat->followingStatement->localSymbolTable = NULL;
-        }
-    } else {
-        if (stat->followingStatement != NULL) {
-            stat->followingStatement->localSymbolTable = NULL;
-        }
     }
 
-    clean_stat(stat->followingStatement);
+    clean_stat(stat->followingStatement, parentTable);
     free(stat);
 }
 
 static void clean_varlist(CFVarListNode *begin) {
-    while(begin != NULL) {
+    while (begin != NULL) {
         CFVarListNode *next = begin->next;
+        free((void *) begin->variable.name);
         free(begin);
         begin = next;
     }
 }
 
 void cf_clean_all() {
+    if (program == NULL) return;
+
     CFFuncListNode *n = program->functionList;
 
     while (n != NULL) {
-        symtable_free(n->fun.symbolTable);
-        clean_stat(n->fun.rootStatement);
+        if (n->fun.symbolTable != NULL) {
+            symtable_free(n->fun.symbolTable);
+        }
+
+        clean_stat(n->fun.rootStatement, n->fun.symbolTable);
         clean_varlist(n->fun.arguments);
         clean_varlist(n->fun.returnValues);
         CFFuncListNode *toFree = n;
         n = n->next;
+        free((void *) toFree->fun.name);
         free(toFree);
     }
 
-    symtable_free(program->globalSymtable);
+    if (program->globalSymtable != NULL) {
+        symtable_free(program->globalSymtable);
+    }
     free(program);
 }
 

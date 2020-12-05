@@ -15,6 +15,19 @@
 
 CompilerResult compiler_result = COMPILER_RESULT_SUCCESS;
 
+const std::map<CompilerResult, std::string> resultNames = {
+        {COMPILER_RESULT_SUCCESS,                                           "Success (0)"},
+        {COMPILER_RESULT_ERROR_LEXICAL,                                     "Lexical error (1)"},
+        {COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL,                         "Syntax error, incl. wrong EOLs (2)"},
+        {COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE, "Semantic error: Undefined or redefined symbol (3)"},
+        {COMPILER_RESULT_ERROR_WRONG_TYPE_OF_NEW_VARIABLE,                  "Semantic error: Uninferrable variable type (4)"},
+        {COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION,          "Semantic error: Type mismatch in expression (5)"},
+        {COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,             "Semantic error: Invalid function call parameters or function return values (6)"},
+        {COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,                            "Semantic error: Other (7)"},
+        {COMPILER_RESULT_ERROR_DIVISION_BY_ZERO,                            "Division by zero (9)"},
+        {COMPILER_RESULT_ERROR_INTERNAL,                                    "Internal error (99)"}
+};
+
 int get_char_internal(int *feof, int *ferror) {
     int c = std::cin.get();
 
@@ -36,7 +49,8 @@ int get_char_internal(int *feof, int *ferror) {
 
 void set_compiler_result(CompilerResult compiler_result_arg) {
 #if VERBOSE > 1
-    std::cout << "[TEST] Set compiler result request. Current val: " << compiler_result << "; Requested val: " << compiler_result_arg << "\n";
+    std::cout << "[TEST] Set compiler result request. Current val: " << resultNames.find(compiler_result)->second
+        << "; Requested val: " << resultNames.find(compiler_result_arg)->second << "\n";
 #endif
 
     if (compiler_result == COMPILER_RESULT_SUCCESS) {

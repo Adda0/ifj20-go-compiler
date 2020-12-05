@@ -221,12 +221,12 @@ int params_n(STItem *current_function, bool ret_type, bool already_found, STPara
             STParam *next_param = NULL;
             if (semantic_enabled) {
                 if (ret_type) {
-                    cf_add_return_value(mstr_content(&id), data_type);
+                    check_cf(cf_add_return_value(mstr_content(&id), data_type));
                     if (!symtable_add_ret_type(current_function, mstr_content(&id), data_type)) {
                         return COMPILER_RESULT_ERROR_INTERNAL;
                     }
                 } else {
-                    cf_add_argument(mstr_content(&id), data_type);
+                    check_cf(cf_add_argument(mstr_content(&id), data_type));
                     if (already_found) {
                         if (current_param == NULL) {
                             stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
@@ -262,13 +262,16 @@ int params_n(STItem *current_function, bool ret_type, bool already_found, STPara
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
                 var->data.data.var_data.type = data_type;
+                var->data.data.var_data.defined = true;
 
                 if (ret_type) {
                     var->data.data.var_data.is_return_val_variable = true;
+                    var->data.reference_counter = 1;
                 } else {
                     var->data.data.var_data.is_argument_variable = true;
                 }
             }
+            mstr_free(&id);
             return params_n(current_function, ret_type, already_found, next_param);
         default:
             token_error("expected ) or , when parsing parameters, got %s\n");
@@ -291,12 +294,12 @@ int params(STItem *current_function, bool ret_type, bool already_found) {
             STParam *next_param = NULL;
             if (semantic_enabled) {
                 if (ret_type) {
-                    cf_add_return_value(mstr_content(&id), data_type);
+                    check_cf(cf_add_return_value(mstr_content(&id), data_type));
                     if (!symtable_add_ret_type(current_function, mstr_content(&id), data_type)) {
                         return COMPILER_RESULT_ERROR_INTERNAL;
                     }
                 } else {
-                    cf_add_argument(mstr_content(&id), data_type);
+                    check_cf(cf_add_argument(mstr_content(&id), data_type));
                     if (already_found) {
                         // Check the type of the first param if we predicted arguments in an expression
                         STParam *first_param = current_function->data.data.func_data.params;
@@ -312,7 +315,7 @@ int params(STItem *current_function, bool ret_type, bool already_found) {
                                            prev_token.context.line_num, prev_token.context.char_num);
                             return COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE;
                         }
-                        // UPdate the information
+                        // Update the information
                         char *new_buffer = malloc(sizeof(char) * (strlen(mstr_content(&id)) + 1));
                         if (new_buffer == NULL) {
                             return COMPILER_RESULT_ERROR_INTERNAL;
@@ -333,13 +336,16 @@ int params(STItem *current_function, bool ret_type, bool already_found) {
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
                 var->data.data.var_data.type = data_type;
+                var->data.data.var_data.defined = true;
 
                 if (ret_type) {
                     var->data.data.var_data.is_return_val_variable = true;
+                    var->data.reference_counter = 1;
                 } else {
                     var->data.data.var_data.is_argument_variable = true;
                 }
             }
+            mstr_free(&id);
             return params_n(current_function, ret_type, already_found, next_param);
         default:
             token_error("expected ) or identifier when parsing parameters, got %s\n");
@@ -358,14 +364,14 @@ int else_n() {
             }
             check_new_token(EOL_REQUIRED);
             if (semantic_enabled) {
-                cf_make_if_else_statement(CF_BASIC);
+                check_cf(cf_make_if_else_statement(CF_BASIC));
                 if ((new_body_table = symtable_init(TABLE_SIZE)) == NULL) {
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
                 if (symtable_stack_push(&symtable_stack, new_body_table) == NULL) {
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
-                cf_assign_statement_symtable(new_body_table);
+                check_cf(cf_assign_statement_symtable(new_body_table));
             }
             check_nonterminal(body());
             if (token.type != TOKEN_CURLY_RIGHT_BRACKET) {
@@ -373,7 +379,7 @@ int else_n() {
                 syntax_error();
             }
             if (semantic_enabled) {
-                cf_pop_previous_branched_statement();
+                check_cf(cf_pop_previous_branched_statement());
                 symtable_stack_pop(&symtable_stack);
             }
             check_new_token(EOL_REQUIRED);
@@ -382,13 +388,13 @@ int else_n() {
             if (token.data.keyword_type == KEYWORD_IF) {
                 // rule <else_n> -> if expression { <body> } <else>
                 if (semantic_enabled) {
-                    cf_make_if_else_statement(CF_IF);
+                    check_cf(cf_make_if_else_statement(CF_IF));
                 }
                 check_new_token(EOL_OPTIONAL);
                 ASTNode *expression;
                 check_nonterminal(parse_expression(PURE_EXPRESSION, true, &expression));
                 if (semantic_enabled) {
-                    cf_use_ast_explicit(expression, CF_IF_CONDITIONAL);
+                    check_cf(cf_use_ast_explicit(expression, CF_IF_CONDITIONAL));
                 }
                 if (token.context.eol_read) {
                     eol_error("unexpected EOL after if expression\n");
@@ -400,18 +406,18 @@ int else_n() {
                 }
                 check_new_token(EOL_REQUIRED);
                 if (semantic_enabled) {
-                    cf_make_if_then_statement(CF_BASIC);
+                    check_cf(cf_make_if_then_statement(CF_BASIC));
                     if ((new_body_table = symtable_init(TABLE_SIZE)) == NULL) {
                         return COMPILER_RESULT_ERROR_INTERNAL;
                     }
                     if (symtable_stack_push(&symtable_stack, new_body_table) == NULL) {
                         return COMPILER_RESULT_ERROR_INTERNAL;
                     }
-                    cf_assign_statement_symtable(new_body_table);
+                    check_cf(cf_assign_statement_symtable(new_body_table));
                 }
                 check_nonterminal(body());
                 if (semantic_enabled) {
-                    cf_pop_previous_branched_statement();
+                    check_cf(cf_pop_previous_branched_statement());
                     symtable_stack_pop(&symtable_stack);
                 }
                 if (token.type != TOKEN_CURLY_RIGHT_BRACKET) {
@@ -471,7 +477,7 @@ int for_definition() {
             // rule <for_definition> -> expression
             check_nonterminal(parse_expression(DEFINE_REQUIRED, true, &definition));
             if (semantic_enabled) {
-                cf_use_ast_explicit(definition, CF_FOR_DEFINITION);
+                check_cf(cf_use_ast_explicit(definition, CF_FOR_DEFINITION));
             }
             if (token.context.eol_read) {
                 eol_error("unexpected EOL after for definition\n");
@@ -494,7 +500,7 @@ int for_assignment() {
             // rule <for_assignment> -> expression
             check_nonterminal(parse_expression(ASSIGN_REQUIRED, false, &assignment));
             if (semantic_enabled) {
-                cf_use_ast_explicit(assignment, CF_FOR_AFTERTHOUGHT);
+                check_cf(cf_use_ast_explicit(assignment, CF_FOR_AFTERTHOUGHT));
             }
             if (token.context.eol_read) {
                 eol_error("unexpected EOL after for assignment\n");
@@ -530,7 +536,7 @@ int return_follow() {
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
 
-                cf_use_ast_explicit(emptyList, CF_RETURN_LIST);
+                check_cf(cf_use_ast_explicit(emptyList, CF_RETURN_LIST));
             }
             syntax_ok();
         default:
@@ -548,9 +554,9 @@ int return_follow() {
                         return COMPILER_RESULT_ERROR_INTERNAL;
                     }
                     tmp->data[0].astPtr = result_node;
-                    cf_use_ast_explicit(tmp, CF_RETURN_LIST);
+                    check_cf(cf_use_ast_explicit(tmp, CF_RETURN_LIST));
                 } else {
-                    cf_use_ast_explicit(result_node, CF_RETURN_LIST);
+                    check_cf(cf_use_ast_explicit(result_node, CF_RETURN_LIST));
                 }
             }
             if (!token.context.eol_read) {
@@ -569,7 +575,7 @@ int statement() {
                 case KEYWORD_RETURN:
                     // rule <statement> -> return <return_follow>
                     if (semantic_enabled) {
-                        cf_make_next_statement(CF_RETURN);
+                        check_cf(cf_make_next_statement(CF_RETURN));
                     }
                     check_new_token(EOL_OPTIONAL);
                     return return_follow();
@@ -578,11 +584,11 @@ int statement() {
                     check_new_token(EOL_OPTIONAL);
                     ASTNode *result_expr;
                     if (semantic_enabled) {
-                        cf_make_next_statement(CF_IF);
+                        check_cf(cf_make_next_statement(CF_IF));
                     }
                     check_nonterminal(parse_expression(PURE_EXPRESSION, true, &result_expr));
                     if (semantic_enabled) {
-                        cf_use_ast_explicit(result_expr, CF_IF_CONDITIONAL);
+                        check_cf(cf_use_ast_explicit(result_expr, CF_IF_CONDITIONAL));
                     }
                     if (token.context.eol_read) {
                         eol_error("unexpected EOL after if expression\n");
@@ -600,8 +606,8 @@ int statement() {
                         if (symtable_stack_push(&symtable_stack, new_body_table) == NULL) {
                             return COMPILER_RESULT_ERROR_INTERNAL;
                         }
-                        cf_make_if_then_statement(CF_BASIC);
-                        cf_assign_statement_symtable(new_body_table);
+                        check_cf(cf_make_if_then_statement(CF_BASIC));
+                        check_cf(cf_assign_statement_symtable(new_body_table));
                     }
                     check_nonterminal(body());
                     if (token.type != TOKEN_CURLY_RIGHT_BRACKET) {
@@ -609,7 +615,7 @@ int statement() {
                         syntax_error();
                     }
                     if (semantic_enabled) {
-                        cf_pop_previous_branched_statement();
+                        check_cf(cf_pop_previous_branched_statement());
                         symtable_stack_pop(&symtable_stack);
                     }
                     check_new_token(EOL_OPTIONAL);
@@ -619,14 +625,14 @@ int statement() {
                     check_new_token(EOL_OPTIONAL);
                     // For definition needs a separate level of symtable.
                     if (semantic_enabled) {
-                        cf_make_next_statement(CF_FOR);
+                        check_cf(cf_make_next_statement(CF_FOR));
                         if ((new_body_table = symtable_init(TABLE_SIZE)) == NULL) {
                             return COMPILER_RESULT_ERROR_INTERNAL;
                         }
                         if (symtable_stack_push(&symtable_stack, new_body_table) == NULL) {
                             return COMPILER_RESULT_ERROR_INTERNAL;
                         }
-                        cf_assign_statement_symtable(new_body_table);
+                        check_cf(cf_assign_statement_symtable(new_body_table));
                     }
                     check_nonterminal(for_definition());
                     if (token.type != TOKEN_SEMICOLON) {
@@ -637,7 +643,7 @@ int statement() {
                     ASTNode *for_expression;
                     check_nonterminal(parse_expression(PURE_EXPRESSION, false, &for_expression));
                     if (semantic_enabled) {
-                        cf_use_ast_explicit(for_expression, CF_FOR_CONDITIONAL);
+                        check_cf(cf_use_ast_explicit(for_expression, CF_FOR_CONDITIONAL));
                     }
                     if (token.context.eol_read) {
                         eol_error("unexpected EOL after for expression\n");
@@ -655,14 +661,14 @@ int statement() {
                     }
                     check_new_token(EOL_REQUIRED);
                     if (semantic_enabled) {
-                        cf_make_for_body_statement(CF_BASIC);
+                        check_cf(cf_make_for_body_statement(CF_BASIC));
                         if ((new_body_table = symtable_init(TABLE_SIZE)) == NULL) {
                             return COMPILER_RESULT_ERROR_INTERNAL;
                         }
                         if (symtable_stack_push(&symtable_stack, new_body_table) == NULL) {
                             return COMPILER_RESULT_ERROR_INTERNAL;
                         }
-                        cf_assign_statement_symtable(new_body_table);
+                        check_cf(cf_assign_statement_symtable(new_body_table));
                     }
                     check_nonterminal(body());
                     if (token.type != TOKEN_CURLY_RIGHT_BRACKET) {
@@ -670,7 +676,7 @@ int statement() {
                         syntax_error();
                     }
                     if (semantic_enabled) {
-                        cf_pop_previous_branched_statement();
+                        check_cf(cf_pop_previous_branched_statement());
                         symtable_stack_pop(&symtable_stack);
                         symtable_stack_pop(&symtable_stack);
                     }
@@ -682,10 +688,10 @@ int statement() {
             }
         case TOKEN_ID:
             // rule <statement> -> expression
-            cf_make_next_statement(CF_BASIC);
+            check_cf(cf_make_next_statement(CF_BASIC));
             ASTNode *expression;
             check_nonterminal(parse_expression(VALID_STATEMENT, true, &expression));
-            cf_use_ast_explicit(expression, CF_STATEMENT_BODY);
+            check_cf(cf_use_ast_explicit(expression, CF_STATEMENT_BODY));
             if (!token.context.eol_read) {
                 eol_error("expected EOL after expression\n");
                 syntax_error();
@@ -735,7 +741,7 @@ int ret_type_n(STItem *current_function) {
             check_new_token(EOL_OPTIONAL);
             check_nonterminal(type(&data_type));
             if (semantic_enabled) {
-                cf_add_return_value(NULL, data_type);
+                check_cf(cf_add_return_value(NULL, data_type));
                 if (!symtable_add_ret_type(current_function, NULL, data_type)) {
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
@@ -763,7 +769,7 @@ int ret_type_inner(STItem *current_function) {
                     // rule <ret_type_inner> -> <type> <ret_type_n>
                     check_nonterminal(type(&data_type));
                     if (semantic_enabled) {
-                        cf_add_return_value(NULL, data_type);
+                        check_cf(cf_add_return_value(NULL, data_type));
                         if (!symtable_add_ret_type(current_function, NULL, data_type)) {
                             return COMPILER_RESULT_ERROR_INTERNAL;
                         }
@@ -791,7 +797,7 @@ int ret_type(STItem *current_function) {
                     // rule <ret_type> -> <type>
                     check_nonterminal(type(&data_type));
                     if (semantic_enabled) {
-                        cf_add_return_value(NULL, data_type);
+                        check_cf(cf_add_return_value(NULL, data_type));
                         if (!symtable_add_ret_type(current_function, NULL, data_type)) {
                             return COMPILER_RESULT_ERROR_INTERNAL;
                         }
@@ -806,7 +812,7 @@ int ret_type(STItem *current_function) {
             syntax_ok();
         case TOKEN_LEFT_BRACKET:
             // rule <ret_type> -> ( <ret_type_inner> )
-            check_new_token(EOL_FORBIDDEN);
+            check_new_token(EOL_OPTIONAL);
             check_nonterminal(ret_type_inner(current_function));
             if (token.type != TOKEN_RIGHT_BRACKET) {
                 token_error("expected ) after multiple function return types, got %s\n");
@@ -836,9 +842,7 @@ int execution() {
             token_error("expected function identifier after func keyword, got %s\n");
             syntax_error();
         }
-        if (semantic_enabled) {
-            cf_make_function(mstr_content(&token.data.str_val));
-        }
+
         STItem *function = symtable_find(function_table, mstr_content(&token.data.str_val));
         bool already_found = false;
         if (semantic_enabled) {
@@ -858,6 +862,11 @@ int execution() {
             function->data.data.func_data.defined = true;
         }
 
+        if (semantic_enabled) {
+            check_cf(cf_make_function(mstr_content(&token.data.str_val)));
+        }
+
+        clear_token();
         check_new_token(EOL_FORBIDDEN);
         if (token.type != TOKEN_LEFT_BRACKET) {
             token_error("expected ( after function identifier, got %s\n");
@@ -866,12 +875,12 @@ int execution() {
 
         if (semantic_enabled) {
             SymbolTable *body_table = symtable_init(TABLE_SIZE);
-            cf_assign_function_symtable(body_table);
+            check_cf(cf_assign_function_symtable(body_table));
             if (body_table == NULL || symtable_stack_push(&symtable_stack, body_table) == NULL) {
                 return COMPILER_RESULT_ERROR_INTERNAL;
             }
         }
-        check_new_token(EOL_FORBIDDEN);
+        check_new_token(EOL_OPTIONAL);
         check_nonterminal(params(function, false, already_found));
 
         if (token.type != TOKEN_RIGHT_BRACKET) {
@@ -997,7 +1006,7 @@ int program() {
     if (function_table == NULL) {
         return COMPILER_RESULT_ERROR_INTERNAL;
     }
-    cf_assign_global_symtable(function_table);
+    check_cf(cf_assign_global_symtable(function_table));
     if (!prepare_builtins()) {
         return COMPILER_RESULT_ERROR_INTERNAL;
     }
@@ -1006,7 +1015,7 @@ int program() {
         token_error("expected package keyword at the beginning of file, got %s\n");
         syntax_error();
     }
-    check_new_token(EOL_FORBIDDEN);
+    check_new_token(EOL_OPTIONAL);
     if (token.type != TOKEN_ID || strcmp("main", mstr_content(&token.data.str_val)) != 0) {
         token_error("expected main identifier after package keyword, got %s\n");
         syntax_error();
@@ -1025,7 +1034,6 @@ int program() {
                            "incorrect prototype of function main\n");
             return COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE;
         }
-        // FIXME: dirty hack
         main->data.reference_counter = 1;
         for (STItem *function = symtable_get_first_item(function_table); function != NULL;
              function = symtable_get_next_item(function_table, function)) {
@@ -1040,7 +1048,7 @@ int program() {
 }
 
 CompilerResult parser_parse() {
-    cf_init();
+    check_cf(cf_init());
     symtable_stack_init(&symtable_stack);
     check_new_token(EOL_OPTIONAL);
     return program();

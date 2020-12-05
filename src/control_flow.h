@@ -52,6 +52,7 @@ typedef struct cfgraph_statement {
     struct cfgraph_statement *followingStatement;
 
     SymbolTable *localSymbolTable;
+    int popCount;
 
     CFStatementType statementType;
     union {

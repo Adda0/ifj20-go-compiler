@@ -80,6 +80,7 @@ add_executable(Test_parser_scanner
         src/precedence_parser.h src/precedence_parser.c
         src/stacks.h src/stacks.c
         src/control_flow.h src/control_flow.c
+        src/code_generator.h src/code_generator.c
         src/ast.h src/ast.c
         src/symtable.h src/symtable.c)
 target_link_libraries(Test_parser_scanner gtest gtest_main)

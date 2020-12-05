@@ -92,14 +92,14 @@ int rules[NUMBER_OF_RULES][RULE_LENGTH] = {
         {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_OR,               SYMB_NONTERMINAL,       SYMB_UNDEF},
         {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_ASSIGN,           SYMB_NONTERMINAL,       SYMB_UNDEF},
         {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_COMMA,            SYMB_MULTI_NONTERMINAL, TOKEN_ASSIGN,
-                                                                                                                    SYMB_NONTERMINAL,       SYMB_UNDEF},
+         SYMB_NONTERMINAL, SYMB_UNDEF},
         {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_COMMA,            SYMB_MULTI_NONTERMINAL, TOKEN_ASSIGN,
-                                                                                                                    SYMB_NONTERMINAL,       TOKEN_COMMA,         SYMB_MULTI_NONTERMINAL},
+         SYMB_NONTERMINAL,  TOKEN_COMMA,       SYMB_MULTI_NONTERMINAL},
         {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_DEFINE,           SYMB_NONTERMINAL,       SYMB_UNDEF},
         {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_COMMA,            SYMB_MULTI_NONTERMINAL, TOKEN_DEFINE,
-                                                                                                                    SYMB_NONTERMINAL,       SYMB_UNDEF},
-        {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_COMMA,            SYMB_MULTI_NONTERMINAL, TOKEN_DEFINE,        SYMB_NONTERMINAL,
-                                                                                                                                            TOKEN_COMMA,         SYMB_MULTI_NONTERMINAL},
+         SYMB_NONTERMINAL, SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_COMMA,            SYMB_MULTI_NONTERMINAL, TOKEN_DEFINE,
+         SYMB_NONTERMINAL, TOKEN_COMMA,        SYMB_MULTI_NONTERMINAL},
         {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_PLUS_ASSIGN,      SYMB_NONTERMINAL,       SYMB_UNDEF},
         {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_MINUS_ASSIGN,     SYMB_NONTERMINAL,       SYMB_UNDEF},
         {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_MULTIPLY_ASSIGN,  SYMB_NONTERMINAL,       SYMB_UNDEF},
@@ -113,7 +113,7 @@ int rules[NUMBER_OF_RULES][RULE_LENGTH] = {
         {SYMB_NONTERMINAL, SYMB_FUNCTION,      TOKEN_LEFT_BRACKET,     TOKEN_RIGHT_BRACKET,    SYMB_UNDEF},
         {SYMB_NONTERMINAL, SYMB_FUNCTION,      TOKEN_LEFT_BRACKET,     SYMB_NONTERMINAL,       TOKEN_RIGHT_BRACKET, SYMB_UNDEF},
         {SYMB_NONTERMINAL, SYMB_FUNCTION,      TOKEN_LEFT_BRACKET,     SYMB_NONTERMINAL,       TOKEN_COMMA,
-                                                                                                                    SYMB_MULTI_NONTERMINAL, TOKEN_RIGHT_BRACKET, SYMB_UNDEF},
+         SYMB_MULTI_NONTERMINAL, TOKEN_RIGHT_BRACKET, SYMB_UNDEF},
         {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_COMMA,            SYMB_MULTI_NONTERMINAL, SYMB_UNDEF},
 };
 
@@ -130,7 +130,8 @@ bool reduce_not(PrecedenceStack *stack, PrecedenceNode *start) {
         return false;
     }
     new_node->left = start->rptr->rptr->data.ast;
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL, .ast=new_node};
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL, .ast=new_node,
+                                   .context=start->rptr->data.context};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
@@ -158,7 +159,8 @@ bool reduce_unary_minus(PrecedenceStack *stack, PrecedenceNode *start) {
         return false;
     }
     new_node->left = start->rptr->rptr->data.ast;
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->rptr->data.data_type, .ast=new_node};
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->rptr->data.data_type, .ast=new_node,
+                                   .context=start->rptr->data.context};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
@@ -179,7 +181,8 @@ bool reduce_multiply(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     new_node->left = first_op->data.ast;
     new_node->right = second_op->data.ast;
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->data.data_type, .ast=new_node};
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->data.data_type, .ast=new_node,
+                                   .context=first_op->data.context};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
@@ -221,7 +224,8 @@ bool reduce_divide(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     new_node->left = first_op->data.ast;
     new_node->right = second_op->data.ast;
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->data.data_type, .ast=new_node};
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->data.data_type, .ast=new_node,
+                                   .context=first_op->data.context};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
@@ -242,7 +246,8 @@ bool reduce_plus(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     new_node->left = first_op->data.ast;
     new_node->right = second_op->data.ast;
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->data.data_type, .ast=new_node};
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->data.data_type, .ast=new_node,
+                                   .context=first_op->data.context};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
@@ -263,7 +268,8 @@ bool reduce_minus(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     new_node->left = first_op->data.ast;
     new_node->right = second_op->data.ast;
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->data.data_type, .ast=new_node};
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->data.data_type, .ast=new_node,
+                                   .context=first_op->data.context};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
@@ -284,7 +290,8 @@ bool reduce_less_than(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     new_node->left = first_op->data.ast;
     new_node->right = second_op->data.ast;
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL, .ast=new_node};
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL, .ast=new_node,
+                                   .context=first_op->data.context};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
@@ -305,7 +312,8 @@ bool reduce_greater_than(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     new_node->left = first_op->data.ast;
     new_node->right = second_op->data.ast;
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL, .ast=new_node};
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL, .ast=new_node,
+                                   .context=first_op->data.context};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
@@ -326,7 +334,8 @@ bool reduce_less_or_equal(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     new_node->left = first_op->data.ast;
     new_node->right = second_op->data.ast;
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL, .ast=new_node};
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL, .ast=new_node,
+                                   .context=first_op->data.context};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
@@ -347,7 +356,8 @@ bool reduce_greater_or_equal(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     new_node->left = first_op->data.ast;
     new_node->right = second_op->data.ast;
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL, .ast=new_node};
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL, .ast=new_node,
+                                   .context=first_op->data.context};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
@@ -369,7 +379,8 @@ bool reduce_equal_to(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     new_node->left = first_op->data.ast;
     new_node->right = second_op->data.ast;
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL, .ast=new_node};
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL, .ast=new_node,
+                                   .context=first_op->data.context};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
@@ -391,7 +402,8 @@ bool reduce_not_equal_to(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     new_node->left = first_op->data.ast;
     new_node->right = second_op->data.ast;
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL, .ast=new_node};
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL, .ast=new_node,
+                                   .context=first_op->data.context};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
@@ -411,7 +423,8 @@ bool reduce_and(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     new_node->left = first_op->data.ast;
     new_node->right = second_op->data.ast;
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->data.data_type, .ast=new_node};
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->data.data_type, .ast=new_node,
+                                   .context=first_op->data.context};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
@@ -431,7 +444,8 @@ bool reduce_or(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     new_node->left = first_op->data.ast;
     new_node->right = second_op->data.ast;
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->data.data_type, .ast=new_node};
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=start->rptr->data.data_type, .ast=new_node,
+                                   .context=first_op->data.context};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
@@ -474,11 +488,11 @@ bool reduce_assign(PrecedenceStack *stack, PrecedenceNode *start) {
                 if (current->data.ast->inheritedDataType != CF_BLACK_HOLE && id_st_item == NULL) {
                     stderr_message("precedence_parser", ERROR,
                                    COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE, "Line %u "
-                                                                                                      "assignment to undefined variable %s\n",
-                                   current->data.context.line_num, id);
+                                   "assignment to undefined variable %s\n", current->data.context.line_num, id);
                     return false;
                 }
 
+                mstr_free(&current->data.data.str_val);
                 current->data.ast->data[0].symbolTableItemPtr = &id_st_item->data;
                 ast_push_to_list(id_list, current->data.ast);
             } else {
@@ -493,7 +507,7 @@ bool reduce_assign(PrecedenceStack *stack, PrecedenceNode *start) {
     }
     new_node->left = id_list;
     new_node->right = expression_list;
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .ast=new_node};
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .ast=new_node, .context=start->rptr->data.context};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
@@ -539,7 +553,8 @@ bool reduce_define(PrecedenceStack *stack, PrecedenceNode *start) {
         if (current->data.type == SYMB_NONTERMINAL) {
             if (lhs) {
                 char *id = mstr_content(&current->data.data.str_val);
-                if (symtable_find(table, id) == NULL) {
+                STItem *item = symtable_find(table, id);
+                if (item == NULL) {
                     if (strcmp("_", id) != 0) {
                         STItem *new = symtable_add(table, mstr_content(&current->data.data.str_val), ST_SYMBOL_VAR);
                         if (new == NULL) {
@@ -548,7 +563,10 @@ bool reduce_define(PrecedenceStack *stack, PrecedenceNode *start) {
                         current->data.ast->data[0].symbolTableItemPtr = &new->data;
                         newly_defined++;
                     }
+                } else {
+                    current->data.ast->data[0].symbolTableItemPtr = &item->data;
                 }
+                mstr_free(&current->data.data.str_val);
                 ast_push_to_list(id_list, current->data.ast);
             } else {
                 ast_push_to_list(expression_list, current->data.ast);
@@ -568,13 +586,14 @@ bool reduce_define(PrecedenceStack *stack, PrecedenceNode *start) {
     new_node->left = id_list;
     new_node->right = expression_list;
 
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .ast=new_node};
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .ast=new_node, .context=start->rptr->data.context};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
 
 bool reduce_modify_assign(PrecedenceStack *stack, PrecedenceNode *start) {
-    if (symtable_stack_find_symbol(&symtable_stack, mstr_content(&start->rptr->data.data.str_val)) == NULL) {
+    STItem *target_symbol = symtable_stack_find_symbol(&symtable_stack, mstr_content(&start->rptr->data.data.str_val));
+    if (target_symbol == NULL) {
         stderr_message("precedence_parser", ERROR,
                        COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE, "Line %u: "
                        "assignment to undefined variable \n", start->rptr->data.context.line_num);
@@ -603,6 +622,7 @@ bool reduce_modify_assign(PrecedenceStack *stack, PrecedenceNode *start) {
     if (op_node == NULL) {
         return false;
     }
+    target->data.ast->data[0].symbolTableItemPtr = &target_symbol->data;
     op_node->left = target->data.ast;
     op_node->right = to_add->data.ast;
 
@@ -610,14 +630,15 @@ bool reduce_modify_assign(PrecedenceStack *stack, PrecedenceNode *start) {
     if (assign_node == NULL) {
         return false;
     }
-    ASTNode *target_node = ast_leaf_id(target->data.ast->data[0].symbolTableItemPtr);
+    ASTNode *target_node = ast_leaf_id(&target_symbol->data);
     if (target_node == NULL) {
         return false;
     }
-    assign_node->left = target->data.ast;
+    assign_node->left = target_node;
     assign_node->right = op_node;
 
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .ast=assign_node};
+    mstr_free(&start->rptr->data.data.str_val);
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .ast=assign_node, .context=target->data.context};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
@@ -629,19 +650,20 @@ bool reduce_brackets(PrecedenceStack *stack, PrecedenceNode *start) {
 }
 
 bool reduce_id(PrecedenceStack *stack, PrecedenceNode *start) {
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_UNKNOWN, .data=start->rptr->data.data};
-    STItem *item = symtable_stack_find_symbol(&symtable_stack, mstr_content(&start->rptr->data.data.str_val));
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_UNKNOWN, .data=start->rptr->data.data,
+                                   .context=start->rptr->data.context};
+    STItem *item = NULL;
     if (right_hand_side) {
         // Variables on RHS must be already defined
+        item = symtable_stack_find_symbol(&symtable_stack, mstr_content(&start->rptr->data.data.str_val));
         if (item == NULL) {
             stderr_message("precedence_parser", ERROR,
                            COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE, "Line %u: "
-                                                                                              "undefined variable %s\n",
-                           start->rptr->data.context.line_num,
+                           "undefined variable %s\n", start->rptr->data.context.line_num,
                            mstr_content(&start->rptr->data.data.str_val));
             return false;
         }
-
+        item->data.reference_counter++;
         new_nonterminal.data_type = item->data.data.var_data.type;
     }
 
@@ -650,12 +672,14 @@ bool reduce_id(PrecedenceStack *stack, PrecedenceNode *start) {
         new_node = ast_leaf_black_hole();
     } else {
         STSymbol *current_symbol = item == NULL ? NULL : &item->data;
-        new_node = ast_node_data(AST_ID, 1);
+        new_node = ast_leaf_id(current_symbol);
         if (new_node == NULL) {
             return false;
         }
-
-        new_node->data[0].symbolTableItemPtr = current_symbol;
+    }
+    if (right_hand_side) {
+        // no longer necessary to store ID of RHS variable
+        mstr_free(&start->rptr->data.data.str_val);
     }
     new_nonterminal.ast = new_node;
     precedence_stack_pop_from(stack, start);
@@ -664,28 +688,29 @@ bool reduce_id(PrecedenceStack *stack, PrecedenceNode *start) {
 
 bool reduce_int(PrecedenceStack *stack, PrecedenceNode *start) {
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_INT, .data=start->rptr->data.data,
-            .ast=ast_leaf_consti(start->rptr->data.data.num_int_val)};
+            .ast=ast_leaf_consti(start->rptr->data.data.num_int_val), .context=start->rptr->data.context};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
 
 bool reduce_float(PrecedenceStack *stack, PrecedenceNode *start) {
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_FLOAT, .data=start->rptr->data.data,
-            .ast=ast_leaf_constf(start->rptr->data.data.num_float_val)};
+            .ast=ast_leaf_constf(start->rptr->data.data.num_float_val), .context=start->rptr->data.context};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
 
 bool reduce_string(PrecedenceStack *stack, PrecedenceNode *start) {
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_STRING, .data=start->rptr->data.data,
-            .ast=ast_leaf_consts(mstr_content(&start->rptr->data.data.str_val))};
+            .ast=ast_leaf_consts(mstr_content(&start->rptr->data.data.str_val)), .context=start->rptr->data.context};
+    mstr_free(&start->rptr->data.data.str_val);
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
 
 bool reduce_bool(PrecedenceStack *stack, PrecedenceNode *start) {
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .data_type=CF_BOOL, .data=start->rptr->data.data,
-            .ast=ast_leaf_constb(start->rptr->data.data.bool_val)};
+            .ast=ast_leaf_constb(start->rptr->data.data.bool_val), .context=start->rptr->data.context};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
@@ -703,6 +728,12 @@ bool reduce_function(PrecedenceStack *stack, PrecedenceNode *start) {
 
     char *func_name = mstr_content(&start->rptr->data.data.str_val);
     STItem *function = symtable_find(function_table, func_name);
+    STItem *var = symtable_stack_find_symbol(&symtable_stack, func_name);
+    if (var != NULL) {
+        stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+                       "Line %u: function %s shadowed by a variable\n", start->rptr->data.context.line_num, func_name);
+        return false;
+    }
     ASTNode *params = ast_node_list(params_count);
     if (params == NULL) {
         return false;
@@ -742,8 +773,10 @@ bool reduce_function(PrecedenceStack *stack, PrecedenceNode *start) {
             current = current->rptr;
         }
     }
+    mstr_free(&start->rptr->data.data.str_val);
+    function->data.reference_counter++;
     ASTNode *func_call = ast_node_func_call(&function->data, params);
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .ast=func_call};
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .ast=func_call, .context=start->rptr->data.context};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
@@ -766,7 +799,7 @@ bool reduce_multi_expression(PrecedenceStack *stack, PrecedenceNode *start) {
 
         current = current->rptr;
     }
-    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .ast=expression_list};
+    StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .ast=expression_list, .context=start->rptr->data.context};
     precedence_stack_pop_from(stack, start);
     return precedence_stack_push(stack, new_nonterminal);
 }
@@ -974,7 +1007,9 @@ bool reduce(PrecedenceStack *stack, PrecedenceNode *start, int *function_level) 
                 bool sem_res = semantic_actions[i](stack, start);
                 ASTNode *top_ast = stack->top->data.ast;
 
-                if (top_ast != NULL) {
+                // Only infer ID type once it has been used in an expression or definition. Inferring it now could
+                // lead to incorrect type inference.
+                if (top_ast != NULL && top_ast->actionType != AST_ID) {
                     ast_infer_node_type(top_ast);
                 }
 
@@ -1103,6 +1138,12 @@ int parse_expression(AssignRule assign_rule, bool eol_before_allowed, ASTNode **
     bool eol_allowed = true;
     bool done = false;
     while (!done) {
+        if (assign_rule == PURE_EXPRESSION && assignments + definitions > 0) {
+            stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL,
+                           "Line %u: expected pure expression (no definitions or assignments)\n",
+                           token.context.line_num);
+            syntax_error();
+        }
         StackSymbol current_symbol = copy_token_to_symbol();
         PrecedenceNode *top = precedence_stack_top(&stack);
         PrecedenceNode *to_reduce;

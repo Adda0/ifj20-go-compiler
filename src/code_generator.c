@@ -21,7 +21,7 @@
 #define out_nnl(...) printf(__VA_ARGS__)
 #define out_nl() putchar('\n')
 
-#define is_direct_ast(ast) (ast->actionType > AST_VALUE)
+#define is_direct_ast(ast) ((ast)->actionType > AST_VALUE)
 
 #if TCG_DEBUG
 #define dbg(msg, ...) printf("# --> "); printf((msg),##__VA_ARGS__); putchar('\n'); fflush(stdout)
@@ -66,7 +66,7 @@ struct {
     bool reg3Used;
 } symbs;
 
-#define find_internal_symbol(symbol) (it = symtable_find(globSt, (symbol))) == NULL ? NULL : &it->data
+#define find_internal_symbol(symbol) (it = symtable_find(globSt, (symbol))) == NULL ? NULL : (&it->data)
 
 void find_internal_symbols(SymbolTable *globSt) {
     STItem *it;
@@ -122,10 +122,20 @@ bool is_statement_empty(CFStatement *stat) {
     }
 }
 
-char *convert_to_target_string_form(const char *input) {
+char *convert_to_target_string_form_cb(const char *input, bool prependType) {
     // Worst case scenario, all characters will be converted to escape sequences which are 4 chars long
-    char *buf = malloc(strlen(input) * 4 + 1);
-    char *bufRet = buf;
+    char *buf;
+    char *bufRet;
+    if (prependType) {
+        buf = malloc(7 + strlen(input) * 4 + 1);
+        bufRet = buf;
+        strcpy(buf, "string@");
+        buf += 7;
+    } else {
+        buf = malloc(strlen(input) * 4 + 1);
+        bufRet = buf;
+    }
+
     char n;
     while ((n = *(input++)) != '\0') {
         if (n <= 32 || n == 35 || n == 92) {
@@ -140,9 +150,22 @@ char *convert_to_target_string_form(const char *input) {
     return bufRet;
 }
 
+char *convert_to_target_string_form(const char *input) {
+    return convert_to_target_string_form_cb(input, false);
+}
+
+bool onlyFindDefinedSymbols = false;
+
 SymbolTable *find_sym_table(const char *id, CFStatement *stat) {
     while (stat != NULL) {
-        if (symtable_find(stat->localSymbolTable, id) != NULL) return stat->localSymbolTable;
+        STItem *it;
+
+        if ((it = symtable_find(stat->localSymbolTable, id)) != NULL) {
+            if (!onlyFindDefinedSymbols || it->data.data.var_data.defined) {
+                return stat->localSymbolTable;
+            }
+        }
+
         stat = stat->parentStatement;
     }
 
@@ -179,9 +202,9 @@ void print_var_name_or_const(ASTNode *node, CFStatement *stat) {
     if (node->actionType == AST_CONST_INT) {
         out_nnl("int@%li", node->data[0].intConstantValue);
     } else if (node->actionType == AST_CONST_FLOAT) {
-        out_nnl("int@%a", node->data[0].floatConstantValue);
+        out_nnl("float@%a", node->data[0].floatConstantValue);
     } else if (node->actionType == AST_CONST_BOOL) {
-        out_nnl("int@%s", node->data[0].boolConstantValue ? "true" : "false");
+        out_nnl("bool@%s", node->data[0].boolConstantValue ? "true" : "false");
     } else if (node->actionType == AST_CONST_STRING) {
         char *s = convert_to_target_string_form(node->data[0].stringConstantValue);
         out_nnl("string@%s", s);
@@ -268,7 +291,7 @@ void generate_print(ASTNode *argAstList, CFStatement *stat) {
     }
 }
 
-void generate_internal_inputx(const char *expType, CFStatement *stat) {
+void generate_internal_inputx(const char *expType, CFStatement *stat, const char *defaultValue) {
     unsigned counter = currentFunction.jumpingExprCounter++;
 
     // Read value into REG_1
@@ -287,22 +310,35 @@ void generate_internal_inputx(const char *expType, CFStatement *stat) {
     // Type doesn't match -> push default value of target type and 1
     out("LABEL $%s_input%i_error", stat->parentFunction->name, counter);
     out("PUSHS int@1");
-    out("PUSHS %s@", expType);
+    out("PUSHS %s@%s", expType, defaultValue);
 
     out("LABEL $%s_input%i_end", stat->parentFunction->name, counter);
 }
 
 void generate_internal_int2float(ASTNode *argAst, CFStatement *stat) {
-    generate_expression_ast_result(argAst, stat);
+    if (argAst->actionType != AST_LIST || argAst->dataCount != 1) {
+        return;
+    }
+
+    generate_expression_ast_result(argAst->data[0].astPtr, stat);
     out("INT2FLOATS");
 }
 
 void generate_internal_float2int(ASTNode *argAst, CFStatement *stat) {
-    generate_expression_ast_result(argAst, stat);
+    if (argAst->actionType != AST_LIST || argAst->dataCount != 1) {
+        return;
+    }
+
+    generate_expression_ast_result(argAst->data[0].astPtr, stat);
     out("FLOAT2INTS");
 }
 
 void generate_internal_len(ASTNode *argAst, CFStatement *stat) {
+    if (argAst->actionType != AST_LIST || argAst->dataCount != 1) {
+        return;
+    }
+    argAst = argAst->data[0].astPtr;
+
     if (argAst->actionType == AST_ID || argAst->actionType == AST_CONST_STRING) {
         out_nnl("STRLEN %s ", REG_1);
         print_var_name_or_const(argAst, stat);
@@ -316,143 +352,229 @@ void generate_internal_len(ASTNode *argAst, CFStatement *stat) {
     }
 }
 
+void generate_internal_chr(ASTNode *argAst, CFStatement *stat) {
+    if (argAst->actionType != AST_LIST || argAst->dataCount != 1) {
+        return;
+    }
+
+    argAst = argAst->data[0].astPtr;
+
+    if (argAst->actionType == AST_CONST_INT) {
+        int i = argAst->data[0].intConstantValue;
+        if (i < 0 || i > 255) {
+            out("PUSHS int@1");
+            out("PUSHS string@");
+            return;
+        } else {
+            out("PUSHS int@0");
+            out("PUSHS string@\\%.3i", i);
+            return;
+        }
+    } else {
+        unsigned counter = currentFunction.jumpingExprCounter;
+        currentFunction.jumpingExprCounter++;
+
+        generate_expression_ast_result(argAst, stat);
+        out("POPS %s", REG_1);
+        out("LT %s %s int@0", COND_RES_VAR, REG_1);
+        out("JUMPIFEQ $%s_chr%i_fail %s bool@true", stat->parentFunction->name, counter, COND_RES_VAR);
+        out("GT %s %s int@255", COND_RES_VAR, REG_1);
+        out("JUMPIFEQ $%s_chr%i_fail %s bool@true", stat->parentFunction->name, counter, COND_RES_VAR);
+
+        out("PUSHS int@0");
+        out("PUSHS %s", REG_1);
+        out("INT2CHARS");
+        out("JUMP $%s_chr%i_end", stat->parentFunction->name, counter);
+
+        out("LABEL $%s_chr%i_fail", stat->parentFunction->name, counter);
+        out("PUSHS int@1");
+        out("PUSHS string@");
+
+        out("LABEL $%s_chr%i_end", stat->parentFunction->name, counter);
+    }
+}
+
 void generate_internal_substr(ASTNode *argAst, CFStatement *stat) {
     ASTNode *strArg = argAst->data[0].astPtr;
     ASTNode *beginIndexArg = argAst->data[1].astPtr;
     ASTNode *lenArg = argAst->data[2].astPtr;
 
-    // move str len to REG_1
-    if (is_direct_ast(strArg)) {
-        out_nnl("STRLEN %s ", REG_1);
-        print_var_name_or_const(argAst, stat);
-        out_nl();
+    // Either GF@$r1 or LF@... or string@...
+    char *strArgOp = NULL;
+    // Either int@... or GF@$r2
+    char *strLenArgOp = REG_2;
+
+    MutableString ms;
+
+    if (strArg->actionType == AST_CONST_STRING) {
+        strArgOp = convert_to_target_string_form_cb(strArg->data[0].stringConstantValue, true);
+        strLenArgOp = malloc(15);
+        sprintf(strLenArgOp, "int@%u", (unsigned int) strlen(strArg->data[0].stringConstantValue));
     } else {
-        generate_expression_ast_result(argAst, stat);
-        out("POPS %s", REG_1);
-        out_nnl("STRLEN %s %s", REG_1, REG_1);
+        if (strArg->actionType == AST_ID) {
+            ms = make_var_name(strArg->data[0].symbolTableItemPtr->identifier, stat, false);
+            strArgOp = mstr_content(&ms);
+        } else {
+            generate_expression_ast_result(strArg, stat);
+            out("POPS %s", REG_1);
+            strArgOp = REG_1;
+        }
+
+        out("STRLEN %s %s", REG_2, strArgOp);
     }
 
     unsigned counter = currentFunction.jumpingExprCounter;
     currentFunction.jumpingExprCounter++;
 
-    // check beginIndex > 0 && beginIndex < (len - 1)
-    out("LT %s %s int@0", COND_RES_VAR, REG_1);
+    // move begin index to REG_3
+    generate_assignment_for_varname(REG_3, stat, beginIndexArg);
+
+    // REG_1: input string
+    // REG_2: len(s)
+    // REG_3: i
+
+    // goto fail if i < 0
+    out("LT %s %s int@0", COND_RES_VAR, REG_3);
     out("JUMPIFEQ $%s_substr%i_fail %s bool@true", stat->parentFunction->name, counter,
         COND_RES_VAR);
-    if (is_direct_ast(beginIndexArg)) {
-        out_nnl("GT %s ", COND_RES_VAR);
-        print_var_name_or_const(beginIndexArg, stat);
-        out(" %s", REG_1);
-        out("JUMPIFEQ $%s_substr%i_fail %s bool@true", stat->parentFunction->name, counter,
-            COND_RES_VAR);
-        out_nnl("EQ %s %s ", COND_RES_VAR, REG_1);
-        print_var_name_or_const(beginIndexArg, stat);
-        out_nl();
-        out("JUMPIFEQ $%s_substr%i_fail %s bool@true", stat->parentFunction->name, counter,
-            COND_RES_VAR);
-    } else {
-        // move begin index to REG_2
-        generate_assignment_for_varname(REG_2, stat, beginIndexArg);
-        out("GT %s %s %s", COND_RES_VAR, REG_2, REG_1);
-        out("JUMPIFEQ $%s_substr%i_fail %s bool@true", stat->parentFunction->name, counter,
-            COND_RES_VAR);
-        out("EQ %s %s %s", COND_RES_VAR, REG_2, REG_1);
-        out("JUMPIFEQ $%s_substr%i_fail %s bool@true", stat->parentFunction->name, counter,
-            COND_RES_VAR);
-    }
+    // || i > len(s)
+    out("GT %s %s %s", COND_RES_VAR, REG_3, strLenArgOp);
+    out("JUMPIFEQ $%s_substr%i_fail %s bool@true", stat->parentFunction->name, counter,
+        COND_RES_VAR);
+    // || i == len(s)
+    out("EQ %s %s %s", COND_RES_VAR, REG_3, strLenArgOp);
+    out("JUMPIFEQ $%s_substr%i_fail %s bool@true", stat->parentFunction->name, counter,
+        COND_RES_VAR);
 
-    // TODO
+    out("CREATEFRAME");
+    out("DEFVAR TF@$tmp_i_%i", counter);
+    out("DEFVAR TF@$tmp_res_%i", counter);
+
+    out("MOVE TF@$tmp_i_%i %s", counter, REG_3);
+    out("MOVE TF@$tmp_res_%i string@", counter);
+
+    // REG_3: n
+    generate_assignment_for_varname(REG_3, stat, lenArg);
+
+    // goto fail if n < 0
+    out("LT %s %s int@0", COND_RES_VAR, REG_3);
+    out("JUMPIFEQ $%s_substr%i_fail %s bool@true", stat->parentFunction->name, counter,
+        COND_RES_VAR);
+
+    out("ADD %s %s TF@$tmp_i_%i", REG_3, REG_3, counter);
+
+    // REG_1: input string
+    // REG_2: len(s)
+    // REG_3: i + n
+    // LF@$tmp_i_%i: i
+    // LF@$tmp_res_%i: (empty string)
+
+    out("GT %s %s %s", COND_RES_VAR, REG_3, strLenArgOp);
+    out("JUMPIFEQ $%s_substr%i_cont %s bool@false", stat->parentFunction->name, counter, COND_RES_VAR);
+    // if n + i > len(s): REG_3 = lenS
+    out("MOVE %s %s", REG_3, strLenArgOp);
+    out("LABEL $%s_substr%i_cont", stat->parentFunction->name, counter);
+    // while i < REG_3: append and increment i
+    out("LT %s TF@$tmp_i_%i %s", COND_RES_VAR, counter, REG_3);
+    out("JUMPIFEQ $%s_substr%i_forend %s bool@false", stat->parentFunction->name, counter, COND_RES_VAR);
+
+    out("GETCHAR %s %s TF@$tmp_i_%i", REG_2, strArgOp, counter);
+    out("CONCAT TF@$tmp_res_%i TF@$tmp_res_%i %s", counter, counter, REG_2);
+    out("ADD TF@$tmp_i_%i TF@$tmp_i_%i int@1", counter, counter);
+    out("JUMP $%s_substr%i_cont", stat->parentFunction->name, counter);
+
+    out("LABEL $%s_substr%i_forend", stat->parentFunction->name, counter);
+    out("PUSHS int@0");
+    out("PUSHS TF@$tmp_res_%i", counter);
+    out("JUMP $%s_substr%i_end", stat->parentFunction->name, counter);
 
     out("LABEL $%s_substr%i_fail", stat->parentFunction->name, counter);
-    out("PUSHS string@");
     out("PUSHS int@1");
+    out("PUSHS string@");
     out("LABEL $%s_substr%i_end", stat->parentFunction->name, counter);
+
+    if (strArg->actionType == AST_ID) {
+        mstr_free(&ms);
+    } else if (strArg->actionType == AST_CONST_STRING) {
+        free(strArgOp);
+        free(strLenArgOp);
+    }
 }
 
 void generate_internal_ord(ASTNode *argAst, CFStatement *stat) {
     ASTNode *strArg = argAst->data[0].astPtr;
     ASTNode *beginIndexArg = argAst->data[1].astPtr;
 
-    // move str to REG_1 and str len to REG_2
-    if (is_direct_ast(strArg)) {
-        out_nnl("STRLEN %s ", REG_2);
-        print_var_name_or_const(argAst, stat);
-        out_nl();
+    // Either GF@$r1 or LF@... or string@...
+    char *strArgOp = NULL;
+    // Either int@... or GF@$r2
+    char *strLenArgOp = REG_2;
+
+    MutableString ms;
+
+    if (strArg->actionType == AST_CONST_STRING) {
+        strArgOp = convert_to_target_string_form_cb(strArg->data[0].stringConstantValue, true);
+        strLenArgOp = malloc(15);
+        sprintf(strLenArgOp, "int@%u", (unsigned int) strlen(strArg->data[0].stringConstantValue));
     } else {
-        generate_expression_ast_result(argAst, stat);
-        out("POPS %s", REG_1);
-        out_nnl("STRLEN %s %s", REG_2, REG_1);
+        if (strArg->actionType == AST_ID) {
+            ms = make_var_name(strArg->data[0].symbolTableItemPtr->identifier, stat, false);
+            strArgOp = mstr_content(&ms);
+        } else {
+            generate_expression_ast_result(strArg, stat);
+            out("POPS %s", REG_1);
+            strArgOp = REG_1;
+        }
+
+        out("STRLEN %s %s", REG_2, strArgOp);
     }
 
     unsigned counter = currentFunction.jumpingExprCounter;
     currentFunction.jumpingExprCounter++;
 
-    // check beginIndex > 0 && beginIndex < (len - 1)
-    out("LT %s %s int@0", COND_RES_VAR, REG_2);
+    // move begin index to REG_3
+    generate_assignment_for_varname(REG_3, stat, beginIndexArg);
+
+    // REG_1: input string
+    // REG_2: len(s)
+    // REG_3: i
+
+    // goto fail if i < 0
+    out("LT %s %s int@0", COND_RES_VAR, REG_3);
     out("JUMPIFEQ $%s_ord%i_fail %s bool@true", stat->parentFunction->name, counter,
         COND_RES_VAR);
-    if (is_direct_ast(beginIndexArg)) {
-        out_nnl("GT %s ", COND_RES_VAR);
-        print_var_name_or_const(beginIndexArg, stat);
-        out(" %s", REG_1);
-        out("JUMPIFEQ $%s_ord%i_fail %s bool@true", stat->parentFunction->name, counter,
-            COND_RES_VAR);
-        out_nnl("EQ %s %s ", COND_RES_VAR, REG_1);
-        print_var_name_or_const(beginIndexArg, stat);
-        out_nl();
-        out("JUMPIFEQ $%s_ord%i_fail %s bool@true", stat->parentFunction->name, counter,
-            COND_RES_VAR);
+    // || i > len(s)
+    out("GT %s %s %s", COND_RES_VAR, REG_3, strLenArgOp);
+    out("JUMPIFEQ $%s_ord%i_fail %s bool@true", stat->parentFunction->name, counter,
+        COND_RES_VAR);
+    // || i == len(s)
+    out("EQ %s %s %s", COND_RES_VAR, REG_3, strLenArgOp);
+    out("JUMPIFEQ $%s_ord%i_fail %s bool@true", stat->parentFunction->name, counter,
+        COND_RES_VAR);
 
-        if (is_direct_ast(strArg)) {
-            out_nnl("GETCHAR %s ", REG_2);
-            print_var_name_or_const(strArg, stat);
-            out_nnl(" ");
-            print_var_name_or_const(beginIndexArg, stat);
-            out_nl();
-            out("PUSHS %s", REG_2);
-            return;
-        } else {
-            out_nnl("GETCHAR %s %s ", REG_2, REG_1);
-            print_var_name_or_const(beginIndexArg, stat);
-            out_nl();
-            out("PUSHS %s", REG_2);
-            return;
-        }
-    } else {
-        // move begin index to REG_3
-        generate_assignment_for_varname(REG_3, stat, beginIndexArg);
-        out("GT %s %s %s", COND_RES_VAR, REG_3, REG_2);
-        out("JUMPIFEQ $%s_ord%i_fail %s bool@true", stat->parentFunction->name, counter,
-            COND_RES_VAR);
-        out("EQ %s %s %s", COND_RES_VAR, REG_3, REG_2);
-        out("JUMPIFEQ $%s_ord%i_fail %s bool@true", stat->parentFunction->name, counter,
-            COND_RES_VAR);
-
-        if (is_direct_ast(strArg)) {
-            out_nnl("GETCHAR %s ", REG_2);
-            print_var_name_or_const(strArg, stat);
-            out(" %s", REG_3);
-            out("PUSHS %s", REG_2);
-            return;
-        } else {
-            out("GETCHAR %s %s %s", REG_2, REG_1, REG_3);
-            out("PUSHS %s", REG_2);
-            return;
-        }
-    }
-
-
+    out("STRI2INT %s %s %s", REG_2, strArgOp, REG_3);
+    out("PUSHS int@0");
+    out("PUSHS %s", REG_2);
     out("JUMP $%s_ord%i_end", stat->parentFunction->name, counter);
+
     out("LABEL $%s_ord%i_fail", stat->parentFunction->name, counter);
-    out("PUSHS int@-1");
     out("PUSHS int@1");
+    out("PUSHS string@");
     out("LABEL $%s_ord%i_end", stat->parentFunction->name, counter);
+
+    if (strArg->actionType == AST_ID) {
+        mstr_free(&ms);
+    } else if (strArg->actionType == AST_CONST_STRING) {
+        free(strArgOp);
+        free(strLenArgOp);
+    }
 }
 
 bool generate_internal_func_call(ASTNode *funcCallAst, CFStatement *stat) {
     STSymbol *s = funcCallAst->left->data[0].symbolTableItemPtr;
     ASTNode *args = funcCallAst->right;
 
+    onlyFindDefinedSymbols = true;
     if (s == symbs.print) {
         generate_print(args, stat);
         return true;
@@ -465,20 +587,26 @@ bool generate_internal_func_call(ASTNode *funcCallAst, CFStatement *stat) {
     } else if (s == symbs.len) {
         generate_internal_len(args, stat);
         return true;
+    } else if (s == symbs.ord) {
+        generate_internal_ord(args, stat);
+        return true;
+    } else if (s == symbs.chr) {
+        generate_internal_chr(args, stat);
+        return true;
     } else if (s == symbs.substr) {
         generate_internal_substr(args, stat);
         return true;
     } else if (s == symbs.inputi) {
-        generate_internal_inputx("int", stat);
+        generate_internal_inputx("int", stat, "0");
         return true;
     } else if (s == symbs.inputb) {
-        generate_internal_inputx("bool", stat);
+        generate_internal_inputx("bool", stat, "false");
         return true;
     } else if (s == symbs.inputs) {
-        generate_internal_inputx("string", stat);
+        generate_internal_inputx("string", stat, "");
         return true;
     } else if (s == symbs.inputf) {
-        generate_internal_inputx("float", stat);
+        generate_internal_inputx("float", stat, "0x0p+0");
         return true;
     }
 
@@ -501,8 +629,11 @@ void generate_func_call(ASTNode *funcCallAst, CFStatement *stat) {
     ASTNode *argAstList = funcCallAst->right;
 
     if (generate_internal_func_call(funcCallAst, stat)) {
+        onlyFindDefinedSymbols = false;
         return;
     }
+
+    onlyFindDefinedSymbols = false;
 
     out("CREATEFRAME");
 
@@ -516,6 +647,7 @@ void generate_func_call(ASTNode *funcCallAst, CFStatement *stat) {
         STParam *argN = targetFuncSymb->data.func_data.params;
         ASTNodeData *argContainer = argAstList->data;
 
+        onlyFindDefinedSymbols = true;
         while (argN != NULL) {
             MutableString varName = make_var_name(argN->id, targetFunc->rootStatement, true);
 
@@ -528,6 +660,7 @@ void generate_func_call(ASTNode *funcCallAst, CFStatement *stat) {
             argN = argN->next;
             argContainer++;
         }
+        onlyFindDefinedSymbols = false;
     }
 
     out("CALL %s", targetFuncSymb->identifier);
@@ -709,6 +842,8 @@ char *make_next_logic_label() {
     return a;
 }
 
+bool generate_logic_expression_assignment(ASTNode *exprAst, CFStatement *stat, const char *targetVarName);
+
 bool generate_simple_logic_expression(ASTNode *exprAst, CFStatement *stat, char *trueLabel, char *falseLabel) {
     ASTNode *left = exprAst->left;
     ASTNode *right = exprAst->right;
@@ -785,8 +920,18 @@ bool generate_simple_logic_expression(ASTNode *exprAst, CFStatement *stat, char 
         out("JUMP %s", falseLabel);
         return true;
     } else {
-        generate_expression_ast_result(left, stat);
-        generate_expression_ast_result(right, stat);
+        if (left->inheritedDataType == CF_BOOL && right->inheritedDataType == CF_BOOL) {
+            // This could be optimised quite easily
+            generate_logic_expression_assignment(left, stat, NULL);
+            generate_logic_expression_assignment(right, stat, NULL);
+        } else if (left->inheritedDataType == CF_BOOL || right->inheritedDataType == CF_BOOL) {
+            stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION,
+                           "Unexpected value in logical expression.\n");
+            return false;
+        } else {
+            generate_expression_ast_result(left, stat);
+            generate_expression_ast_result(right, stat);
+        }
 
         if (t == AST_LOG_EQ) {
             out("EQS");
@@ -795,7 +940,7 @@ bool generate_simple_logic_expression(ASTNode *exprAst, CFStatement *stat, char 
         } else if (t == AST_LOG_NEQ) {
             out("EQS");
             out("PUSHS bool@false");
-            out("JUMPIFNEQS %s", trueLabel);
+            out("JUMPIFEQS %s", trueLabel);
         } else if (t == AST_LOG_LT) {
             out("LTS");
             out("PUSHS bool@true");
@@ -852,8 +997,11 @@ bool generate_logic_expression_tree(ASTNode *exprAst, CFStatement *stat, char *t
 }
 
 bool generate_logic_expression_assignment(ASTNode *exprAst, CFStatement *stat, const char *targetVarName) {
+    unsigned counter = currentFunction.jumpingExprCounter;
+    currentFunction.jumpingExprCounter++;
+
     char i[11];
-    sprintf(i, "%i", currentFunction.jumpingExprCounter);
+    sprintf(i, "%i", counter);
 
     MutableString trueLabelStr, falseLabelStr;
     mstr_make(&trueLabelStr, 5, "$", stat->parentFunction->name, "_", i, "_true");
@@ -861,12 +1009,22 @@ bool generate_logic_expression_assignment(ASTNode *exprAst, CFStatement *stat, c
 
     generate_logic_expression_tree(exprAst, stat, mstr_content(&trueLabelStr), mstr_content(&falseLabelStr));
     out("LABEL %s", mstr_content(&trueLabelStr));
-    out("MOVE %s bool@true", targetVarName);
-    out("JUMP $%s_%i_end", stat->parentFunction->name, currentFunction.jumpingExprCounter);
+    if (targetVarName == NULL) {
+        out("PUSHS bool@true");
+    } else {
+        out("MOVE %s bool@true", targetVarName);
+    }
+
+    out("JUMP $%s_%i_end", stat->parentFunction->name, counter);
+
     out("LABEL %s", mstr_content(&falseLabelStr));
-    out("MOVE %s bool@false", targetVarName);
-    out("LABEL $%s_%i_end", stat->parentFunction->name, currentFunction.jumpingExprCounter);
-    currentFunction.jumpingExprCounter++;
+    if (targetVarName == NULL) {
+        out("PUSHS bool@false");
+    } else {
+        out("MOVE %s bool@false", targetVarName);
+    }
+
+    out("LABEL $%s_%i_end", stat->parentFunction->name, counter);
 
     mstr_free(&trueLabelStr);
     mstr_free(&falseLabelStr);
@@ -875,8 +1033,6 @@ bool generate_logic_expression_assignment(ASTNode *exprAst, CFStatement *stat, c
 }
 
 void generate_assignment_for_varname(const char *varName, CFStatement *stat, ASTNode *value) {
-    ASTNodeData data = value->data[0];
-
     if (varName == NULL) {
         if (value->actionType >= AST_LOGIC && value->actionType < AST_CONTROL) {
             generate_logic_expression_assignment(value, stat, REG_1);
@@ -892,16 +1048,16 @@ void generate_assignment_for_varname(const char *varName, CFStatement *stat, AST
     switch (value->actionType) {
         // If the right side is a CONST or ID, generate a simple MOVE
         case AST_CONST_INT:
-        out("MOVE %s int@%li", varName, data.intConstantValue);
+        out("MOVE %s int@%li", varName, value->data[0].intConstantValue);
             break;
         case AST_CONST_FLOAT:
-        out("MOVE %s float@%a", varName, data.floatConstantValue);
+        out("MOVE %s float@%a", varName, value->data[0].floatConstantValue);
             break;
         case AST_CONST_BOOL:
-        out("MOVE %s bool@%s", varName, data.boolConstantValue ? "true" : "false");
+        out("MOVE %s bool@%s", varName, value->data[0].boolConstantValue ? "true" : "false");
             break;
         case AST_CONST_STRING: {
-            char *s = convert_to_target_string_form(data.stringConstantValue);
+            char *s = convert_to_target_string_form(value->data[0].stringConstantValue);
             out("MOVE %s string@%s", varName, s);
             free(s);
         }
@@ -939,7 +1095,8 @@ void generate_assignment(ASTNode *asgAst, CFStatement *stat) {
             generate_func_call(asgAst->right->data[0].astPtr, stat);
 
             for (unsigned i = 0; i < asgAst->left->dataCount; i++) {
-                if (asgAst->left->data[i].astPtr->inheritedDataType == CF_BLACK_HOLE) {
+                if (asgAst->left->data[i].astPtr->inheritedDataType == CF_BLACK_HOLE ||
+                    asgAst->left->data[i].astPtr->data[0].symbolTableItemPtr->reference_counter == 0) {
                     out("POPS %s", REG_1);
                     continue;
                 }
@@ -947,6 +1104,7 @@ void generate_assignment(ASTNode *asgAst, CFStatement *stat) {
                 MutableString varName = make_var_name(
                         asgAst->left->data[i].astPtr->data[0].symbolTableItemPtr->identifier, stat, false);
                 out("POPS %s", mstr_content(&varName));
+                asgAst->left->data[i].astPtr->data[0].symbolTableItemPtr->data.var_data.defined = true;
                 mstr_free(&varName);
             }
 
@@ -965,12 +1123,27 @@ void generate_assignment(ASTNode *asgAst, CFStatement *stat) {
         }
 
         for (unsigned i = 0; i < asgAst->left->dataCount; i++) {
-            ASTNode *tmpAssignNode = ast_node(AST_ASSIGN);
-            ASTNode *tmpAssignLeft = asgAst->left->data[i].astPtr;
-            tmpAssignNode->left = tmpAssignLeft;
-            tmpAssignNode->right = asgAst->right->data[i].astPtr;
-            generate_assignment(tmpAssignNode, stat);
-            free(tmpAssignNode);
+            ASTNode *valNode = asgAst->right->data[i].astPtr;
+
+            if (valNode->actionType >= AST_LOGIC && valNode->actionType < AST_CONTROL) {
+                generate_logic_expression_assignment(valNode, stat, REG_1);
+            } else {
+                generate_expression_ast_result(valNode, stat);
+            }
+        }
+
+        for (unsigned i = 0; i < asgAst->left->dataCount; i++) {
+            ASTNode *idNode = asgAst->left->data[asgAst->left->dataCount - i - 1].astPtr;
+
+            if (idNode->inheritedDataType == CF_BLACK_HOLE) {
+                out("POPS %s", REG_1);
+            } else {
+                out_nnl("POPS ");
+                print_var_name(idNode, stat);
+                out_nl();
+
+                idNode->data[0].symbolTableItemPtr->data.var_data.defined = true;
+            }
         }
 
         return;
@@ -978,9 +1151,14 @@ void generate_assignment(ASTNode *asgAst, CFStatement *stat) {
 
     if (asgAst->left->inheritedDataType == CF_BLACK_HOLE) {
         generate_assignment_for_varname(NULL, stat, asgAst->right);
+    } else if (asgAst->left->data[0].symbolTableItemPtr->reference_counter == 0) {
+        dbg("Omitting assignment into unused variable");
     } else {
         MutableString varName = make_var_name(asgAst->left->data[0].symbolTableItemPtr->identifier, stat, false);
+        onlyFindDefinedSymbols = true;
         generate_assignment_for_varname(mstr_content(&varName), stat, asgAst->right);
+        onlyFindDefinedSymbols = false;
+        asgAst->left->data[0].symbolTableItemPtr->data.var_data.defined = true;
         mstr_free(&varName);
     }
 }
@@ -1015,13 +1193,13 @@ void generate_return_statement(CFStatement *stat) {
             return;
         }
     } else {
-        if (retAstList->actionType != AST_LIST) {
+        if (!hasNamedReturnValues && (retAstList == NULL || retAstList->actionType != AST_LIST)) {
             stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
                            "Unexpected AST in RETURN statement.\n");
             return;
         }
 
-        if (hasNamedReturnValues && retAstList->dataCount != 0
+        if (hasNamedReturnValues && retAstList != NULL && retAstList->dataCount != 0
             && retAstList->dataCount != stat->parentFunction->returnValuesCount) {
             stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
                            "Return statement of the function '%s' with named return values should either explicitly specify all return values or contain none.\n",
@@ -1038,11 +1216,14 @@ void generate_return_statement(CFStatement *stat) {
     }
 
     CFVarListNode *argNode = currentFunction.function->returnValues;
-    if (!hasNamedReturnValues || retAstList->dataCount > 0) {
+    if (retAstList != NULL && (!hasNamedReturnValues || retAstList->dataCount > 0)) {
         for (unsigned i = 0; i < retAstList->dataCount; i++) {
             ASTNode *ast = retAstList->data[retAstList->dataCount - i - 1].astPtr;
 
             if (!ast_infer_node_type(ast)) {
+                stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION,
+                               "Types of values in return statement of function '%s' couldn't be inferred.\n",
+                               stat->parentFunction->name);
                 return;
             }
 
@@ -1053,7 +1234,12 @@ void generate_return_statement(CFStatement *stat) {
                 return;
             }
 
-            generate_expression_ast_result(ast, stat);
+            if (ast->actionType >= AST_LOGIC && ast->actionType < AST_CONTROL) {
+                generate_logic_expression_assignment(ast, stat, REG_1);
+            } else {
+                generate_expression_ast_result(ast, stat);
+            }
+
             argNode = argNode->next;
         }
     } else {
@@ -1080,7 +1266,7 @@ void generate_if_statement(CFStatement *stat) {
 
     ast_infer_node_type(stat->data.ifData->conditionalAst);
     if (stat->data.ifData->conditionalAst->inheritedDataType != CF_BOOL) {
-        stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+        stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION,
                        "Unexpected non-logical expression in if statement.\n");
         return;
     }
@@ -1170,6 +1356,12 @@ void generate_basic_statement(CFStatement *stat) {
 
     switch (stat->data.bodyAst->actionType) {
         case AST_FUNC_CALL:
+            if (stat->data.bodyAst->left->data[0].symbolTableItemPtr->data.func_data.ret_types_count > 0) {
+                stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+                               "Unexpected call outside an assigment or an expression to a function that returns values.");
+                return;
+            }
+
             generate_func_call(stat->data.bodyAst, stat);
             break;
         case AST_DEFINE:
@@ -1229,7 +1421,7 @@ void generate_definitions(CFStatement *stat) {
             while (it != NULL) {
                 STSymbol *symb = &it->data;
 
-                if (/*symb->reference_counter > 0 &&*/ symb->type == ST_SYMBOL_VAR) {
+                if (symb->reference_counter > 0 && symb->type == ST_SYMBOL_VAR) {
                     if (!symb->data.var_data.is_argument_variable) {
                         MutableString varName = make_var_name(symb->identifier, stat, false);
                         char *varNameP = mstr_content(&varName);
@@ -1283,15 +1475,24 @@ void generate_function(CFFunction *fun) {
     struct cfgraph_program_structure *prog = get_program();
     STItem *funcSymbol = symtable_find(prog->globalSymtable, fun->name);
     if (funcSymbol->data.reference_counter == 0) {
-        dbg("Function not used, omitting");
+        dbg("Function not used");
         stderr_message("codegen", WARNING, COMPILER_RESULT_SUCCESS, "Function '%s' is not used anywhere.\n",
                        fun->name);
-        return;
+        //return;
     }
 
     if (is_statement_empty(fun->rootStatement)) {
-        dbg("Function empty, omitting");
         stderr_message("codegen", WARNING, COMPILER_RESULT_SUCCESS, "Function '%s' is empty.\n", fun->name);
+
+        if (fun->returnValuesCount > 0 && fun->returnValues->variable.name == NULL) {
+            stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
+                           "Empty function with parameters is missing a return statement.");
+            return;
+        }
+
+        out("LABEL %s", fun->name);
+        dbg("Function empty");
+        out("RETURN");
         return;
     }
 
@@ -1317,8 +1518,11 @@ void generate_function(CFFunction *fun) {
 
     // Return from the function will be generated from the first RETURN statement
     if (!fun->terminated) {
-        if (fun->returnValuesCount == 0) {
+        if (fun->returnValuesCount == 0 || fun->returnValues->variable.name != NULL) {
+            ASTNode *astBackup = fun->rootStatement->data.bodyAst;
+            fun->rootStatement->data.bodyAst = NULL;
             generate_return_statement(fun->rootStatement);
+            fun->rootStatement->data.bodyAst = astBackup;
         } else {
             stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
                            "Function '%s' is missing a return statement.\n", fun->name);
@@ -1374,7 +1578,6 @@ void tcg_generate() {
     if (is_statement_empty(prog->mainFunc->rootStatement)) {
         stderr_message("codegen", WARNING, COMPILER_RESULT_SUCCESS, "Empty main function.\n");
         out("EXIT int@0");
-        return;
     }
 
     if (generateMainAsFunc) {
