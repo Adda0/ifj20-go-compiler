@@ -20,17 +20,20 @@ scanner.o: scanner.c scanner.h mutable_string.h compiler.h \
 		   scanner_static.h stderr_message.h
 mutable_string.o: mutable_string.c mutable_string.h
 stderr_message.o: stderr_message.c stderr_message.h  compiler.h
-compiler.o: compiler.c compiler.h parser.h scanner.h mutable_string.h control_flow.h
+compiler.o: compiler.c compiler.h parser.h scanner.h mutable_string.h stacks.h symtable.h \
+			precedence_parser.h ast.h optimiser.h control_flow.h code_generator.h
 parser.o: parser.c parser.h compiler.h scanner.h mutable_string.h stderr_message.h \
-		  precedence_parser.h control_flow.h ast.h
+		  precedence_parser.h control_flow.h ast.h stacks.h precedence_parser.h
 precedence_parser.o: precedence_parser.c precedence_parser.h scanner.h \
 					 mutable_string.h compiler.h parser.h stderr_message.h stacks.h \
 					 control_flow.h ast.h
-stacks.o: stacks.c stacks.h scanner.h mutable_string.h compiler.h precedence_parser.h
+stacks.o: stacks.c stacks.h scanner.h mutable_string.h compiler.h precedence_parser.h \
+		  symtable.h stderr_message.h ast.h
 symtable.o: symtable.c symtable.h stderr_message.h compiler.h
-ast.o: ast.c ast.h symtable.h
+ast.o: ast.c ast.h symtable.h stderr_message.h compiler.h
 control_flow.o: control_flow.c control_flow.h ast.h symtable.h
-code_generator.o: code_generator.c code_generator.h control_flow.h ast.h symtable.h
+code_generator.o: code_generator.c code_generator.h control_flow.h ast.h symtable.h \
+				  ast.h stderr_message.h compiler.h mutable_string.h
 optimiser.o: optimiser.c optimiser.h
 
 
