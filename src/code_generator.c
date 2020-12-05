@@ -1123,12 +1123,27 @@ void generate_assignment(ASTNode *asgAst, CFStatement *stat) {
         }
 
         for (unsigned i = 0; i < asgAst->left->dataCount; i++) {
-            ASTNode *tmpAssignNode = ast_node(AST_ASSIGN);
-            ASTNode *tmpAssignLeft = asgAst->left->data[i].astPtr;
-            tmpAssignNode->left = tmpAssignLeft;
-            tmpAssignNode->right = asgAst->right->data[i].astPtr;
-            generate_assignment(tmpAssignNode, stat);
-            free(tmpAssignNode);
+            ASTNode *valNode = asgAst->right->data[i].astPtr;
+
+            if (valNode->actionType >= AST_LOGIC && valNode->actionType < AST_CONTROL) {
+                generate_logic_expression_assignment(valNode, stat, REG_1);
+            } else {
+                generate_expression_ast_result(valNode, stat);
+            }
+        }
+
+        for (unsigned i = 0; i < asgAst->left->dataCount; i++) {
+            ASTNode *idNode = asgAst->left->data[asgAst->left->dataCount - i - 1].astPtr;
+
+            if (idNode->inheritedDataType == CF_BLACK_HOLE) {
+                out("POPS %s", REG_1);
+            } else {
+                out_nnl("POPS ");
+                print_var_name(idNode, stat);
+                out_nl();
+
+                idNode->data[0].symbolTableItemPtr->data.var_data.defined = true;
+            }
         }
 
         return;
