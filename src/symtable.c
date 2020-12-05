@@ -5,6 +5,7 @@
  * @brief Contains implementation of symbol table as hash table.
  *
  * @author David Chocholatý (xchoch08), FIT BUT
+ * Inspired by my implementation of a hash table from the second IJC project.
  */
 
 #include <string.h>

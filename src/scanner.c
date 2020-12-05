@@ -280,8 +280,13 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                                "Line %llu, col %llu: Expected an octal digit (0 to 7) following the underscore in '%s_'.\n",
                                line_num, char_num, mstr_content(mutable_string));
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
-            } else {
+            } else if (isdigit(read_char)) {
                 *automaton_state = STATE_ZERO;
+            } else {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
+                               "Line %llu, col %llu: Expected a digit following the underscore in '%s_'.\n",
+                               line_num, char_num, mstr_content(mutable_string));
+                *scanner_result = SCANNER_RESULT_INVALID_STATE;
             }
             break;
 
@@ -472,8 +477,13 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                                "Line %llu, col %llu: Expected a hexadecimal digit following the underscore in '%s_'.\n",
                                line_num, char_num, mstr_content(mutable_string));
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
-            } else {
+            } else if (isxdigit(read_char)) {
                 *automaton_state = STATE_HEXADECIMAL_NUMBER;
+            } else {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
+                               "Line %llu, col %llu: Expected a hexadecimal digit following the underscore in '%s_'.\n",
+                               line_num, char_num, mstr_content(mutable_string));
+                *scanner_result = SCANNER_RESULT_INVALID_STATE;
             }
             break;
 
@@ -521,8 +531,13 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                                "Line %llu, col %llu: Expected a digit following the underscore in '%s_'.\n",
                                line_num, char_num, mstr_content(mutable_string));
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
-            } else {
+            } else if (isdigit(read_char)) {
                 *automaton_state = STATE_INT;
+            } else {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
+                               "Line %llu, col %llu: Expected a digit following the underscore in '%s_'.\n",
+                               line_num, char_num, mstr_content(mutable_string));
+                *scanner_result = SCANNER_RESULT_INVALID_STATE;
             }
             break;
 
@@ -567,8 +582,13 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                                "Line %llu, col %llu: Expected a digit following the underscore in '%s_'.\n",
                                line_num, char_num, mstr_content(mutable_string));
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
-            } else {
+            } else if (isdigit(read_char)) {
                 *automaton_state = STATE_FLOAT;
+            } else {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
+                               "Line %llu, col %llu: Expected a digit following the underscore in '%s_'.\n",
+                               line_num, char_num, mstr_content(mutable_string));
+                *scanner_result = SCANNER_RESULT_INVALID_STATE;
             }
             break;
 
@@ -653,8 +673,13 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                                "Line %llu, col %llu: Expected a digit following the underscore in '%s_'.\n",
                                line_num, char_num, mstr_content(mutable_string));
                 *scanner_result = SCANNER_RESULT_INVALID_STATE;
-            } else {
+            } else if (isdigit(read_char)) {
                 *automaton_state = STATE_FLOAT_EXPONENT;
+            } else {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
+                               "Line %llu, col %llu: Expected an digit following the underscore in '%s_'.\n",
+                               line_num, char_num, mstr_content(mutable_string));
+                *scanner_result = SCANNER_RESULT_INVALID_STATE;
             }
             break;
 
@@ -900,6 +925,12 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
                        "Line %llu, col %llu: String wasn't properly ended, when EOF was read: '%s'. \n",
                        line_num, char_num, mstr_content(mutable_string));
+                        *automaton_state = STATE_STRING_INVALID;
+            } else if ((int)read_char <= 31) {
+                stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
+                       "Line %llu, col %llu: Unexpected character in a string following '%s'. \n",
+                       line_num, char_num, mstr_content(mutable_string));
+                       *automaton_state = STATE_STRING_INVALID;
             } else {
                 mstr_append(mutable_string, read_char);
             }
