@@ -409,7 +409,7 @@ bool assignment_inference_list_func_call(ASTNode *node) {
     }
 
     if (leftIdListNode->dataCount != funcSymb->data.func_data.ret_types_count) {
-        print_error(COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+        print_error(COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
                     "Assignment left-hand side variables don't match return values of the right-hand side function '%s'.\n",
                     funcSymb->identifier);
         // TODO: error code

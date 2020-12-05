@@ -446,9 +446,8 @@ static void clean_stat(CFStatement *stat, SymbolTable *parentTable) {
     if (stat->localSymbolTable != NULL && stat->localSymbolTable != parentTable) {
         symtable_free(stat->localSymbolTable);
     }
+
     clean_stat(stat->followingStatement, parentTable);
-    //static int a = 0;
-    //fprintf(stderr, "Freeing stat #%i, type %i, ptr %p\n", a++, stat->statementType, stat);
     free(stat);
 }
 

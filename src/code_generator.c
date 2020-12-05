@@ -1183,7 +1183,7 @@ void generate_if_statement(CFStatement *stat) {
 
     ast_infer_node_type(stat->data.ifData->conditionalAst);
     if (stat->data.ifData->conditionalAst->inheritedDataType != CF_BOOL) {
-        stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+        stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION,
                        "Unexpected non-logical expression in if statement.\n");
         return;
     }
