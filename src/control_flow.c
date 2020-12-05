@@ -107,7 +107,9 @@ void cf_add_argument(const char *name, CFDataType type) {
     newNode->next = n;
     newNode->previous = NULL;
 
-    newNode->variable.name = name;
+    newNode->variable.name = malloc(strlen(name) + 1);
+    strcpy((char *) newNode->variable.name, name);
+
     newNode->variable.dataType = type;
     newNode->variable.position = activeFunc->argumentsCount;
     activeFunc->argumentsCount++;
@@ -137,7 +139,13 @@ void cf_add_return_value(const char *name, CFDataType type) {
     newNode->next = n;
     newNode->previous = NULL;
 
-    newNode->variable.name = name;
+    if (name == NULL) {
+        newNode->variable.name = NULL;
+    } else {
+        newNode->variable.name = malloc(strlen(name) + 1);
+        strcpy((char *) newNode->variable.name, name);
+    }
+
     newNode->variable.dataType = type;
     newNode->variable.position = activeFunc->returnValuesCount;
     activeFunc->returnValuesCount++;
@@ -466,6 +474,7 @@ static void clean_stat(CFStatement *stat, SymbolTable *parentTable) {
 static void clean_varlist(CFVarListNode *begin) {
     while (begin != NULL) {
         CFVarListNode *next = begin->next;
+        free((void *) begin->variable.name);
         free(begin);
         begin = next;
     }
