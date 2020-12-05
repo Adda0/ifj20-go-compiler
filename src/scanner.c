@@ -1069,6 +1069,10 @@ extern int get_char_internal(int *feof, int *ferror);
 static NextCharResult get_next_char(char *read_char) {
     int feofi = 0, ferrori = 0;
     *read_char = (char) get_char_internal(&feofi, &ferrori);
+    if ((int) *read_char == 13) {
+        // when read char is CR, skip it
+        *read_char = (char) get_char_internal(&feofi, &ferrori);
+    }
 
     if (ferrori) {
         return NEXT_CHAR_RESULT_ERROR;
