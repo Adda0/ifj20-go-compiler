@@ -1027,7 +1027,6 @@ int program() {
                            "incorrect prototype of function main\n");
             return COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE;
         }
-        // FIXME: dirty hack
         main->data.reference_counter = 1;
         for (STItem *function = symtable_get_first_item(function_table); function != NULL;
              function = symtable_get_next_item(function_table, function)) {

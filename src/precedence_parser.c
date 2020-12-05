@@ -625,7 +625,11 @@ bool reduce_modify_assign(PrecedenceStack *stack, PrecedenceNode *start) {
     if (assign_node == NULL) {
         return false;
     }
-    ASTNode *target_node = ast_leaf_id(target->data.ast->data[0].symbolTableItemPtr);
+    ASTNode *target_node = ast_node_data(AST_ID, 1);
+    if (target_node == NULL) {
+        return false;
+    }
+    target_node->data[0].symbolTableItemPtr = target->data.ast->data[0].symbolTableItemPtr;
     if (target_node == NULL) {
         return false;
     }
@@ -657,7 +661,7 @@ bool reduce_id(PrecedenceStack *stack, PrecedenceNode *start) {
                            mstr_content(&start->rptr->data.data.str_val));
             return false;
         }
-
+        item->data.reference_counter++;
         new_nonterminal.data_type = item->data.data.var_data.type;
     }
 
@@ -670,7 +674,6 @@ bool reduce_id(PrecedenceStack *stack, PrecedenceNode *start) {
         if (new_node == NULL) {
             return false;
         }
-
         new_node->data[0].symbolTableItemPtr = current_symbol;
     }
     if (right_hand_side) {
@@ -769,6 +772,7 @@ bool reduce_function(PrecedenceStack *stack, PrecedenceNode *start) {
         }
     }
     mstr_free(&start->rptr->data.data.str_val);
+    function->data.reference_counter++;
     ASTNode *func_call = ast_node_func_call(&function->data, params);
     StackSymbol new_nonterminal = {.type=SYMB_NONTERMINAL, .ast=func_call, .context=start->rptr->data.context};
     precedence_stack_pop_from(stack, start);

@@ -57,7 +57,6 @@ ASTNode *ast_node_list(unsigned dataCount) {
 }
 
 ASTNode *ast_leaf_id(STSymbol *idSymbolPtr) {
-    idSymbolPtr->reference_counter++;
     return ast_leaf_single_data(AST_ID, (ASTNodeData) {.symbolTableItemPtr = idSymbolPtr});
 }
 
