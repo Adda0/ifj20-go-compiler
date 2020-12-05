@@ -86,6 +86,40 @@
     }                                                                                           \
 } while(0)
 
+
+#define check_cf(cf_call) do {                                                                  \
+    cf_call;                                                                                    \
+    switch (cf_error) {                                                                         \
+        case CF_NO_ERROR:                                                                       \
+            break;                                                                              \
+        case CF_ERROR_INTERNAL:                                                                 \
+            stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_INTERNAL,                     \
+                           "Out of memory\n");                                                  \
+            break;                                                                              \
+        case CF_ERROR_INVALID_AST_TYPE:                                                         \
+            stderr_message("parser", ERROR,                                                     \
+                           COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION,            \
+                           "Line %u: incorrect type of expression\n", token.context.line_num);  \
+            break;                                                                              \
+        case CF_ERROR_MAIN_REDEFINITION:                                                        \
+            stderr_message("parser", ERROR,                                                     \
+                           COMPILER_RESULT_ERROR_UNDEFINED_OR_REDEFINED_FUNCTION_OR_VARIABLE,   \
+                           "Line %u: redefined main\n", token.context.line_num);                \
+            break;                                                                              \
+        case CF_ERROR_MAIN_NO_ARGUMENTS_OR_RETURN_VALUES:                                       \
+            stderr_message("parser", ERROR,                                                     \
+                           COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,               \
+                           "Line %u: invalid main definition\n", token.context.line_num);       \
+            break;                                                                              \
+        default:                                                                                \
+            stderr_message("parser", ERROR,                                                     \
+                           COMPILER_RESULT_ERROR_INTERNAL,                                      \
+                           "Line %u: unexpected error in intermediary code generation\n",       \
+                           token.context.line_num);                                             \
+            break;                                                                              \
+    }                                                                                           \
+} while(0)
+
 #define syntax_error() do {                                                                     \
     clear_token();                                                                              \
     recover();                                                                                  \
