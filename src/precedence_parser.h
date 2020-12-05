@@ -32,6 +32,8 @@ typedef enum symbol_type {
     SYMB_BEGIN,
     SYMB_FUNCTION,
     SYMB_ID,
+    SYMB_UNARY_MINUS,
+    SYMB_UNARY_PLUS,
     SYMB_MULTI_NONTERMINAL,
     SYMB_UNDEF,
 } SymbolType;
