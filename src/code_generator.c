@@ -122,10 +122,20 @@ bool is_statement_empty(CFStatement *stat) {
     }
 }
 
-char *convert_to_target_string_form(const char *input) {
+char *convert_to_target_string_form_cb(const char *input, bool prependType) {
     // Worst case scenario, all characters will be converted to escape sequences which are 4 chars long
-    char *buf = malloc(strlen(input) * 4 + 1);
-    char *bufRet = buf;
+    char *buf;
+    char *bufRet;
+    if (prependType) {
+        buf = malloc(7 + strlen(input) * 4 + 1);
+        bufRet = buf;
+        strcpy(buf, "string@");
+        buf += 7;
+    } else {
+        buf = malloc(strlen(input) * 4 + 1);
+        bufRet = buf;
+    }
+
     char n;
     while ((n = *(input++)) != '\0') {
         if (n <= 32 || n == 35 || n == 92) {
@@ -138,6 +148,10 @@ char *convert_to_target_string_form(const char *input) {
 
     *buf = '\0';
     return bufRet;
+}
+
+char *convert_to_target_string_form(const char *input) {
+    return convert_to_target_string_form_cb(input, false);
 }
 
 bool onlyFindDefinedSymbols = false;
@@ -352,6 +366,7 @@ void generate_internal_chr(ASTNode *argAst, CFStatement *stat) {
             out("PUSHS string@");
             return;
         } else {
+            out("PUSHS int@0");
             out("PUSHS string@\\%.3i", i);
             return;
         }
@@ -384,132 +399,175 @@ void generate_internal_substr(ASTNode *argAst, CFStatement *stat) {
     ASTNode *beginIndexArg = argAst->data[1].astPtr;
     ASTNode *lenArg = argAst->data[2].astPtr;
 
-    // move str len to REG_1
-    if (is_direct_ast(strArg)) {
-        out_nnl("STRLEN %s ", REG_1);
-        print_var_name_or_const(strArg, stat);
-        out_nl();
+    // Either GF@$r1 or LF@... or string@...
+    char *strArgOp = NULL;
+    // Either int@... or GF@$r2
+    char *strLenArgOp = REG_2;
+
+    MutableString ms;
+
+    if (strArg->actionType == AST_CONST_STRING) {
+        strArgOp = convert_to_target_string_form_cb(strArg->data[0].stringConstantValue, true);
+        strLenArgOp = malloc(15);
+        sprintf(strLenArgOp, "int@%u", (unsigned int) strlen(strArg->data[0].stringConstantValue));
     } else {
-        generate_expression_ast_result(strArg, stat);
-        out("POPS %s", REG_1);
-        out_nnl("STRLEN %s %s", REG_1, REG_1);
+        if (strArg->actionType == AST_ID) {
+            ms = make_var_name(strArg->data[0].symbolTableItemPtr->identifier, stat, false);
+            strArgOp = mstr_content(&ms);
+        } else {
+            generate_expression_ast_result(strArg, stat);
+            out("POPS %s", REG_1);
+            strArgOp = REG_1;
+        }
+
+        out("STRLEN %s %s", REG_2, strArgOp);
     }
 
     unsigned counter = currentFunction.jumpingExprCounter;
     currentFunction.jumpingExprCounter++;
 
-    // check beginIndex > 0 && beginIndex < (len - 1)
-    out("LT %s %s int@0", COND_RES_VAR, REG_1);
+    // move begin index to REG_3
+    generate_assignment_for_varname(REG_3, stat, beginIndexArg);
+
+    // REG_1: input string
+    // REG_2: len(s)
+    // REG_3: i
+
+    // goto fail if i < 0
+    out("LT %s %s int@0", COND_RES_VAR, REG_3);
     out("JUMPIFEQ $%s_substr%i_fail %s bool@true", stat->parentFunction->name, counter,
         COND_RES_VAR);
-    if (is_direct_ast(beginIndexArg)) {
-        out_nnl("GT %s ", COND_RES_VAR);
-        print_var_name_or_const(beginIndexArg, stat);
-        out(" %s", REG_1);
-        out("JUMPIFEQ $%s_substr%i_fail %s bool@true", stat->parentFunction->name, counter,
-            COND_RES_VAR);
-        out_nnl("EQ %s %s ", COND_RES_VAR, REG_1);
-        print_var_name_or_const(beginIndexArg, stat);
-        out_nl();
-        out("JUMPIFEQ $%s_substr%i_fail %s bool@true", stat->parentFunction->name, counter,
-            COND_RES_VAR);
-    } else {
-        // move begin index to REG_2
-        generate_assignment_for_varname(REG_2, stat, beginIndexArg);
-        out("GT %s %s %s", COND_RES_VAR, REG_2, REG_1);
-        out("JUMPIFEQ $%s_substr%i_fail %s bool@true", stat->parentFunction->name, counter,
-            COND_RES_VAR);
-        out("EQ %s %s %s", COND_RES_VAR, REG_2, REG_1);
-        out("JUMPIFEQ $%s_substr%i_fail %s bool@true", stat->parentFunction->name, counter,
-            COND_RES_VAR);
-    }
+    // || i > len(s)
+    out("GT %s %s %s", COND_RES_VAR, REG_3, strLenArgOp);
+    out("JUMPIFEQ $%s_substr%i_fail %s bool@true", stat->parentFunction->name, counter,
+        COND_RES_VAR);
+    // || i == len(s)
+    out("EQ %s %s %s", COND_RES_VAR, REG_3, strLenArgOp);
+    out("JUMPIFEQ $%s_substr%i_fail %s bool@true", stat->parentFunction->name, counter,
+        COND_RES_VAR);
 
-    // TODO
+    out("CREATEFRAME");
+    out("DEFVAR TF@$tmp_i_%i", counter);
+    out("DEFVAR TF@$tmp_res_%i", counter);
+
+    out("MOVE TF@$tmp_i_%i %s", counter, REG_3);
+    out("MOVE TF@$tmp_res_%i string@", counter);
+
+    // REG_3: n
+    generate_assignment_for_varname(REG_3, stat, lenArg);
+
+    // goto fail if n < 0
+    out("LT %s %s int@0", COND_RES_VAR, REG_3);
+    out("JUMPIFEQ $%s_substr%i_fail %s bool@true", stat->parentFunction->name, counter,
+        COND_RES_VAR);
+
+    out("ADD %s %s TF@$tmp_i_%i", REG_3, REG_3, counter);
+
+    // REG_1: input string
+    // REG_2: len(s)
+    // REG_3: i + n
+    // LF@$tmp_i_%i: i
+    // LF@$tmp_res_%i: (empty string)
+
+    out("GT %s %s %s", COND_RES_VAR, REG_3, strLenArgOp);
+    out("JUMPIFEQ $%s_substr%i_cont %s bool@false", stat->parentFunction->name, counter, COND_RES_VAR);
+    // if n + i > len(s): REG_3 = lenS
+    out("MOVE %s %s", REG_3, strLenArgOp);
+    out("LABEL $%s_substr%i_cont", stat->parentFunction->name, counter);
+    // while i < REG_3: append and increment i
+    out("LT %s TF@$tmp_i_%i %s", COND_RES_VAR, counter, REG_3);
+    out("JUMPIFEQ $%s_substr%i_forend %s bool@false", stat->parentFunction->name, counter, COND_RES_VAR);
+
+    out("GETCHAR %s %s TF@$tmp_i_%i", REG_2, strArgOp, counter);
+    out("CONCAT TF@$tmp_res_%i TF@$tmp_res_%i %s", counter, counter, REG_2);
+    out("ADD TF@$tmp_i_%i TF@$tmp_i_%i int@1", counter, counter);
+    out("JUMP $%s_substr%i_cont", stat->parentFunction->name, counter);
+
+    out("LABEL $%s_substr%i_forend", stat->parentFunction->name, counter);
+    out("PUSHS int@0");
+    out("PUSHS TF@$tmp_res_%i", counter);
+    out("JUMP $%s_substr%i_end", stat->parentFunction->name, counter);
 
     out("LABEL $%s_substr%i_fail", stat->parentFunction->name, counter);
-    out("PUSHS string@");
     out("PUSHS int@1");
+    out("PUSHS string@");
     out("LABEL $%s_substr%i_end", stat->parentFunction->name, counter);
+
+    if (strArg->actionType == AST_ID) {
+        mstr_free(&ms);
+    } else if (strArg->actionType == AST_CONST_STRING) {
+        free(strArgOp);
+        free(strLenArgOp);
+    }
 }
 
 void generate_internal_ord(ASTNode *argAst, CFStatement *stat) {
     ASTNode *strArg = argAst->data[0].astPtr;
     ASTNode *beginIndexArg = argAst->data[1].astPtr;
 
-    // move str to REG_1 and str len to REG_2
-    if (is_direct_ast(strArg)) {
-        out_nnl("STRLEN %s ", REG_2);
-        print_var_name_or_const(strArg, stat);
-        out_nl();
+    // Either GF@$r1 or LF@... or string@...
+    char *strArgOp = NULL;
+    // Either int@... or GF@$r2
+    char *strLenArgOp = REG_2;
+
+    MutableString ms;
+
+    if (strArg->actionType == AST_CONST_STRING) {
+        strArgOp = convert_to_target_string_form_cb(strArg->data[0].stringConstantValue, true);
+        strLenArgOp = malloc(15);
+        sprintf(strLenArgOp, "int@%u", (unsigned int) strlen(strArg->data[0].stringConstantValue));
     } else {
-        generate_expression_ast_result(strArg, stat);
-        out("POPS %s", REG_1);
-        out_nnl("STRLEN %s %s", REG_2, REG_1);
+        if (strArg->actionType == AST_ID) {
+            ms = make_var_name(strArg->data[0].symbolTableItemPtr->identifier, stat, false);
+            strArgOp = mstr_content(&ms);
+        } else {
+            generate_expression_ast_result(strArg, stat);
+            out("POPS %s", REG_1);
+            strArgOp = REG_1;
+        }
+
+        out("STRLEN %s %s", REG_2, strArgOp);
     }
 
     unsigned counter = currentFunction.jumpingExprCounter;
     currentFunction.jumpingExprCounter++;
 
-    // check beginIndex > 0 && beginIndex < (len - 1)
-    out("LT %s %s int@0", COND_RES_VAR, REG_2);
+    // move begin index to REG_3
+    generate_assignment_for_varname(REG_3, stat, beginIndexArg);
+
+    // REG_1: input string
+    // REG_2: len(s)
+    // REG_3: i
+
+    // goto fail if i < 0
+    out("LT %s %s int@0", COND_RES_VAR, REG_3);
     out("JUMPIFEQ $%s_ord%i_fail %s bool@true", stat->parentFunction->name, counter,
         COND_RES_VAR);
-    if (is_direct_ast(beginIndexArg)) {
-        out_nnl("GT %s ", COND_RES_VAR);
-        print_var_name_or_const(beginIndexArg, stat);
-        out(" %s", REG_1);
-        out("JUMPIFEQ $%s_ord%i_fail %s bool@true", stat->parentFunction->name, counter,
-            COND_RES_VAR);
-        out_nnl("EQ %s %s ", COND_RES_VAR, REG_1);
-        print_var_name_or_const(beginIndexArg, stat);
-        out_nl();
-        out("JUMPIFEQ $%s_ord%i_fail %s bool@true", stat->parentFunction->name, counter,
-            COND_RES_VAR);
+    // || i > len(s)
+    out("GT %s %s %s", COND_RES_VAR, REG_3, strLenArgOp);
+    out("JUMPIFEQ $%s_ord%i_fail %s bool@true", stat->parentFunction->name, counter,
+        COND_RES_VAR);
+    // || i == len(s)
+    out("EQ %s %s %s", COND_RES_VAR, REG_3, strLenArgOp);
+    out("JUMPIFEQ $%s_ord%i_fail %s bool@true", stat->parentFunction->name, counter,
+        COND_RES_VAR);
 
-        if (is_direct_ast(strArg)) {
-            out_nnl("GETCHAR %s ", REG_2);
-            print_var_name_or_const(strArg, stat);
-            out_nnl(" ");
-            print_var_name_or_const(beginIndexArg, stat);
-            out_nl();
-            out("PUSHS %s", REG_2);
-            return;
-        } else {
-            out_nnl("GETCHAR %s %s ", REG_2, REG_1);
-            print_var_name_or_const(beginIndexArg, stat);
-            out_nl();
-            out("PUSHS %s", REG_2);
-            return;
-        }
-    } else {
-        // move begin index to REG_3
-        generate_assignment_for_varname(REG_3, stat, beginIndexArg);
-        out("GT %s %s %s", COND_RES_VAR, REG_3, REG_2);
-        out("JUMPIFEQ $%s_ord%i_fail %s bool@true", stat->parentFunction->name, counter,
-            COND_RES_VAR);
-        out("EQ %s %s %s", COND_RES_VAR, REG_3, REG_2);
-        out("JUMPIFEQ $%s_ord%i_fail %s bool@true", stat->parentFunction->name, counter,
-            COND_RES_VAR);
-
-        if (is_direct_ast(strArg)) {
-            out_nnl("GETCHAR %s ", REG_2);
-            print_var_name_or_const(strArg, stat);
-            out(" %s", REG_3);
-            out("PUSHS %s", REG_2);
-            return;
-        } else {
-            out("GETCHAR %s %s %s", REG_2, REG_1, REG_3);
-            out("PUSHS %s", REG_2);
-            return;
-        }
-    }
-
-
+    out("STRI2INT %s %s %s", REG_2, strArgOp, REG_3);
+    out("PUSHS int@0");
+    out("PUSHS %s", REG_2);
     out("JUMP $%s_ord%i_end", stat->parentFunction->name, counter);
+
     out("LABEL $%s_ord%i_fail", stat->parentFunction->name, counter);
-    out("PUSHS int@-1");
     out("PUSHS int@1");
+    out("PUSHS string@");
     out("LABEL $%s_ord%i_end", stat->parentFunction->name, counter);
+
+    if (strArg->actionType == AST_ID) {
+        mstr_free(&ms);
+    } else if (strArg->actionType == AST_CONST_STRING) {
+        free(strArgOp);
+        free(strLenArgOp);
+    }
 }
 
 bool generate_internal_func_call(ASTNode *funcCallAst, CFStatement *stat) {
