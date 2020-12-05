@@ -202,9 +202,9 @@ void print_var_name_or_const(ASTNode *node, CFStatement *stat) {
     if (node->actionType == AST_CONST_INT) {
         out_nnl("int@%li", node->data[0].intConstantValue);
     } else if (node->actionType == AST_CONST_FLOAT) {
-        out_nnl("int@%a", node->data[0].floatConstantValue);
+        out_nnl("float@%a", node->data[0].floatConstantValue);
     } else if (node->actionType == AST_CONST_BOOL) {
-        out_nnl("int@%s", node->data[0].boolConstantValue ? "true" : "false");
+        out_nnl("bool@%s", node->data[0].boolConstantValue ? "true" : "false");
     } else if (node->actionType == AST_CONST_STRING) {
         char *s = convert_to_target_string_form(node->data[0].stringConstantValue);
         out_nnl("string@%s", s);
