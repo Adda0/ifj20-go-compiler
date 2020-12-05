@@ -161,6 +161,12 @@ CFStatement *cf_make_next_statement(CFStatementType statementType) {
         } else if (activeStat->localSymbolTable != NULL) {
             newStat->localSymbolTable = activeStat->localSymbolTable;
         }
+
+        if (activeStat->statementType == CF_IF && activeStat->data.ifData->elseStatement == NULL) {
+            // If this statement is an IF with no else statement, increase its popCount by one
+            // to ensure it cannot be popped into anymore
+            activeStat->popCount++;
+        }
     } else {
         newStat->localSymbolTable = activeFunc->symbolTable;
     }
@@ -304,8 +310,9 @@ void cf_use_ast_explicit(ASTNode *ast, CFASTTarget target) {
 
 CFStatement *cf_pop_previous_branched_statement() {
     if (activeStat == NULL) return NULL;
+
     CFStatement *n = activeStat->parentStatement;
-    while (n->statementType != CF_IF && n->statementType != CF_FOR) {
+    while (!(n->statementType == CF_IF && n->popCount < 2) && !(n->statementType == CF_FOR && n->popCount < 1)) {
         n = n->parentStatement;
 
         if (n == NULL) {
@@ -314,6 +321,7 @@ CFStatement *cf_pop_previous_branched_statement() {
     }
 
     activeStat = n;
+    n->popCount++;
     return n;
 }
 
@@ -330,6 +338,7 @@ CFStatement *cf_make_if_then_statement(CFStatementType type) {
     // Make a new statement which will be set as active
     CFStatement *newStat = cf_make_next_statement(type);
     if (newStat == NULL) return NULL; // The error has been handled
+    currentActive->popCount--;
 
     // Restore the previously active statement's follower and set the newly created one as thenStatement instead
     currentActive->followingStatement = currentFollowing;
@@ -351,6 +360,7 @@ CFStatement *cf_make_if_else_statement(CFStatementType type) {
     // Make a new statement which will be set as active
     CFStatement *newStat = cf_make_next_statement(type);
     if (newStat == NULL) return NULL; // The error has been handled
+    currentActive->popCount--;
 
     // Restore the previously active statement's follower and set the newly created one as thenStatement instead
     currentActive->followingStatement = currentFollowing;
