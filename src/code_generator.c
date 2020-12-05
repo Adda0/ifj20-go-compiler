@@ -574,6 +574,7 @@ bool generate_internal_func_call(ASTNode *funcCallAst, CFStatement *stat) {
     STSymbol *s = funcCallAst->left->data[0].symbolTableItemPtr;
     ASTNode *args = funcCallAst->right;
 
+    onlyFindDefinedSymbols = true;
     if (s == symbs.print) {
         generate_print(args, stat);
         return true;
@@ -628,8 +629,11 @@ void generate_func_call(ASTNode *funcCallAst, CFStatement *stat) {
     ASTNode *argAstList = funcCallAst->right;
 
     if (generate_internal_func_call(funcCallAst, stat)) {
+        onlyFindDefinedSymbols = false;
         return;
     }
+
+    onlyFindDefinedSymbols = false;
 
     out("CREATEFRAME");
 
@@ -643,6 +647,7 @@ void generate_func_call(ASTNode *funcCallAst, CFStatement *stat) {
         STParam *argN = targetFuncSymb->data.func_data.params;
         ASTNodeData *argContainer = argAstList->data;
 
+        onlyFindDefinedSymbols = true;
         while (argN != NULL) {
             MutableString varName = make_var_name(argN->id, targetFunc->rootStatement, true);
 
@@ -655,6 +660,7 @@ void generate_func_call(ASTNode *funcCallAst, CFStatement *stat) {
             argN = argN->next;
             argContainer++;
         }
+        onlyFindDefinedSymbols = false;
     }
 
     out("CALL %s", targetFuncSymb->identifier);
