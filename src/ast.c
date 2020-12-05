@@ -433,6 +433,7 @@ bool assignment_inference_list_func_call(ASTNode *node) {
         strictInference = strictInferenceState;
 
         if (leftIdNode->inheritedDataType == CF_BLACK_HOLE) {
+            funcRetType = funcRetType->next;
             continue;
         }
 
