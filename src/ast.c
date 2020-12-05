@@ -93,7 +93,9 @@ ASTNode *ast_leaf_constf(double f) {
 }
 
 ASTNode *ast_leaf_consts(const char *s) {
-    return ast_leaf_single_data(AST_CONST_STRING, (ASTNodeData) {.stringConstantValue = s});
+    char *sCopy = malloc(strlen(s) + 1);
+    strcpy(sCopy, s);
+    return ast_leaf_single_data(AST_CONST_STRING, (ASTNodeData) {.stringConstantValue = sCopy});
 }
 
 ASTNode *ast_leaf_constb(bool b) {

@@ -72,7 +72,9 @@ CFFunction *cf_make_function(const char *name) {
     newNode->previous = NULL;
     CFFunction *newFunctionNode = &newNode->fun;
 
-    newFunctionNode->name = name;
+    newFunctionNode->name = malloc(strlen(name) + 1);
+    CF_ALLOC_CHECK_RN(newFunctionNode->name);
+    strcpy((char *) newFunctionNode->name, name);
 
     if (strcmp(name, "main") == 0) {
         if (program->mainFunc == NULL) {
