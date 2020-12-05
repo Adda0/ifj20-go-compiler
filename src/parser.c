@@ -842,9 +842,7 @@ int execution() {
             token_error("expected function identifier after func keyword, got %s\n");
             syntax_error();
         }
-        if (semantic_enabled) {
-            check_cf(cf_make_function(mstr_content(&token.data.str_val)));
-        }
+
         STItem *function = symtable_find(function_table, mstr_content(&token.data.str_val));
         bool already_found = false;
         if (semantic_enabled) {
@@ -862,6 +860,10 @@ int execution() {
                 }
             }
             function->data.data.func_data.defined = true;
+        }
+
+        if (semantic_enabled) {
+            check_cf(cf_make_function(mstr_content(&token.data.str_val)));
         }
 
         check_new_token(EOL_FORBIDDEN);
