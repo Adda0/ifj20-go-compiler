@@ -266,6 +266,7 @@ int params_n(STItem *current_function, bool ret_type, bool already_found, STPara
 
                 if (ret_type) {
                     var->data.data.var_data.is_return_val_variable = true;
+                    var->data.reference_counter = 1;
                 } else {
                     var->data.data.var_data.is_argument_variable = true;
                 }
@@ -338,6 +339,7 @@ int params(STItem *current_function, bool ret_type, bool already_found) {
 
                 if (ret_type) {
                     var->data.data.var_data.is_return_val_variable = true;
+                    var->data.reference_counter = 1;
                 } else {
                     var->data.data.var_data.is_argument_variable = true;
                 }

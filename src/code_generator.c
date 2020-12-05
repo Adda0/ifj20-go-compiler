@@ -1089,7 +1089,8 @@ void generate_assignment(ASTNode *asgAst, CFStatement *stat) {
             generate_func_call(asgAst->right->data[0].astPtr, stat);
 
             for (unsigned i = 0; i < asgAst->left->dataCount; i++) {
-                if (asgAst->left->data[i].astPtr->inheritedDataType == CF_BLACK_HOLE) {
+                if (asgAst->left->data[i].astPtr->inheritedDataType == CF_BLACK_HOLE ||
+                    asgAst->left->data[i].astPtr->data[0].symbolTableItemPtr->reference_counter == 0) {
                     out("POPS %s", REG_1);
                     continue;
                 }
@@ -1128,6 +1129,8 @@ void generate_assignment(ASTNode *asgAst, CFStatement *stat) {
 
     if (asgAst->left->inheritedDataType == CF_BLACK_HOLE) {
         generate_assignment_for_varname(NULL, stat, asgAst->right);
+    } else if (asgAst->left->data[0].symbolTableItemPtr->reference_counter == 0) {
+        dbg("Omitting assignment into unused variable");
     } else {
         MutableString varName = make_var_name(asgAst->left->data[0].symbolTableItemPtr->identifier, stat, false);
         onlyFindDefinedSymbols = true;
@@ -1168,13 +1171,13 @@ void generate_return_statement(CFStatement *stat) {
             return;
         }
     } else {
-        if (retAstList == NULL || retAstList->actionType != AST_LIST) {
+        if (!hasNamedReturnValues && (retAstList == NULL || retAstList->actionType != AST_LIST)) {
             stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
                            "Unexpected AST in RETURN statement.\n");
             return;
         }
 
-        if (hasNamedReturnValues && retAstList->dataCount != 0
+        if (hasNamedReturnValues && retAstList != NULL && retAstList->dataCount != 0
             && retAstList->dataCount != stat->parentFunction->returnValuesCount) {
             stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
                            "Return statement of the function '%s' with named return values should either explicitly specify all return values or contain none.\n",
@@ -1396,7 +1399,7 @@ void generate_definitions(CFStatement *stat) {
             while (it != NULL) {
                 STSymbol *symb = &it->data;
 
-                if (/*symb->reference_counter > 0 &&*/ symb->type == ST_SYMBOL_VAR) {
+                if (symb->reference_counter > 0 && symb->type == ST_SYMBOL_VAR) {
                     if (!symb->data.var_data.is_argument_variable) {
                         MutableString varName = make_var_name(symb->identifier, stat, false);
                         char *varNameP = mstr_content(&varName);
@@ -1493,7 +1496,7 @@ void generate_function(CFFunction *fun) {
 
     // Return from the function will be generated from the first RETURN statement
     if (!fun->terminated) {
-        if (fun->returnValuesCount == 0) {
+        if (fun->returnValuesCount == 0 || fun->returnValues->variable.name != NULL) {
             ASTNode *astBackup = fun->rootStatement->data.bodyAst;
             fun->rootStatement->data.bodyAst = NULL;
             generate_return_statement(fun->rootStatement);
