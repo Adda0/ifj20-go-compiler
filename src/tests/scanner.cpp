@@ -454,6 +454,12 @@ TEST_F(ScannerTest, IntStartingWithMultipleZeroes2) {
     ASSERT_EQ(resultToken.data.num_int_val, 69);
 }
 
+TEST_F(ScannerTest, IntStartingWithMultipleZeroes3) {
+    // Go interprets this as an octal number, same as C
+    LEX_SUCCESS("00000 ", TOKEN_INT);
+    ASSERT_EQ(resultToken.data.num_int_val, 0);
+}
+
 TEST_F(ScannerTest, IntMultiple) {
     LEX_SUCCESS("123456 ", TOKEN_INT);
     ASSERT_EQ(resultToken.data.num_int_val, 123456);
@@ -1789,4 +1795,8 @@ TEST_F(ScannerTest, InvalidCharacter5) {
 
 TEST_F(ScannerTest, InvalidCharacter6) {
     LEX("\"str\x1A\" ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_STRING, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, IntWithUnderscore) {
+    LEX("1_ ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT, COMPILER_RESULT_ERROR_LEXICAL);
 }
