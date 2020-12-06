@@ -13,6 +13,7 @@
 #include "stderr_message.h"
 #include "mutable_string.h"
 #include "symtable.h"
+#include "stacks.h"
 
 #define TCG_DEBUG 1
 
@@ -50,6 +51,8 @@ struct {
     bool isInBranch;
     bool terminated;
     bool terminatedInBranch;
+
+    SymtableStack stStack;
 } currentFunction;
 
 struct {
@@ -160,19 +163,9 @@ char *convert_to_target_string_form(const char *input) {
 bool onlyFindDefinedSymbols = false;
 
 SymbolTable *find_sym_table(const char *id, CFStatement *stat) {
-    while (stat != NULL) {
-        STItem *it;
-
-        if ((it = symtable_find(stat->localSymbolTable, id)) != NULL) {
-            if (!onlyFindDefinedSymbols || it->data.data.var_data.defined) {
-                return stat->localSymbolTable;
-            }
-        }
-
-        stat = stat->parentStatement;
-    }
-
-    return NULL;
+    SymbolTable *tab = NULL;
+    symtable_stack_find_symbol_and_symtable(&currentFunction.stStack, id, &tab);
+    return tab;
 }
 
 MutableString make_var_name(const char *id, CFStatement *stat, bool isTF) {
@@ -1168,17 +1161,17 @@ void generate_assignment(ASTNode *asgAst, CFStatement *stat) {
             free(tmpAssignNode);
         } else {
             for (unsigned i = 0; i < asgAst->left->dataCount; i++) {
-                ASTNode *valNode = asgAst->right->data[i].astPtr;
+                ASTNode *valNode = asgAst->right->data[asgAst->left->dataCount - i - 1].astPtr;
 
                 if (valNode->actionType >= AST_LOGIC && valNode->actionType < AST_CONTROL) {
-                    generate_logic_expression_assignment(valNode, stat, REG_1);
+                    generate_logic_expression_assignment(valNode, stat, NULL);
                 } else {
                     generate_expression_ast_result(valNode, stat);
                 }
             }
 
             for (unsigned i = 0; i < asgAst->left->dataCount; i++) {
-                ASTNode *idNode = asgAst->left->data[asgAst->left->dataCount - i - 1].astPtr;
+                ASTNode *idNode = asgAst->left->data[i].astPtr;
 
                 if (idNode->inheritedDataType == CF_BLACK_HOLE
                     || idNode->data[0].symbolTableItemPtr->reference_counter == 0) {
@@ -1334,12 +1327,17 @@ void generate_if_statement(CFStatement *stat) {
 
     currentFunction.isInBranch = true;
     out("LABEL %s", mstr_content(&trueLabelStr));
+
+    symtable_stack_push(&currentFunction.stStack, stat->data.ifData->thenStatement->localSymbolTable);
     generate_statement(stat->data.ifData->thenStatement);
+    symtable_stack_pop(&currentFunction.stStack);
 
     if (hasElse) {
         out("JUMP $%s_if%i_end", stat->parentFunction->name, counter);
         out("LABEL %s", mstr_content(&falseLabelStr));
+        symtable_stack_push(&currentFunction.stStack, stat->data.ifData->elseStatement->localSymbolTable);
         generate_statement(stat->data.ifData->elseStatement);
+        symtable_stack_pop(&currentFunction.stStack);
     }
     currentFunction.isInBranch = false;
 
@@ -1352,6 +1350,8 @@ void generate_if_statement(CFStatement *stat) {
 
 void generate_for_statement(CFStatement *stat) {
     dbg("Generating for statement (if #%i)", currentFunction.ifCounter);
+
+    symtable_stack_push(&currentFunction.stStack, stat->localSymbolTable);
 
     unsigned counter = currentFunction.ifCounter;
     currentFunction.ifCounter++;
@@ -1388,13 +1388,16 @@ void generate_for_statement(CFStatement *stat) {
     }
 
     currentFunction.isInBranch = true;
+    symtable_stack_push(&currentFunction.stStack, stat->data.forData->bodyStatement->localSymbolTable);
     generate_statement(stat->data.forData->bodyStatement);
+    symtable_stack_pop(&currentFunction.stStack);
     currentFunction.isInBranch = false;
 
     if (stat->data.forData->afterthoughtAst != NULL) {
         ast_infer_node_type(stat->data.forData->afterthoughtAst);
         generate_assignment(stat->data.forData->afterthoughtAst, stat);
     }
+    symtable_stack_pop(&currentFunction.stStack);
 
     out("JUMP $%s_for%i_begin", stat->parentFunction->name, counter);
     out("LABEL $%s_for%i_end", stat->parentFunction->name, counter);
@@ -1468,6 +1471,7 @@ void generate_definitions(CFStatement *stat) {
     if (stat->localSymbolTable->symbol_prefix == 0) {
         stat->localSymbolTable->symbol_prefix = currentFunction.scopeCounter++;
 
+        symtable_stack_push(&currentFunction.stStack, stat->localSymbolTable);
         for (unsigned ai = 0; ai < stat->localSymbolTable->arr_size; ai++) {
             STItem *it = stat->localSymbolTable->arr[ai];
             while (it != NULL) {
@@ -1507,6 +1511,7 @@ void generate_definitions(CFStatement *stat) {
                 it = it->next;
             }
         }
+        symtable_stack_pop(&currentFunction.stStack);
     }
 
     if (stat->statementType == CF_IF) {
@@ -1555,6 +1560,12 @@ void generate_function(CFFunction *fun) {
     currentFunction.isInBranch = false;
     currentFunction.terminatedInBranch = false;
     currentFunction.terminated = false;
+
+    while (currentFunction.stStack.top != NULL) {
+        symtable_stack_pop(&currentFunction.stStack);
+    }
+
+    symtable_stack_push(&currentFunction.stStack, fun->symbolTable);
 
     out("LABEL %s", fun->name);
 

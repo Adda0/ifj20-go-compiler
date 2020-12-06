@@ -83,6 +83,9 @@ SymtableNode *symtable_stack_top(SymtableStack *stack);
 /** @brief Searches for a symbol in symtable stack, returns the first occurrence. */
 STItem *symtable_stack_find_symbol(SymtableStack *stack, const char *symbol);
 
+/** @brief Searches for a symbol in symtable stack, returns the first occurrence. */
+STItem *symtable_stack_find_symbol_and_symtable(SymtableStack *stack, const char *symbol, SymbolTable **table);
+
 /** @brief Removes the top symbol table from the stack. */
 void symtable_stack_pop(SymtableStack *stack);
 
