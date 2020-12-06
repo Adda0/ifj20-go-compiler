@@ -47,6 +47,9 @@ struct {
 
     bool isMain;
     bool generateMainAsFunction;
+    bool isInBranch;
+    bool terminated;
+    bool terminatedInBranch;
 } currentFunction;
 
 struct {
@@ -1222,7 +1225,7 @@ void generate_return_statement(CFStatement *stat) {
         }
 
         out("EXIT int@0");
-        stat->parentFunction->terminated = true;
+        currentFunction.terminated = true;
         return;
     }
 
@@ -1299,7 +1302,8 @@ void generate_return_statement(CFStatement *stat) {
     // Delete the local frame
     out("POPFRAME");
     out("RETURN");
-    stat->parentFunction->terminated = true;
+    currentFunction.terminated = true;
+    currentFunction.terminatedInBranch = currentFunction.isInBranch;
 }
 
 void generate_if_statement(CFStatement *stat) {
@@ -1328,6 +1332,7 @@ void generate_if_statement(CFStatement *stat) {
     generate_logic_expression_tree(stat->data.ifData->conditionalAst, stat, mstr_content(&trueLabelStr),
                                    mstr_content(&falseLabelStr));
 
+    currentFunction.isInBranch = true;
     out("LABEL %s", mstr_content(&trueLabelStr));
     generate_statement(stat->data.ifData->thenStatement);
 
@@ -1336,6 +1341,7 @@ void generate_if_statement(CFStatement *stat) {
         out("LABEL %s", mstr_content(&falseLabelStr));
         generate_statement(stat->data.ifData->elseStatement);
     }
+    currentFunction.isInBranch = false;
 
     out("LABEL $%s_if%i_end", stat->parentFunction->name, counter);
 
@@ -1381,7 +1387,9 @@ void generate_for_statement(CFStatement *stat) {
         mstr_free(&falseLabelStr);
     }
 
+    currentFunction.isInBranch = true;
     generate_statement(stat->data.forData->bodyStatement);
+    currentFunction.isInBranch = false;
 
     if (stat->data.forData->afterthoughtAst != NULL) {
         ast_infer_node_type(stat->data.forData->afterthoughtAst);
@@ -1544,6 +1552,9 @@ void generate_function(CFFunction *fun) {
     currentFunction.scopeCounter = 1;
     currentFunction.jumpingExprCounter = 0;
     currentFunction.ifCounter = 0;
+    currentFunction.isInBranch = false;
+    currentFunction.terminatedInBranch = false;
+    currentFunction.terminated = false;
 
     out("LABEL %s", fun->name);
 
@@ -1561,7 +1572,7 @@ void generate_function(CFFunction *fun) {
     generate_statement(fun->rootStatement);
 
     // Return from the function will be generated from the first RETURN statement
-    if (!fun->terminated) {
+    if (!currentFunction.terminated) {
         if (fun->returnValuesCount == 0 || fun->returnValues->variable.name != NULL) {
             ASTNode *astBackup = fun->rootStatement->data.bodyAst;
             fun->rootStatement->data.bodyAst = NULL;
@@ -1572,6 +1583,38 @@ void generate_function(CFFunction *fun) {
                            "Function '%s' is missing a return statement.\n", fun->name);
             return;
         }
+    }
+
+    if (currentFunction.terminatedInBranch) {
+        if (fun->returnValuesCount != 0 && fun->returnValues->variable.name == NULL) {
+            stderr_message("codegen", WARNING, COMPILER_RESULT_SUCCESS,
+                           "Function '%s' has no return statements outside branches. Generated a return statement with default values.\n",
+                           fun->name);
+
+            CFVarListNode *n = fun->returnValues;
+            while (n != NULL) {
+                switch (n->variable.dataType) {
+                    case CF_BOOL:
+                    out("PUSHS bool@false");
+                        break;
+                    case CF_INT:
+                    out("PUSHS int@0");
+                        break;
+                    case CF_FLOAT:
+                    out("PUSHS float@0x0p+0");
+                        break;
+                    case CF_STRING:
+                    out("PUSHS string@");
+                        break;
+                    default:
+                        break;
+                }
+                n = n->next;
+            }
+        }
+
+        out("POPFRAME");
+        out("RETURN");
     }
 
     dbg("Function '%s' end", fun->name);

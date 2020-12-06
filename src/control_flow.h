@@ -78,8 +78,6 @@ typedef struct cfgraph_function {
     CFStatement *rootStatement;
 
     SymbolTable *symbolTable;
-
-    bool terminated;
 } CFFunction;
 
 typedef struct cfgraph_functions_list_node {
