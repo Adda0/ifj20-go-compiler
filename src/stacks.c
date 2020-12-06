@@ -117,17 +117,18 @@ SymtableNode *symtable_stack_top(SymtableStack *stack) {
     return stack->top;
 }
 
-STItem *symtable_stack_find_symbol_and_symtable(SymtableStack *stack, const char *symbol, SymbolTable **table) {
+STItem *symtable_stack_find_symbol_and_symtable(SymtableStack *stack, const char *symbol, SymbolTable **table, bool defined_only) {
     SymtableNode *curr = stack->top;
     while (curr != NULL) {
         STItem *found = symtable_find(curr->table, symbol);
-        if (found != NULL) {
+        if (found != NULL && (!defined_only || found->data.data.var_data.defined)) {
             if (table != NULL) {
                 *table = curr->table;
             }
 
             return found;
         }
+
         curr = curr->next;
     }
 
@@ -139,7 +140,7 @@ STItem *symtable_stack_find_symbol_and_symtable(SymtableStack *stack, const char
 }
 
 STItem *symtable_stack_find_symbol(SymtableStack *stack, const char *symbol) {
-    return symtable_stack_find_symbol_and_symtable(stack, symbol, NULL);
+    return symtable_stack_find_symbol_and_symtable(stack, symbol, NULL, false);
 }
 
 void symtable_stack_pop(SymtableStack *stack) {

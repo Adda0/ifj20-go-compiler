@@ -164,7 +164,7 @@ bool onlyFindDefinedSymbols = false;
 
 SymbolTable *find_sym_table(const char *id, CFStatement *stat) {
     SymbolTable *tab = NULL;
-    symtable_stack_find_symbol_and_symtable(&currentFunction.stStack, id, &tab);
+    symtable_stack_find_symbol_and_symtable(&currentFunction.stStack, id, &tab, onlyFindDefinedSymbols);
     return tab;
 }
 
@@ -1161,7 +1161,7 @@ void generate_assignment(ASTNode *asgAst, CFStatement *stat) {
             free(tmpAssignNode);
         } else {
             for (unsigned i = 0; i < asgAst->left->dataCount; i++) {
-                ASTNode *valNode = asgAst->right->data[asgAst->left->dataCount - i - 1].astPtr;
+                ASTNode *valNode = asgAst->right->data[i].astPtr;
 
                 if (valNode->actionType >= AST_LOGIC && valNode->actionType < AST_CONTROL) {
                     generate_logic_expression_assignment(valNode, stat, NULL);
@@ -1171,17 +1171,33 @@ void generate_assignment(ASTNode *asgAst, CFStatement *stat) {
             }
 
             for (unsigned i = 0; i < asgAst->left->dataCount; i++) {
-                ASTNode *idNode = asgAst->left->data[i].astPtr;
+                unsigned currentVarIndex = asgAst->left->dataCount - i - 1;
+                ASTNode *idNode = asgAst->left->data[currentVarIndex].astPtr;
 
                 if (idNode->inheritedDataType == CF_BLACK_HOLE
                     || idNode->data[0].symbolTableItemPtr->reference_counter == 0) {
                     out("POPS %s", REG_1);
                 } else {
-                    out_nnl("POPS ");
-                    print_var_name(idNode, stat);
-                    out_nl();
+                    // Check whether there's the same variable in the assignment list that's to the right
+                    // side of this one. If so, throw the result away.
 
-                    idNode->data[0].symbolTableItemPtr->data.var_data.defined = true;
+                    bool hadLeft = false;
+                    for (unsigned j = currentVarIndex + 1; j < asgAst->left->dataCount; j++) {
+                        if (idNode->data[0].symbolTableItemPtr ==
+                            asgAst->left->data[j].astPtr->data[0].symbolTableItemPtr) {
+                            out("POPS %s", REG_1);
+                            hadLeft = true;
+                            break;
+                        }
+                    }
+
+                    if (!hadLeft) {
+                        out_nnl("POPS ");
+                        print_var_name(idNode, stat);
+                        out_nl();
+
+                        idNode->data[0].symbolTableItemPtr->data.var_data.defined = true;
+                    }
                 }
             }
         }
@@ -1561,10 +1577,6 @@ void generate_function(CFFunction *fun) {
     currentFunction.terminatedInBranch = false;
     currentFunction.terminated = false;
 
-    while (currentFunction.stStack.top != NULL) {
-        symtable_stack_pop(&currentFunction.stStack);
-    }
-
     symtable_stack_push(&currentFunction.stStack, fun->symbolTable);
 
     out("LABEL %s", fun->name);
@@ -1691,6 +1703,11 @@ void tcg_generate() {
         currentFunction.generateMainAsFunction = generateMainAsFunc;
 
         generate_function(&n->fun);
+
+        while (currentFunction.stStack.top != NULL) {
+            symtable_stack_pop(&currentFunction.stStack);
+        }
+
         n = n->next;
     }
 }
