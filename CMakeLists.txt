@@ -56,7 +56,8 @@ add_executable(ControlFlowTester
         src/optimiser.h src/optimiser.c
         src/stderr_message.h src/stderr_message.c
         src/mutable_string.h src/mutable_string.c
-        src/cftest.c)
+        src/cftest.c
+        src/stacks.h src/stacks.c)
 
 # ------- Tests -------
 add_executable(Test_mutable_string src/mutable_string.h src/mutable_string.c src/tests/mutable_string.cpp)
