@@ -415,23 +415,32 @@ CFStatement *cf_make_for_body_statement(CFStatementType type) {
     return newStat;
 }
 
-static void clean_ast(ASTNode *node) {
-    if (node == NULL) return;
-    clean_ast(node->left);
-    clean_ast(node->right);
+bool is_statement_empty(CFStatement *stat) {
+    if (stat == NULL) return true;
 
-    switch (node->actionType) {
-        case AST_LIST:
-            for (unsigned i = 0; i < node->dataCount; i++) {
-                clean_ast(node->data[i].astPtr);
+    switch (stat->statementType) {
+        case CF_BASIC:
+            if (stat->parentStatement != NULL && (stat->parentStatement->statementType == CF_IF
+                                                  || stat->parentStatement->statementType == CF_FOR)) {
+                return false;
             }
-            break;
-        case AST_CONST_STRING:
-            free((void *) node->data[0].stringConstantValue);
-            break;
-    }
 
-    free(node);
+            return is_ast_empty(stat->data.bodyAst);
+        case CF_IF:
+            return is_ast_empty(stat->data.ifData->conditionalAst) ||
+                   (is_statement_empty(stat->data.ifData->thenStatement) &&
+                    is_statement_empty(stat->data.ifData->elseStatement));
+        case CF_FOR:
+            return is_statement_empty(stat->data.forData->bodyStatement);
+        case CF_RETURN:
+            for (unsigned i = 0; i < stat->data.bodyAst->dataCount; i++) {
+                if (is_ast_empty(stat->data.bodyAst->data[i].astPtr)) return true;
+            }
+
+            return false;
+        default:
+            return true;
+    }
 }
 
 static void clean_stat(CFStatement *stat, SymbolTable *parentTable) {

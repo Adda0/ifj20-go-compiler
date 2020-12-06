@@ -96,6 +96,12 @@ extern ASTError ast_error;
 // Does NOT run type inference.
 ASTNode *ast_node(ASTNodeType nodeType);
 
+// Clears memory allocated by ASTNode
+void clean_ast(ASTNode *node);
+
+// Checks whether an AST has no effect.
+bool is_ast_empty(ASTNode *ast);
+
 // Allocates and returns a new empty AST node with the specified amount of data space.
 // Does NOT run type inference.
 ASTNode *ast_node_data(ASTNodeType nodeType, unsigned dataCount);
