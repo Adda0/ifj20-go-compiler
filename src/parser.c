@@ -425,7 +425,13 @@ int else_n() {
                     syntax_error();
                 }
                 check_new_token(EOL_OPTIONAL);
-                return else_();
+
+                check_nonterminal(else_());
+                if (semantic_enabled) {
+                    check_cf(cf_pop_previous_branched_statement());
+                }
+
+                return compiler_result;
             } else {
                 token_error("expected if keyword, got %s\n");
                 syntax_error();
