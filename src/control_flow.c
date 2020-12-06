@@ -163,10 +163,17 @@ CFStatement *cf_make_next_statement(CFStatementType statementType) {
 
     if (activeStat != NULL) {
         if (activeStat->statementType == CF_FOR) {
-            if (activeStat->parentStatement == NULL) {
+            // Find the first non-for parent statement to acquire the correct symtable
+            CFStatement *bestParent = activeStat->parentStatement;
+
+            while (bestParent != NULL && bestParent->statementType == CF_FOR) {
+                bestParent = bestParent->parentStatement;
+            }
+
+            if (bestParent == NULL) {
                 newStat->localSymbolTable = activeFunc->symbolTable;
             } else {
-                newStat->localSymbolTable = activeStat->parentStatement->localSymbolTable;
+                newStat->localSymbolTable = bestParent->localSymbolTable;
             }
         } else if (activeStat->localSymbolTable != NULL) {
             newStat->localSymbolTable = activeStat->localSymbolTable;
@@ -438,10 +445,12 @@ static void clean_stat(CFStatement *stat, SymbolTable *parentTable) {
 
             if (stat->data.ifData->elseStatement != NULL) {
                 if (stat->data.ifData->elseStatement->statementType == CF_IF) {
-                    clean_stat(stat->data.ifData->elseStatement, stat->data.ifData->elseStatement->localSymbolTable);
+                    clean_stat(stat->data.ifData->elseStatement,
+                               stat->data.ifData->elseStatement->localSymbolTable);
                 } else {
                     symtable_free(stat->data.ifData->elseStatement->localSymbolTable);
-                    clean_stat(stat->data.ifData->elseStatement, stat->data.ifData->elseStatement->localSymbolTable);
+                    clean_stat(stat->data.ifData->elseStatement,
+                               stat->data.ifData->elseStatement->localSymbolTable);
                 }
             }
 
