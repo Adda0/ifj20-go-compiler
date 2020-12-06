@@ -613,6 +613,8 @@ bool generate_internal_func_call(ASTNode *funcCallAst, CFStatement *stat) {
     return false;
 }
 
+bool generate_logic_expression_assignment(ASTNode *exprAst, CFStatement *stat, const char *targetVarName);
+
 void generate_func_call(ASTNode *funcCallAst, CFStatement *stat) {
     // Arguments are passed in a temporary frame
     // The frame will then be pushed as LF in the function itself, if it makes sense
@@ -635,8 +637,6 @@ void generate_func_call(ASTNode *funcCallAst, CFStatement *stat) {
 
     onlyFindDefinedSymbols = false;
 
-    out("CREATEFRAME");
-
     if (targetFunc->argumentsCount > 0) {
         if (argAstList == NULL || argAstList->dataCount != targetFunc->argumentsCount) {
             stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
@@ -644,23 +644,58 @@ void generate_func_call(ASTNode *funcCallAst, CFStatement *stat) {
             return;
         }
 
-        STParam *argN = targetFuncSymb->data.func_data.params;
-        ASTNodeData *argContainer = argAstList->data;
+        if (funcCallAst->hasInnerFuncCalls) {
+            // Evaluate arguments on stack first, in last-to-first order, to make the following popping easier
+            onlyFindDefinedSymbols = true;
+            for (unsigned i = 0; i < argAstList->dataCount; i++) {
+                ASTNode *argData = argAstList->data[argAstList->dataCount - i - 1].astPtr;
 
-        onlyFindDefinedSymbols = true;
-        while (argN != NULL) {
-            MutableString varName = make_var_name(argN->id, targetFunc->rootStatement, true);
+                if (argData->actionType >= AST_LOGIC && argData->actionType < AST_CONTROL) {
+                    generate_logic_expression_assignment(argData, stat, NULL);
+                } else {
+                    generate_expression_ast_result(argData, stat);
+                }
+            }
+            onlyFindDefinedSymbols = false;
 
-            ASTNode *argData = argContainer->astPtr;
-            out("DEFVAR %s", mstr_content(&varName));
-            generate_assignment_for_varname(mstr_content(&varName), stat, argData);
+            out("CREATEFRAME");
+            STParam *argN = targetFuncSymb->data.func_data.params;
+            while (argN != NULL) {
+                MutableString varName = make_var_name(argN->id, targetFunc->rootStatement, true);
 
-            mstr_free(&varName);
+                out("DEFVAR %s", mstr_content(&varName));
+                out("POPS %s", mstr_content(&varName));
 
-            argN = argN->next;
-            argContainer++;
+                mstr_free(&varName);
+
+                argN = argN->next;
+            }
+        } else {
+            // No inner func calls, this is one of the inner-most calls
+            // Evaluate arguments normally
+
+            out("CREATEFRAME");
+            STParam *argN = targetFuncSymb->data.func_data.params;
+            ASTNodeData *argContainer = argAstList->data;
+
+            // Setting this flag here is ok, because make_var_name doesn't perform scope lookup for TF vars
+            onlyFindDefinedSymbols = true;
+            while (argN != NULL) {
+                MutableString varName = make_var_name(argN->id, targetFunc->rootStatement, true);
+
+                ASTNode *argData = argContainer->astPtr;
+                out("DEFVAR %s", mstr_content(&varName));
+                generate_assignment_for_varname(mstr_content(&varName), stat, argData);
+
+                mstr_free(&varName);
+
+                argN = argN->next;
+                argContainer++;
+            }
+            onlyFindDefinedSymbols = false;
         }
-        onlyFindDefinedSymbols = false;
+    } else {
+        out("CREATEFRAME");
     }
 
     out("CALL %s", targetFuncSymb->identifier);
@@ -842,7 +877,6 @@ char *make_next_logic_label() {
     return a;
 }
 
-bool generate_logic_expression_assignment(ASTNode *exprAst, CFStatement *stat, const char *targetVarName);
 
 bool generate_simple_logic_expression(ASTNode *exprAst, CFStatement *stat, char *trueLabel, char *falseLabel) {
     ASTNode *left = exprAst->left;

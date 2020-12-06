@@ -227,6 +227,10 @@ bool check_unary_node_children(ASTNode *node) {
         return false;
     }
 
+    if (node->left->actionType == AST_FUNC_CALL || node->left->hasInnerFuncCalls) {
+        node->hasInnerFuncCalls = true;
+    }
+
     if (node->left->inheritedDataType == CF_UNKNOWN) {
         if (!ast_infer_node_type(node->left)) {
             node->inheritedDataType = CF_UNKNOWN_UNINFERRABLE;
@@ -243,6 +247,11 @@ bool check_binary_node_children(ASTNode *node) {
         ast_error = AST_ERROR_BINARY_OP_CHILDREN_NOT_ASSIGNED;
         // TODO: error code
         return false;
+    }
+
+    if (node->left->hasInnerFuncCalls || node->right->hasInnerFuncCalls
+        || node->left->actionType == AST_FUNC_CALL || node->right->actionType == AST_FUNC_CALL) {
+        node->hasInnerFuncCalls = true;
     }
 
     //if (node->left->inheritedDataType == CF_UNKNOWN) {
@@ -611,6 +620,10 @@ bool func_call_inference_semantic_checks(ASTNode *node) {
                 ast_uninferrable(node);
             }
 
+            if (parAst->hasInnerFuncCalls || parAst->actionType == AST_FUNC_CALL) {
+                node->hasInnerFuncCalls = true;
+            }
+
             if (par->type == CF_UNKNOWN) {
                 par->type = parAst->inheritedDataType;
                 return true;
@@ -783,22 +796,27 @@ bool ast_infer_node_type(ASTNode *node) {
                 node->inheritedDataType = CF_NIL;
             } else if (node->dataCount == 1) {
                 ASTNode *innerNode = node->data[0].astPtr;
+
                 if (innerNode == NULL
                     || (innerNode->inheritedDataType == CF_UNKNOWN_UNINFERRABLE)
                     || (!ast_infer_node_type(innerNode))) {
                     // TODO: error code
                     ast_uninferrable(node);
                 } else {
+                    node->hasInnerFuncCalls = innerNode->hasInnerFuncCalls;
                     node->inheritedDataType = innerNode->inheritedDataType;
                 }
             } else {
                 node->inheritedDataType = CF_MULTIPLE;
                 // Run inference for the inner trees
                 bool hasError = false;
+                bool hasFuncCall = false;
                 for (unsigned i = 0; i < node->dataCount; i++) {
                     hasError |= ast_infer_node_type(node->data[i].astPtr);
+                    hasFuncCall |= node->data[i].astPtr->hasInnerFuncCalls;
                 }
 
+                node->hasInnerFuncCalls = hasFuncCall;
                 return hasError;
             }
 

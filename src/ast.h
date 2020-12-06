@@ -69,6 +69,7 @@ typedef struct ast_node {
     struct ast_node *left;
     struct ast_node *right;
 
+    bool hasInnerFuncCalls;
     unsigned dataCount;
     unsigned dataPointerIndex;
     ASTNodeData data[];
