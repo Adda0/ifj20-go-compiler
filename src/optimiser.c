@@ -15,8 +15,20 @@
 #include "ast.h"
 #include "stderr_message.h"
 
+
 static double dabs(double x) {
     return x > 0 ? x : -x;
+}
+
+void reduce_ref_counter(ASTNode *ast) {
+    if (ast == NULL) {
+        return;
+    }
+    reduce_ref_counter(ast->left);
+    reduce_ref_counter(ast->right);
+    if (ast->actionType == AST_ID) {
+        ast->data[0].symbolTableItemPtr->reference_counter--;
+    }
 }
 
 void optimise_add(ASTNode **ast, bool *changed) {
@@ -135,19 +147,19 @@ void optimise_multiply(ASTNode **ast, bool *changed) {
         }
         *changed = true;
     } else {
-        // If one of the operands is 0, the operation is also constant. If one of the operands is 1,
-        // we can remove the multiplication.
+        // If one of the operands is 0, the operation is also constant (doesn't apply to float).
+        // If one of the operands is 1, we can remove the multiplication.
         ASTNode *target = NULL;
         if ((right_op->actionType == AST_CONST_INT && right_op->data[0].intConstantValue == 0) ||
-                (right_op->actionType == AST_CONST_FLOAT && dabs(right_op->data[0].floatConstantValue ) < 1e-10) ||
                 (left_op->actionType == AST_CONST_INT && left_op->data[0].intConstantValue == 1) ||
                 (left_op->actionType == AST_CONST_FLOAT && dabs(1 - left_op->data[0].floatConstantValue) < 1e-10)) {
+            reduce_ref_counter(left_op);
             (*ast)->right = NULL;
             target = right_op;
         } else if ((left_op->actionType == AST_CONST_INT && left_op->data[0].intConstantValue == 0) ||
-                (left_op->actionType == AST_CONST_FLOAT && dabs(left_op->data[0].floatConstantValue) < 1e-10) ||
                 (right_op->actionType == AST_CONST_INT && right_op->data[0].intConstantValue == 1) ||
                 (right_op->actionType == AST_CONST_FLOAT && dabs(1 - right_op->data[0].floatConstantValue) < 1e-10)) {
+            reduce_ref_counter(right_op);
             (*ast)->left = NULL;
             target = left_op;
         }
@@ -260,6 +272,7 @@ void optimise_log_and(ASTNode **ast, bool *changed) {
         *changed = true;
     } else if (left_op->actionType == AST_CONST_BOOL && !left_op->data[0].boolConstantValue) {
         // Short circuit optimization, the result will be false
+        reduce_ref_counter(right_op);
         (*ast)->left = NULL;
         clean_ast(*ast);
         (*ast) = left_op;
@@ -281,6 +294,7 @@ void optimise_log_or(ASTNode **ast, bool *changed) {
         *changed = true;
     } else if (left_op->actionType == AST_CONST_BOOL && left_op->data[0].boolConstantValue) {
         // Short circuit optimization, the result will be true
+        reduce_ref_counter(right_op);
         (*ast)->left = NULL;
         clean_ast(*ast);
         (*ast) = left_op;
@@ -289,7 +303,7 @@ void optimise_log_or(ASTNode **ast, bool *changed) {
 }
 
 void optimise_ast(ASTNode **ast, bool *changed) {
-    // Traverse the AST using in-order traversal
+    // Traverse the AST using post-order traversal
     if (*ast == NULL) {
         return;
     }
@@ -300,6 +314,7 @@ void optimise_ast(ASTNode **ast, bool *changed) {
         }
     } else {
         optimise_ast(&(*ast)->left, changed);
+        optimise_ast(&(*ast)->right, changed);
     }
     switch ((*ast)->actionType) {
         case AST_ADD:
@@ -328,9 +343,6 @@ void optimise_ast(ASTNode **ast, bool *changed) {
             break;
         default:
             break;
-    }
-    if ((*ast)->actionType != AST_LIST) {
-        optimise_ast(&(*ast)->right, changed);
     }
 }
 
