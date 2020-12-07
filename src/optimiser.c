@@ -228,6 +228,66 @@ void optimise_negate(ASTNode **ast, bool *changed) {
     }
 }
 
+void optimise_log_neg(ASTNode **ast, bool *changed) {
+    ASTNode *left_op = (*ast)->left;
+    if (left_op->actionType == AST_CONST_BOOL) {
+        (*ast)->left = NULL;
+        clean_ast(*ast);
+        (*ast) = left_op;
+        left_op->data[0].boolConstantValue = !left_op->data[0].boolConstantValue;
+        *changed = true;
+    } else if (left_op->actionType == AST_LOG_NOT) {
+        // two ! operators cancel out
+        ASTNode *repl = left_op->left;
+        (*ast)->left->left = NULL;
+        clean_ast(*ast);
+        (*ast) = repl;
+        *changed = true;
+    }
+}
+
+void optimise_log_and(ASTNode **ast, bool *changed) {
+    ASTNode *left_op = (*ast)->left;
+    ASTNode *right_op = (*ast)->right;
+    if (left_op->actionType == AST_CONST_BOOL && right_op->actionType == AST_CONST_BOOL) {
+        bool new_val = left_op->data[0].boolConstantValue && right_op->data[0].boolConstantValue;
+        clean_ast(*ast);
+        *ast = ast_leaf_constb(new_val);
+        if (*ast == NULL) {
+            stderr_message("optimiser", ERROR, COMPILER_RESULT_ERROR_INTERNAL, "Out of memory\n");
+            return;
+        }
+        *changed = true;
+    } else if (left_op->actionType == AST_CONST_BOOL && !left_op->data[0].boolConstantValue) {
+        // Short circuit optimization, the result will be false
+        (*ast)->left = NULL;
+        clean_ast(*ast);
+        (*ast) = left_op;
+        *changed = true;
+    }
+}
+
+void optimise_log_or(ASTNode **ast, bool *changed) {
+    ASTNode *left_op = (*ast)->left;
+    ASTNode *right_op = (*ast)->right;
+    if (left_op->actionType == AST_CONST_BOOL && right_op->actionType == AST_CONST_BOOL) {
+        bool new_val = left_op->data[0].boolConstantValue || right_op->data[0].boolConstantValue;
+        clean_ast(*ast);
+        *ast = ast_leaf_constb(new_val);
+        if (*ast == NULL) {
+            stderr_message("optimiser", ERROR, COMPILER_RESULT_ERROR_INTERNAL, "Out of memory\n");
+            return;
+        }
+        *changed = true;
+    } else if (left_op->actionType == AST_CONST_BOOL && left_op->data[0].boolConstantValue) {
+        // Short circuit optimization, the result will be true
+        (*ast)->left = NULL;
+        clean_ast(*ast);
+        (*ast) = left_op;
+        *changed = true;
+    }
+}
+
 void optimise_ast(ASTNode **ast, bool *changed) {
     // Traverse the AST using in-order traversal
     if (*ast == NULL) {
@@ -256,6 +316,15 @@ void optimise_ast(ASTNode **ast, bool *changed) {
             break;
         case AST_AR_NEGATE:
             optimise_negate(ast, changed);
+            break;
+        case AST_LOG_NOT:
+            optimise_log_neg(ast, changed);
+            break;
+        case AST_LOG_AND:
+            optimise_log_and(ast, changed);
+            break;
+        case AST_LOG_OR:
+            optimise_log_or(ast, changed);
             break;
         default:
             break;
