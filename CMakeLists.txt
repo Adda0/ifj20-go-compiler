@@ -83,7 +83,8 @@ add_executable(Test_parser_scanner
         src/control_flow.h src/control_flow.c
         src/code_generator.h src/code_generator.c
         src/ast.h src/ast.c
-        src/symtable.h src/symtable.c)
+        src/symtable.h src/symtable.c
+        src/optimiser.h src/optimiser.c)
 target_link_libraries(Test_parser_scanner gtest gtest_main)
 
 add_executable(Test_symbol_table

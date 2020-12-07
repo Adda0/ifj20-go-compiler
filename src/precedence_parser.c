@@ -187,7 +187,7 @@ bool reduce_multiply(PrecedenceStack *stack, PrecedenceNode *start) {
     return precedence_stack_push(stack, new_nonterminal);
 }
 
-double dabs(double x) {
+static double dabs(double x) {
     return x > 0 ? x : -x;
 }
 
@@ -209,10 +209,9 @@ bool reduce_divide(PrecedenceStack *stack, PrecedenceNode *start) {
             return false;
         }
 
-    } else if (type2 == CF_FLOAT && (second_op->data.ast->actionType ==
-                                     AST_CONST_FLOAT /* TODO: || second_op->data.ast->actionType == AST_AR_NEGATE */)) {
+    } else if (type2 == CF_FLOAT && (second_op->data.ast->actionType == AST_CONST_FLOAT)) {
         double divider = start->rptr->rptr->rptr->data.data.num_float_val;
-        if (dabs(divider) < 1e-7) {
+        if (dabs(divider) < 1e-10) {
             stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_DIVISION_BY_ZERO,
                            "Line %u: division by zero constant\n", start->rptr->rptr->rptr->data.context.line_num);
             return false;
