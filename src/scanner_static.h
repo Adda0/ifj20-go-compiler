@@ -83,9 +83,6 @@ typedef enum automaton_state {
     STATE_ASSIGN, // =
     STATE_EQUAL_TO, // ==
 
-    STATE_TRUE,
-    STATE_FALSE,
-
     STATE_NOT, // !
     STATE_NOT_EQUAL_TO, // !=
     STATE_AMPERSAND, // &
