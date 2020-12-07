@@ -302,6 +302,110 @@ void optimise_log_or(ASTNode **ast, bool *changed) {
     }
 }
 
+bool compare_ints(ASTNode **ast) {
+    int64_t val1 = (*ast)->left->data[0].intConstantValue;
+    int64_t val2 = (*ast)->right->data[0].intConstantValue;
+    switch ((*ast)->actionType) {
+        case AST_LOG_EQ:
+            return val1 == val2;
+        case AST_LOG_NEQ:
+            return val1 != val2;
+        case AST_LOG_GT:
+            return val1 > val2;
+        case AST_LOG_LT:
+            return val1 < val2;
+        case AST_LOG_GTE:
+            return val1 >= val2;
+        case AST_LOG_LTE:
+            return val1 <= val2;
+        default:
+            return false;
+    }
+}
+
+bool compare_floats(ASTNode **ast) {
+    double val1 = (*ast)->left->data[0].floatConstantValue;
+    double val2 = (*ast)->right->data[0].floatConstantValue;
+    switch ((*ast)->actionType) {
+        case AST_LOG_EQ:
+            return val1 == val2;
+        case AST_LOG_NEQ:
+            return val1 != val2;
+        case AST_LOG_GT:
+            return val1 > val2;
+        case AST_LOG_LT:
+            return val1 < val2;
+        case AST_LOG_GTE:
+            return val1 >= val2;
+        case AST_LOG_LTE:
+            return val1 <= val2;
+        default:
+            return false;
+    }
+}
+
+bool compare_strings(ASTNode **ast) {
+    const char *val1 = (*ast)->left->data[0].stringConstantValue;
+    const char *val2 = (*ast)->right->data[0].stringConstantValue;
+    int res = strcmp(val1, val2);
+    switch ((*ast)->actionType) {
+        case AST_LOG_EQ:
+            return res == 0;
+        case AST_LOG_NEQ:
+            return res !=0;
+        case AST_LOG_GT:
+            return res > 0;
+        case AST_LOG_LT:
+            return res < 0;
+        case AST_LOG_GTE:
+            return res >= 0;
+        case AST_LOG_LTE:
+            return res <= 0;
+        default:
+            return false;
+    }
+}
+void optimise_relational_operator(ASTNode **ast, bool *changed) {
+    ASTNode *left_op = (*ast)->left;
+    ASTNode *right_op = (*ast)->right;
+    bool result;
+    bool modify = false;
+    if (left_op->actionType == AST_CONST_INT && right_op->actionType == AST_CONST_INT) {
+        result = compare_ints(ast);
+        modify = true;
+    } else if (left_op->actionType == AST_CONST_FLOAT && right_op->actionType == AST_CONST_FLOAT) {
+        result = compare_floats(ast);
+        modify = true;
+    } else if (left_op->actionType == AST_CONST_STRING && right_op->actionType == AST_CONST_STRING) {
+        result = compare_strings(ast);
+        modify = true;
+    } else if (left_op->actionType == AST_CONST_BOOL && right_op->actionType == AST_CONST_BOOL) {
+        bool val1 = left_op->data[0].boolConstantValue;
+        bool val2 = right_op->data[0].boolConstantValue;
+        switch ((*ast)->actionType) {
+            case AST_LOG_EQ:
+                result = val1 == val2;
+                break;
+            case AST_LOG_NEQ:
+                result = val1 != val2;
+                break;
+            default:
+                return;
+        }
+        modify = true;
+    }
+    if (modify) {
+        // Create new bool node
+        clean_ast(*ast);
+        *ast = ast_leaf_constb(result);
+        if (*ast == NULL) {
+            stderr_message("optimiser", ERROR, COMPILER_RESULT_ERROR_INTERNAL, "Out of memory\n");
+            return;
+        }
+        *changed = true;
+    }
+}
+
 void optimise_ast(ASTNode **ast, bool *changed) {
     // Traverse the AST using post-order traversal
     if (*ast == NULL) {
@@ -340,6 +444,14 @@ void optimise_ast(ASTNode **ast, bool *changed) {
             break;
         case AST_LOG_OR:
             optimise_log_or(ast, changed);
+            break;
+        case AST_LOG_EQ:
+        case AST_LOG_NEQ:
+        case AST_LOG_LT:
+        case AST_LOG_GT:
+        case AST_LOG_LTE:
+        case AST_LOG_GTE:
+            optimise_relational_operator(ast, changed);
             break;
         default:
             break;
