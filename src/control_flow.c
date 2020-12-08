@@ -163,10 +163,17 @@ CFStatement *cf_make_next_statement(CFStatementType statementType) {
 
     if (activeStat != NULL) {
         if (activeStat->statementType == CF_FOR) {
-            if (activeStat->parentStatement == NULL) {
+            // Find the first non-for parent statement to acquire the correct symtable
+            CFStatement *bestParent = activeStat->parentStatement;
+
+            while (bestParent != NULL && bestParent->statementType == CF_FOR) {
+                bestParent = bestParent->parentStatement;
+            }
+
+            if (bestParent == NULL) {
                 newStat->localSymbolTable = activeFunc->symbolTable;
             } else {
-                newStat->localSymbolTable = activeStat->parentStatement->localSymbolTable;
+                newStat->localSymbolTable = bestParent->localSymbolTable;
             }
         } else if (activeStat->localSymbolTable != NULL) {
             newStat->localSymbolTable = activeStat->localSymbolTable;
@@ -183,10 +190,12 @@ CFStatement *cf_make_next_statement(CFStatementType statementType) {
 
     if (activeFunc->rootStatement == NULL) {
         activeFunc->rootStatement = newStat;
+        newStat->parentBranchStatement = newStat;
     }
 
     if (activeStat != NULL) {
         activeStat->followingStatement = newStat;
+        newStat->parentBranchStatement = activeStat->parentBranchStatement;
     }
 
     switch (statementType) {
@@ -350,6 +359,8 @@ CFStatement *cf_make_if_then_statement(CFStatementType type) {
     if (newStat == NULL) return NULL; // The error has been handled
     currentActive->popCount--;
 
+    newStat->parentBranchStatement = currentActive;
+
     // Restore the previously active statement's follower and set the newly created one as thenStatement instead
     currentActive->followingStatement = currentFollowing;
     currentActive->data.ifData->thenStatement = newStat;
@@ -372,6 +383,8 @@ CFStatement *cf_make_if_else_statement(CFStatementType type) {
     if (newStat == NULL) return NULL; // The error has been handled
     currentActive->popCount--;
 
+    newStat->parentBranchStatement = currentActive;
+
     // Restore the previously active statement's follower and set the newly created one as thenStatement instead
     currentActive->followingStatement = currentFollowing;
     currentActive->data.ifData->elseStatement = newStat;
@@ -392,6 +405,8 @@ CFStatement *cf_make_for_body_statement(CFStatementType type) {
     // Make a new statement which will be set as active
     CFStatement *newStat = cf_make_next_statement(type);
     if (newStat == NULL) return NULL; // The error has been handled
+
+    newStat->parentBranchStatement = currentActive;
 
     // Restore the previously active statement's follower and set the newly created one as thenStatement instead
     currentActive->followingStatement = currentFollowing;
@@ -438,10 +453,12 @@ static void clean_stat(CFStatement *stat, SymbolTable *parentTable) {
 
             if (stat->data.ifData->elseStatement != NULL) {
                 if (stat->data.ifData->elseStatement->statementType == CF_IF) {
-                    clean_stat(stat->data.ifData->elseStatement, stat->data.ifData->elseStatement->localSymbolTable);
+                    clean_stat(stat->data.ifData->elseStatement,
+                               stat->data.ifData->elseStatement->localSymbolTable);
                 } else {
                     symtable_free(stat->data.ifData->elseStatement->localSymbolTable);
-                    clean_stat(stat->data.ifData->elseStatement, stat->data.ifData->elseStatement->localSymbolTable);
+                    clean_stat(stat->data.ifData->elseStatement,
+                               stat->data.ifData->elseStatement->localSymbolTable);
                 }
             }
 

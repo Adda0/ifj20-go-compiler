@@ -13,6 +13,7 @@
 #include "stderr_message.h"
 #include "mutable_string.h"
 #include "symtable.h"
+#include "stacks.h"
 
 #define TCG_DEBUG 1
 
@@ -47,6 +48,11 @@ struct {
 
     bool isMain;
     bool generateMainAsFunction;
+    bool isInBranch;
+    bool terminated;
+    bool terminatedInBranch;
+
+    SymtableStack stStack;
 } currentFunction;
 
 struct {
@@ -157,19 +163,9 @@ char *convert_to_target_string_form(const char *input) {
 bool onlyFindDefinedSymbols = false;
 
 SymbolTable *find_sym_table(const char *id, CFStatement *stat) {
-    while (stat != NULL) {
-        STItem *it;
-
-        if ((it = symtable_find(stat->localSymbolTable, id)) != NULL) {
-            if (!onlyFindDefinedSymbols || it->data.data.var_data.defined) {
-                return stat->localSymbolTable;
-            }
-        }
-
-        stat = stat->parentStatement;
-    }
-
-    return NULL;
+    SymbolTable *tab = NULL;
+    symtable_stack_find_symbol_and_symtable(&currentFunction.stStack, id, &tab, onlyFindDefinedSymbols);
+    return tab;
 }
 
 MutableString make_var_name(const char *id, CFStatement *stat, bool isTF) {
@@ -613,6 +609,8 @@ bool generate_internal_func_call(ASTNode *funcCallAst, CFStatement *stat) {
     return false;
 }
 
+bool generate_logic_expression_assignment(ASTNode *exprAst, CFStatement *stat, const char *targetVarName);
+
 void generate_func_call(ASTNode *funcCallAst, CFStatement *stat) {
     // Arguments are passed in a temporary frame
     // The frame will then be pushed as LF in the function itself, if it makes sense
@@ -635,8 +633,6 @@ void generate_func_call(ASTNode *funcCallAst, CFStatement *stat) {
 
     onlyFindDefinedSymbols = false;
 
-    out("CREATEFRAME");
-
     if (targetFunc->argumentsCount > 0) {
         if (argAstList == NULL || argAstList->dataCount != targetFunc->argumentsCount) {
             stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
@@ -644,23 +640,58 @@ void generate_func_call(ASTNode *funcCallAst, CFStatement *stat) {
             return;
         }
 
-        STParam *argN = targetFuncSymb->data.func_data.params;
-        ASTNodeData *argContainer = argAstList->data;
+        if (funcCallAst->hasInnerFuncCalls) {
+            // Evaluate arguments on stack first, in last-to-first order, to make the following popping easier
+            onlyFindDefinedSymbols = true;
+            for (unsigned i = 0; i < argAstList->dataCount; i++) {
+                ASTNode *argData = argAstList->data[argAstList->dataCount - i - 1].astPtr;
 
-        onlyFindDefinedSymbols = true;
-        while (argN != NULL) {
-            MutableString varName = make_var_name(argN->id, targetFunc->rootStatement, true);
+                if (argData->actionType >= AST_LOGIC && argData->actionType < AST_CONTROL) {
+                    generate_logic_expression_assignment(argData, stat, NULL);
+                } else {
+                    generate_expression_ast_result(argData, stat);
+                }
+            }
+            onlyFindDefinedSymbols = false;
 
-            ASTNode *argData = argContainer->astPtr;
-            out("DEFVAR %s", mstr_content(&varName));
-            generate_assignment_for_varname(mstr_content(&varName), stat, argData);
+            out("CREATEFRAME");
+            STParam *argN = targetFuncSymb->data.func_data.params;
+            while (argN != NULL) {
+                MutableString varName = make_var_name(argN->id, targetFunc->rootStatement, true);
 
-            mstr_free(&varName);
+                out("DEFVAR %s", mstr_content(&varName));
+                out("POPS %s", mstr_content(&varName));
 
-            argN = argN->next;
-            argContainer++;
+                mstr_free(&varName);
+
+                argN = argN->next;
+            }
+        } else {
+            // No inner func calls, this is one of the inner-most calls
+            // Evaluate arguments normally
+
+            out("CREATEFRAME");
+            STParam *argN = targetFuncSymb->data.func_data.params;
+            ASTNodeData *argContainer = argAstList->data;
+
+            // Setting this flag here is ok, because make_var_name doesn't perform scope lookup for TF vars
+            onlyFindDefinedSymbols = true;
+            while (argN != NULL) {
+                MutableString varName = make_var_name(argN->id, targetFunc->rootStatement, true);
+
+                ASTNode *argData = argContainer->astPtr;
+                out("DEFVAR %s", mstr_content(&varName));
+                generate_assignment_for_varname(mstr_content(&varName), stat, argData);
+
+                mstr_free(&varName);
+
+                argN = argN->next;
+                argContainer++;
+            }
+            onlyFindDefinedSymbols = false;
         }
-        onlyFindDefinedSymbols = false;
+    } else {
+        out("CREATEFRAME");
     }
 
     out("CALL %s", targetFuncSymb->identifier);
@@ -842,7 +873,6 @@ char *make_next_logic_label() {
     return a;
 }
 
-bool generate_logic_expression_assignment(ASTNode *exprAst, CFStatement *stat, const char *targetVarName);
 
 bool generate_simple_logic_expression(ASTNode *exprAst, CFStatement *stat, char *trueLabel, char *falseLabel) {
     ASTNode *left = exprAst->left;
@@ -1122,27 +1152,53 @@ void generate_assignment(ASTNode *asgAst, CFStatement *stat) {
             return;
         }
 
-        for (unsigned i = 0; i < asgAst->left->dataCount; i++) {
-            ASTNode *valNode = asgAst->right->data[i].astPtr;
+        if (asgAst->left->dataCount == 1) {
+            ASTNode *tmpAssignNode = ast_node(AST_ASSIGN);
+            ASTNode *tmpAssignLeft = asgAst->left->data[0].astPtr;
+            tmpAssignNode->left = tmpAssignLeft;
+            tmpAssignNode->right = asgAst->right->data[0].astPtr;
+            generate_assignment(tmpAssignNode, stat);
+            free(tmpAssignNode);
+        } else {
+            for (unsigned i = 0; i < asgAst->left->dataCount; i++) {
+                ASTNode *valNode = asgAst->right->data[i].astPtr;
 
-            if (valNode->actionType >= AST_LOGIC && valNode->actionType < AST_CONTROL) {
-                generate_logic_expression_assignment(valNode, stat, REG_1);
-            } else {
-                generate_expression_ast_result(valNode, stat);
+                if (valNode->actionType >= AST_LOGIC && valNode->actionType < AST_CONTROL) {
+                    generate_logic_expression_assignment(valNode, stat, NULL);
+                } else {
+                    generate_expression_ast_result(valNode, stat);
+                }
             }
-        }
 
-        for (unsigned i = 0; i < asgAst->left->dataCount; i++) {
-            ASTNode *idNode = asgAst->left->data[asgAst->left->dataCount - i - 1].astPtr;
+            for (unsigned i = 0; i < asgAst->left->dataCount; i++) {
+                unsigned currentVarIndex = asgAst->left->dataCount - i - 1;
+                ASTNode *idNode = asgAst->left->data[currentVarIndex].astPtr;
 
-            if (idNode->inheritedDataType == CF_BLACK_HOLE) {
-                out("POPS %s", REG_1);
-            } else {
-                out_nnl("POPS ");
-                print_var_name(idNode, stat);
-                out_nl();
+                if (idNode->inheritedDataType == CF_BLACK_HOLE
+                    || idNode->data[0].symbolTableItemPtr->reference_counter == 0) {
+                    out("POPS %s", REG_1);
+                } else {
+                    // Check whether there's the same variable in the assignment list that's to the right
+                    // side of this one. If so, throw the result away.
 
-                idNode->data[0].symbolTableItemPtr->data.var_data.defined = true;
+                    bool hadLeft = false;
+                    for (unsigned j = currentVarIndex + 1; j < asgAst->left->dataCount; j++) {
+                        if (idNode->data[0].symbolTableItemPtr ==
+                            asgAst->left->data[j].astPtr->data[0].symbolTableItemPtr) {
+                            out("POPS %s", REG_1);
+                            hadLeft = true;
+                            break;
+                        }
+                    }
+
+                    if (!hadLeft) {
+                        out_nnl("POPS ");
+                        print_var_name(idNode, stat);
+                        out_nl();
+
+                        idNode->data[0].symbolTableItemPtr->data.var_data.defined = true;
+                    }
+                }
             }
         }
 
@@ -1178,7 +1234,7 @@ void generate_return_statement(CFStatement *stat) {
         }
 
         out("EXIT int@0");
-        stat->parentFunction->terminated = true;
+        currentFunction.terminated = true;
         return;
     }
 
@@ -1255,7 +1311,8 @@ void generate_return_statement(CFStatement *stat) {
     // Delete the local frame
     out("POPFRAME");
     out("RETURN");
-    stat->parentFunction->terminated = true;
+    currentFunction.terminated = true;
+    currentFunction.terminatedInBranch = currentFunction.isInBranch;
 }
 
 void generate_if_statement(CFStatement *stat) {
@@ -1284,14 +1341,21 @@ void generate_if_statement(CFStatement *stat) {
     generate_logic_expression_tree(stat->data.ifData->conditionalAst, stat, mstr_content(&trueLabelStr),
                                    mstr_content(&falseLabelStr));
 
+    currentFunction.isInBranch = true;
     out("LABEL %s", mstr_content(&trueLabelStr));
+
+    symtable_stack_push(&currentFunction.stStack, stat->data.ifData->thenStatement->localSymbolTable);
     generate_statement(stat->data.ifData->thenStatement);
+    symtable_stack_pop(&currentFunction.stStack);
 
     if (hasElse) {
         out("JUMP $%s_if%i_end", stat->parentFunction->name, counter);
         out("LABEL %s", mstr_content(&falseLabelStr));
+        symtable_stack_push(&currentFunction.stStack, stat->data.ifData->elseStatement->localSymbolTable);
         generate_statement(stat->data.ifData->elseStatement);
+        symtable_stack_pop(&currentFunction.stStack);
     }
+    currentFunction.isInBranch = false;
 
     out("LABEL $%s_if%i_end", stat->parentFunction->name, counter);
 
@@ -1302,6 +1366,8 @@ void generate_if_statement(CFStatement *stat) {
 
 void generate_for_statement(CFStatement *stat) {
     dbg("Generating for statement (if #%i)", currentFunction.ifCounter);
+
+    symtable_stack_push(&currentFunction.stStack, stat->localSymbolTable);
 
     unsigned counter = currentFunction.ifCounter;
     currentFunction.ifCounter++;
@@ -1337,12 +1403,17 @@ void generate_for_statement(CFStatement *stat) {
         mstr_free(&falseLabelStr);
     }
 
+    currentFunction.isInBranch = true;
+    symtable_stack_push(&currentFunction.stStack, stat->data.forData->bodyStatement->localSymbolTable);
     generate_statement(stat->data.forData->bodyStatement);
+    symtable_stack_pop(&currentFunction.stStack);
+    currentFunction.isInBranch = false;
 
     if (stat->data.forData->afterthoughtAst != NULL) {
         ast_infer_node_type(stat->data.forData->afterthoughtAst);
         generate_assignment(stat->data.forData->afterthoughtAst, stat);
     }
+    symtable_stack_pop(&currentFunction.stStack);
 
     out("JUMP $%s_for%i_begin", stat->parentFunction->name, counter);
     out("LABEL $%s_for%i_end", stat->parentFunction->name, counter);
@@ -1416,6 +1487,7 @@ void generate_definitions(CFStatement *stat) {
     if (stat->localSymbolTable->symbol_prefix == 0) {
         stat->localSymbolTable->symbol_prefix = currentFunction.scopeCounter++;
 
+        symtable_stack_push(&currentFunction.stStack, stat->localSymbolTable);
         for (unsigned ai = 0; ai < stat->localSymbolTable->arr_size; ai++) {
             STItem *it = stat->localSymbolTable->arr[ai];
             while (it != NULL) {
@@ -1455,6 +1527,7 @@ void generate_definitions(CFStatement *stat) {
                 it = it->next;
             }
         }
+        symtable_stack_pop(&currentFunction.stStack);
     }
 
     if (stat->statementType == CF_IF) {
@@ -1500,6 +1573,11 @@ void generate_function(CFFunction *fun) {
     currentFunction.scopeCounter = 1;
     currentFunction.jumpingExprCounter = 0;
     currentFunction.ifCounter = 0;
+    currentFunction.isInBranch = false;
+    currentFunction.terminatedInBranch = false;
+    currentFunction.terminated = false;
+
+    symtable_stack_push(&currentFunction.stStack, fun->symbolTable);
 
     out("LABEL %s", fun->name);
 
@@ -1517,7 +1595,7 @@ void generate_function(CFFunction *fun) {
     generate_statement(fun->rootStatement);
 
     // Return from the function will be generated from the first RETURN statement
-    if (!fun->terminated) {
+    if (!currentFunction.terminated) {
         if (fun->returnValuesCount == 0 || fun->returnValues->variable.name != NULL) {
             ASTNode *astBackup = fun->rootStatement->data.bodyAst;
             fun->rootStatement->data.bodyAst = NULL;
@@ -1528,6 +1606,38 @@ void generate_function(CFFunction *fun) {
                            "Function '%s' is missing a return statement.\n", fun->name);
             return;
         }
+    }
+
+    if (currentFunction.terminatedInBranch) {
+        if (fun->returnValuesCount != 0 && fun->returnValues->variable.name == NULL) {
+            stderr_message("codegen", WARNING, COMPILER_RESULT_SUCCESS,
+                           "Function '%s' has no return statements outside branches. Generated a return statement with default values.\n",
+                           fun->name);
+
+            CFVarListNode *n = fun->returnValues;
+            while (n != NULL) {
+                switch (n->variable.dataType) {
+                    case CF_BOOL:
+                    out("PUSHS bool@false");
+                        break;
+                    case CF_INT:
+                    out("PUSHS int@0");
+                        break;
+                    case CF_FLOAT:
+                    out("PUSHS float@0x0p+0");
+                        break;
+                    case CF_STRING:
+                    out("PUSHS string@");
+                        break;
+                    default:
+                        break;
+                }
+                n = n->next;
+            }
+        }
+
+        out("POPFRAME");
+        out("RETURN");
     }
 
     dbg("Function '%s' end", fun->name);
@@ -1593,6 +1703,11 @@ void tcg_generate() {
         currentFunction.generateMainAsFunction = generateMainAsFunc;
 
         generate_function(&n->fun);
+
+        while (currentFunction.stStack.top != NULL) {
+            symtable_stack_pop(&currentFunction.stStack);
+        }
+
         n = n->next;
     }
 }

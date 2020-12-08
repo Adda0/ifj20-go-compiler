@@ -68,7 +68,7 @@ const char precedence_table[][NUMBER_OF_OPS] = {
         {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
                 ' ', ' ', ' ', ' ', ' ', ' ', '=', ' ', ' ', ' ', ' ', ' '}, // f
         {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<',
-                '=', '=', '=', '=', '=', '=', '<', '=', '<', '<', '=', '>'}, // ,
+                '=', '=', ' ', ' ', ' ', ' ', '<', '=', '<', '<', '=', '>'}, // ,
         {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<',
                 '<', '<', '<', '<', '<', '<', '<', ' ', '<', '<', '<', 'o'}, // $
 };
@@ -76,8 +76,8 @@ const char precedence_table[][NUMBER_OF_OPS] = {
 
 int rules[NUMBER_OF_RULES][RULE_LENGTH] = {
         {SYMB_NONTERMINAL, TOKEN_NOT,          SYMB_NONTERMINAL,       SYMB_UNDEF},
-        {SYMB_NONTERMINAL, TOKEN_PLUS,         SYMB_NONTERMINAL,       SYMB_UNDEF},
-        {SYMB_NONTERMINAL, TOKEN_MINUS,        SYMB_NONTERMINAL,       SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_UNARY_PLUS,    SYMB_NONTERMINAL,       SYMB_UNDEF},
+        {SYMB_NONTERMINAL, SYMB_UNARY_MINUS,   SYMB_NONTERMINAL,       SYMB_UNDEF},
         {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_MULTIPLY,         SYMB_NONTERMINAL,       SYMB_UNDEF},
         {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_DIVIDE,           SYMB_NONTERMINAL,       SYMB_UNDEF},
         {SYMB_NONTERMINAL, SYMB_NONTERMINAL,   TOKEN_PLUS,             SYMB_NONTERMINAL,       SYMB_UNDEF},
@@ -923,6 +923,10 @@ int get_table_index(int type, bool eol_allowed, bool eol_read) {
             return INDEX_I;
         case TOKEN_COMMA:
             return INDEX_COMMA;
+        case SYMB_UNARY_PLUS:
+            return INDEX_UNARY_PLUS;
+        case SYMB_UNARY_MINUS:
+            return INDEX_UNARY_MINUS;
         default:
             return INDEX_END;
     }
@@ -1162,6 +1166,10 @@ int parse_expression(AssignRule assign_rule, bool eol_before_allowed, ASTNode **
             current_symbol.type = SYMB_FUNCTION;
         } else if (current_symbol.type == TOKEN_ID && symbol_index == INDEX_I) {
             current_symbol.type = SYMB_ID;
+        } else if (current_symbol.type == TOKEN_PLUS && symbol_index == INDEX_UNARY_PLUS) {
+            current_symbol.type = SYMB_UNARY_PLUS;
+        } else if (current_symbol.type == TOKEN_MINUS && symbol_index == INDEX_UNARY_MINUS) {
+            current_symbol.type = SYMB_UNARY_MINUS;
         }
         switch (precedence_table[top_index][symbol_index]) {
             case '=':

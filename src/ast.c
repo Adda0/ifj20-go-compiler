@@ -204,13 +204,13 @@ bool ast_infer_leaf_type(ASTNode *node) {
             } else {
                 node->inheritedDataType = CF_MULTIPLE;
             }
-        }
 
-        // If strict inference is on, we can't have any unknowns for identifiers
-        if (strictInference && node->inheritedDataType == CF_UNKNOWN) {
-            print_error(COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
-                        "Couldn't infer type for identifier '%s'.", symb->identifier);
-            ast_uninferrable(node);
+            // If strict inference is on, we can't have any unknowns for functions
+            if (strictInference && node->inheritedDataType == CF_UNKNOWN) {
+                print_error(COMPILER_RESULT_ERROR_SEMANTIC_GENERAL,
+                            "Couldn't infer type for function '%s'.", symb->identifier);
+                ast_uninferrable(node);
+            }
         }
 
         return true;
@@ -225,6 +225,10 @@ bool check_unary_node_children(ASTNode *node) {
     if (node->left == NULL) {
         ast_error = AST_ERROR_UNARY_OP_CHILD_NOT_ASSIGNED;
         return false;
+    }
+
+    if (node->left->actionType == AST_FUNC_CALL || node->left->hasInnerFuncCalls) {
+        node->hasInnerFuncCalls = true;
     }
 
     if (node->left->inheritedDataType == CF_UNKNOWN) {
@@ -245,20 +249,25 @@ bool check_binary_node_children(ASTNode *node) {
         return false;
     }
 
+    if (node->left->hasInnerFuncCalls || node->right->hasInnerFuncCalls
+        || node->left->actionType == AST_FUNC_CALL || node->right->actionType == AST_FUNC_CALL) {
+        node->hasInnerFuncCalls = true;
+    }
+
     //if (node->left->inheritedDataType == CF_UNKNOWN) {
-        if (!ast_infer_node_type(node->left)) {
-            node->inheritedDataType = CF_UNKNOWN_UNINFERRABLE;
-            // TODO: error code
-            return false;
-        }
+    if (!ast_infer_node_type(node->left)) {
+        node->inheritedDataType = CF_UNKNOWN_UNINFERRABLE;
+        // TODO: error code
+        return false;
+    }
     //}
 
     //if (node->right->inheritedDataType == CF_UNKNOWN) {
-        if (!ast_infer_node_type(node->right)) {
-            node->inheritedDataType = CF_UNKNOWN_UNINFERRABLE;
-            // TODO: error code
-            return false;
-        }
+    if (!ast_infer_node_type(node->right)) {
+        node->inheritedDataType = CF_UNKNOWN_UNINFERRABLE;
+        // TODO: error code
+        return false;
+    }
     //}
 
     if (node->left->inheritedDataType == CF_BLACK_HOLE) {
@@ -275,11 +284,6 @@ bool check_binary_node_children(ASTNode *node) {
     if (node->right->inheritedDataType == CF_BLACK_HOLE) {
         node->inheritedDataType = CF_UNKNOWN_UNINFERRABLE;
         return false;
-    }
-
-    if (strictInference &&
-        (node->left->inheritedDataType == CF_UNKNOWN || node->right->inheritedDataType == CF_UNKNOWN)) {
-        ast_uninferrable(node);
     }
 
     // If we got to a FUNC_CALL for a func that hasn't been yet defined,
@@ -331,6 +335,11 @@ bool check_binary_node_children(ASTNode *node) {
         }
 
         return true;
+    }
+
+    if (strictInference &&
+        (node->left->inheritedDataType == CF_UNKNOWN || node->right->inheritedDataType == CF_UNKNOWN)) {
+        ast_uninferrable(node);
     }
 
     if (node->left->inheritedDataType != node->right->inheritedDataType) {
@@ -480,8 +489,18 @@ bool assignment_inference_semantic_checks(ASTNode *node) {
             ASTNode *leftIdNode = node->left->data[i].astPtr;
             ASTNode *rightValueNode = node->right->data[i].astPtr;
 
-            if (!ast_infer_node_type(leftIdNode)
-                || !ast_infer_node_type(rightValueNode)) {
+            bool strictInferenceState = strictInference;
+            strictInference = false;
+            if (!ast_infer_node_type(leftIdNode)) {
+                print_error(COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION,
+                            "Error deducing type for variable '%s'.\n",
+                            leftIdNode->data[0].symbolTableItemPtr->identifier);
+                // TODO: error code
+                ast_uninferrable(node);
+            }
+            strictInference = strictInferenceState;
+
+            if (!ast_infer_node_type(rightValueNode)) {
                 print_error(COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION,
                             "Error deducing type for variable '%s'.\n",
                             leftIdNode->data[0].symbolTableItemPtr->identifier);
@@ -599,6 +618,10 @@ bool func_call_inference_semantic_checks(ASTNode *node) {
                             funcSymbol->identifier);
                 // TODO: error code
                 ast_uninferrable(node);
+            }
+
+            if (parAst->hasInnerFuncCalls || parAst->actionType == AST_FUNC_CALL) {
+                node->hasInnerFuncCalls = true;
             }
 
             if (par->type == CF_UNKNOWN) {
@@ -773,22 +796,27 @@ bool ast_infer_node_type(ASTNode *node) {
                 node->inheritedDataType = CF_NIL;
             } else if (node->dataCount == 1) {
                 ASTNode *innerNode = node->data[0].astPtr;
+
                 if (innerNode == NULL
                     || (innerNode->inheritedDataType == CF_UNKNOWN_UNINFERRABLE)
                     || (!ast_infer_node_type(innerNode))) {
                     // TODO: error code
                     ast_uninferrable(node);
                 } else {
+                    node->hasInnerFuncCalls = innerNode->hasInnerFuncCalls;
                     node->inheritedDataType = innerNode->inheritedDataType;
                 }
             } else {
                 node->inheritedDataType = CF_MULTIPLE;
                 // Run inference for the inner trees
                 bool hasError = false;
+                bool hasFuncCall = false;
                 for (unsigned i = 0; i < node->dataCount; i++) {
                     hasError |= ast_infer_node_type(node->data[i].astPtr);
+                    hasFuncCall |= node->data[i].astPtr->hasInnerFuncCalls;
                 }
 
+                node->hasInnerFuncCalls = hasFuncCall;
                 return hasError;
             }
 

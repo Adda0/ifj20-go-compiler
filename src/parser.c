@@ -425,7 +425,13 @@ int else_n() {
                     syntax_error();
                 }
                 check_new_token(EOL_OPTIONAL);
-                return else_();
+
+                check_nonterminal(else_());
+                if (semantic_enabled) {
+                    check_cf(cf_pop_previous_branched_statement());
+                }
+
+                return compiler_result;
             } else {
                 token_error("expected if keyword, got %s\n");
                 syntax_error();
@@ -937,6 +943,14 @@ bool prepare_builtins() {
     }
     inputf->data.data.func_data.defined = true;
     if (!symtable_add_ret_type(inputf, NULL, CF_FLOAT) || !symtable_add_ret_type(inputf, NULL, CF_INT)) {
+        return false;
+    }
+    STItem *inputb = symtable_add(function_table, "inputb", ST_SYMBOL_FUNC);
+    if (inputb == NULL) {
+        return false;
+    }
+    inputb->data.data.func_data.defined = true;
+    if (!symtable_add_ret_type(inputb, NULL, CF_BOOL) || !symtable_add_ret_type(inputb, NULL, CF_INT)) {
         return false;
     }
     STItem *print = symtable_add(function_table, "print", ST_SYMBOL_FUNC);

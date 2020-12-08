@@ -49,6 +49,7 @@ typedef struct cfgraph_for_statement {
 typedef struct cfgraph_statement {
     struct cfgraph_function *parentFunction;
     struct cfgraph_statement *parentStatement;
+    struct cfgraph_statement *parentBranchStatement; // TODO: use this instead of popCount
     struct cfgraph_statement *followingStatement;
 
     SymbolTable *localSymbolTable;
@@ -78,8 +79,6 @@ typedef struct cfgraph_function {
     CFStatement *rootStatement;
 
     SymbolTable *symbolTable;
-
-    bool terminated;
 } CFFunction;
 
 typedef struct cfgraph_functions_list_node {
