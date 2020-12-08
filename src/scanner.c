@@ -873,7 +873,6 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
             if (read_char == '*') {
                 *automaton_state = STATE_ASTERISK_IN_MULTILINE_COMMENT;
             } else if (read_char == EOF) {
-                // TODO: it would be great to tell the user where the block comment started
                 stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_LEXICAL,
                                "Line %llu, col %llu: Block comment hasn't been terminated. End it with '*/'.\n",
                                line_num, char_num);
