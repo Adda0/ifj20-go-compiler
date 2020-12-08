@@ -33,7 +33,7 @@ typedef enum scanner_result {
     SCANNER_RESULT_SUCCESS,
     SCANNER_RESULT_MISSING_EOL,
     SCANNER_RESULT_EXCESS_EOL,
-    SCANNER_RESULT_EOF,
+    SCANNER_RESULT_EOF, // EOF was read, end of the source code
     SCANNER_RESULT_INVALID_STATE, // parsing source code didn't end in an accept state of scanner FA
     SCANNER_RESULT_NUMBER_OVERFLOW, // overflow of integer of double nubmer when parsing the number from string
     SCANNER_RESULT_INTERNAL_ERROR, // internal operation as malloc() failed
@@ -129,18 +129,18 @@ typedef union token_data {
  * @brief Data type containing additional context info about token - used by parser, filled by scanner.
  */
 typedef struct token_context {
-    size_t line_num;
-    size_t char_num;
-    bool eol_read;
+    size_t line_num; // line number of the current token
+    size_t char_num; // column number of the first char of the token
+    bool eol_read; // whether EOL was read when looking for the first char of the token
 } TokenContext;
 
 /**
  * @brief Data type containing all the necessary data for token given to parser by scanner.
  */
 typedef struct token {
-    TokenType type;
-    TokenData data;
-    TokenContext context;
+    TokenType type; // type of a token
+    TokenData data; // necessary information for token
+    TokenContext context; // additional information about token
 } Token;
 
 /**
