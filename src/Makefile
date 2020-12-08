@@ -14,7 +14,7 @@ all: compiler
 
 compiler: scanner.o mutable_string.o stderr_message.o compiler.o \
 		  parser.o precedence_parser.o stacks.o symtable.o ast.o control_flow.o code_generator.o \
-		  optimiser.o
+		  optimiser.o variable_vector.o
 
 scanner.o: scanner.c scanner.h mutable_string.h compiler.h \
 		   scanner_static.h stderr_message.h
@@ -36,6 +36,7 @@ code_generator.o: code_generator.c code_generator.h control_flow.h ast.h symtabl
 				  ast.h stderr_message.h compiler.h mutable_string.h
 optimiser.o: optimiser.c optimiser.h control_flow.h symtable.h ast.h \
 			 code_generator.h stderr_message.h compiler.h
+variable_vector.o: variable_vector.c variable_vector.h symtable.h ast.h stderr_message.h
 
 
 test:
