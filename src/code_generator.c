@@ -57,6 +57,7 @@ struct {
 
     SymtableStack stStack;
 } currentFunction;
+
 struct {
     STSymbol *print;
     STSymbol *int2float;
@@ -73,6 +74,7 @@ struct {
     bool printUsed;
     bool reg3Used;
 } symbs;
+
 bool onlyFindDefinedSymbols = false;
 
 void generate_statement(CFStatement *stat);
