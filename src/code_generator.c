@@ -75,8 +75,19 @@ struct {
 } symbs;
 bool onlyFindDefinedSymbols = false;
 
+void generate_statement(CFStatement *stat);
+
+void generate_assignment_for_varname(const char *varName, ASTNode *value);
+
+bool generate_expression_ast_result(ASTNode *exprAst);
+
+bool generate_logic_expression_tree(ASTNode *exprAst, char *trueLabel, char *falseLabel);
+
+bool generate_logic_expression_assignment(ASTNode *exprAst, const char *targetVarName);
+
 #define find_internal_symbol(symbol) (it = symtable_find(globSt, (symbol))) == NULL ? NULL : (&it->data)
 
+// Finds symbols corresponding to the built-in functions in the global symbol table and saves pointers to them.
 void find_internal_symbols(SymbolTable *globSt) {
     STItem *it;
 
@@ -131,19 +142,33 @@ char *convert_to_target_string_form(const char *input) {
     return convert_to_target_string_form_cb(input, false);
 }
 
+// Finds the first symbol table on the current symbol table stack that contains the specified identifier.
+// The global onlyFindDefinedSymbols variable controls whether only variables that have been defined already
+// should be returned (this is typically used when evaluating right-hand sides of expressions).
 SymbolTable *find_sym_table(const char *id) {
     SymbolTable *tab = NULL;
     symtable_stack_find_symbol_and_symtable(&currentFunction.stStack, id, &tab, onlyFindDefinedSymbols);
     return tab;
 }
 
+// Finds an identifier in the symbol table stack and creates a MutableString with the corresponding variable's name
+// decorated with the scope (symbol table) number of the table it was found in.
+// If the isTF argument is true, it doesn't perform a symbol table lookup and instead decorates the variable name
+// with 'TF@$1_' (the top-level symtable of a function will always have number one, assigned in generate_definitions()).
 MutableString make_var_name(const char *id, bool isTF) {
-    char *i = malloc(12);
+    char *i = malloc(UINT_DIGITS);
 
     if (isTF) {
         sprintf(i, "1");
     } else {
         SymbolTable *symtab = find_sym_table(id);
+
+        if (symtab == NULL) {
+            stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
+                           "Symbol '%s' not found.\n", id);
+            sprintf(i, "error");
+        }
+
         sprintf(i, "%u", symtab->symbol_prefix);
     }
 
@@ -153,16 +178,27 @@ MutableString make_var_name(const char *id, bool isTF) {
     return str;
 }
 
+// Finds an identifier in the symbol table stack, decorates the identifier with LF@$ and the scope (symbol table) number
+// of the table it was found in and prints the resulting variable name to output.
 void print_var_name_id(const char *id) {
     SymbolTable *symtab = find_sym_table(id);
+
+    if (symtab == NULL) {
+        stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
+                       "Symbol '%s' not found.\n", id);
+        return;
+    }
+
     out_nnl("%s@$%u_%s", "LF", symtab->symbol_prefix, id);
 }
 
+// Calls print_var_name_id with the identifier referenced by the specified AST_ID node.
 void print_var_name(ASTNode *idAstNode) {
     STSymbol *st = idAstNode->data[0].symbolTableItemPtr;
     print_var_name_id(st->identifier);
 }
 
+// Either prints the target code representation of a constant or calls print_var name to print a decorated variable name.
 void print_var_name_or_const(ASTNode *node) {
     if (node->actionType == AST_CONST_INT) {
         out_nnl("int@%li", node->data[0].intConstantValue);
@@ -179,20 +215,13 @@ void print_var_name_or_const(ASTNode *node) {
     }
 }
 
-void generate_statement(CFStatement *stat);
-
-void generate_assignment_for_varname(const char *varName, ASTNode *value);
-
-bool generate_expression_ast_result(ASTNode *exprAst);
-
-bool generate_logic_expression_tree(ASTNode *exprAst, char *trueLabel, char *falseLabel);
-
+// ---- Built-in functions generators ----
 void generate_print_log_expr(ASTNode *ast) {
     unsigned counter = currentFunction.ifCounter;
     currentFunction.ifCounter++;
 
-    char i[11];
-    sprintf(i, "%i", counter);
+    char i[UINT_DIGITS];
+    sprintf(i, "%u", counter);
 
     MutableString trueLabelStr, falseLabelStr;
 
@@ -534,7 +563,10 @@ void generate_internal_ord(ASTNode *argAst) {
         free(strLenArgOp);
     }
 }
+// ---------------------------------------
 
+// Checks whether the specified AST_FUNC_CALL node leads to a call to a built-in function and calls the corresponding
+// generation function if it does.
 bool generate_internal_func_call(ASTNode *funcCallAst) {
     STSymbol *s = funcCallAst->left->data[0].symbolTableItemPtr;
     ASTNode *args = funcCallAst->right;
@@ -578,11 +610,13 @@ bool generate_internal_func_call(ASTNode *funcCallAst) {
     return false;
 }
 
-bool generate_logic_expression_assignment(ASTNode *exprAst, const char *targetVarName);
-
+// Generates a function call: generates a CREATEFRAME instruction with DEFVAR instructions for the target function's arguments.
+// If the function call contains other nested function calls, it first evaluates the arguments on stack, then assigns them
+// into the created variables, because calling a nested function call generation would discard the current temporary frame;
+// otherwise, it generates the assignments in-place, mitigating the need for additional stack operations.
 void generate_func_call(ASTNode *funcCallAst) {
     // Arguments are passed in a temporary frame
-    // The frame will then be pushed as LF in the function itself, if it makes sense
+    // The frame will then be pushed as LF in the function itself
     if (is_ast_empty(funcCallAst) || funcCallAst->left == NULL) {
         stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
                        "Function call has no target.\n");
@@ -669,6 +703,7 @@ void generate_func_call(ASTNode *funcCallAst) {
     // The return values are on stack
 }
 
+// Generates a representation of a non-logic and non-string AST node.
 void generate_expression_ast(ASTNode *exprAst) {
     switch (exprAst->actionType) {
         case AST_ID:
@@ -690,7 +725,6 @@ void generate_expression_ast(ASTNode *exprAst) {
         case AST_CONST_FLOAT:
         out("PUSHS float@%a", exprAst->data[0].floatConstantValue);
             return;
-
         case AST_ADD:
         out("ADDS");
             break;
@@ -708,6 +742,8 @@ void generate_expression_ast(ASTNode *exprAst) {
             }
             break;
         case AST_AR_NEGATE:
+            // For NEGATE nodes converted to express a (0 - AST).
+            // Left and right will have been pushed on stack, so just do the same as in SUBTRACT.
             if (exprAst->right != NULL) {
                 out("SUBS");
             }
@@ -736,6 +772,9 @@ void generate_expression_ast(ASTNode *exprAst) {
     }
 }
 
+// Recursively generates an AST consisting of string constants, identifiers and ADD nodes.
+// It uses the most efficient way to do this based on the type of the child nodes (even though most of this
+// work will have been already done by the optimiser).
 // Target: 0 = push to stack, 1 = REG_1, 2 = REG_2
 void generate_string_concat(ASTNode *addAst, int target) {
     ASTNode *left = addAst->left;
@@ -771,6 +810,8 @@ void generate_string_concat(ASTNode *addAst, int target) {
     }
 }
 
+// Recursively (post-order) evaluates a non-logic AST on stack. First calls itself for left and right children,
+// then calls generate_expression_ast to generate a stack instruction corresponding to this node.
 bool generate_expression_ast_result(ASTNode *exprAst) {
     if (exprAst == NULL) {
         dbg("Null expression");
@@ -789,6 +830,8 @@ bool generate_expression_ast_result(ASTNode *exprAst) {
     }
 
     if (exprAst->actionType == AST_AR_NEGATE) {
+        // This will probably have been done in the optimiser already
+        // Checking it here isn't a problem though
         if (exprAst->left->actionType == AST_CONST_INT) {
             int i = exprAst->left->data[0].intConstantValue;
             exprAst->left->data[0].intConstantValue = -i;
@@ -835,13 +878,17 @@ bool generate_expression_ast_result(ASTNode *exprAst) {
     return true;
 }
 
+// Creates a string with a unique name for a label that is generated as a part of jumping logic expression tree
+// evaluation. This is done simply using a static counter, which can be global for the whole program.
 char *make_next_logic_label() {
-    static int cntr = 0;
-    char *a = malloc(11);
-    sprintf(a, "$$log_%i", cntr++);
+    static unsigned counter = 0;
+    char *a = malloc(UINT_DIGITS);
+    sprintf(a, "$$log_%u", counter++);
     return a;
 }
 
+// Evaluates a simple logic expression (comparison, constant, identifier or function call). Generates a jump
+// to *trueLabel when the result is true, and a jump to *falseLabel when it's false.
 bool generate_simple_logic_expression(ASTNode *exprAst, char *trueLabel, char *falseLabel) {
     ASTNode *left = exprAst->left;
     ASTNode *right = exprAst->right;
@@ -910,8 +957,9 @@ bool generate_simple_logic_expression(ASTNode *exprAst, char *trueLabel, char *f
             out_nl();
 
             out("JUMPIFEQ %s bool@true %s", trueLabel, COND_RES_VAR);
-        } else {
-            // error
+        } else { // Sanity check
+            stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION,
+                           "Malformed logical expression.\n");
             return false;
         }
 
@@ -919,7 +967,6 @@ bool generate_simple_logic_expression(ASTNode *exprAst, char *trueLabel, char *f
         return true;
     } else {
         if (left->inheritedDataType == CF_BOOL && right->inheritedDataType == CF_BOOL) {
-            // This could be optimised quite easily
             generate_logic_expression_assignment(left, NULL);
             generate_logic_expression_assignment(right, NULL);
         } else if (left->inheritedDataType == CF_BOOL || right->inheritedDataType == CF_BOOL) {
@@ -954,8 +1001,9 @@ bool generate_simple_logic_expression(ASTNode *exprAst, char *trueLabel, char *f
 
             out("%s %s %s %s", t == AST_LOG_LTE ? "LT" : "GT", COND_RES_VAR, COND_LHS_VAR, COND_RHS_VAR);
             out("JUMPIFEQ %s bool@true %s", trueLabel, COND_RES_VAR);
-        } else {
-            // todo: error
+        } else { // Sanity check
+            stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_TYPE_INCOMPATIBILITY_IN_EXPRESSION,
+                           "Malformed logical expression.\n");
             return false;
         }
 
@@ -964,6 +1012,9 @@ bool generate_simple_logic_expression(ASTNode *exprAst, char *trueLabel, char *f
     }
 }
 
+// Recursively evaluates a jumping logic expression tree by calling itself when the *exprAst is an AND, OR or NOT
+// and creating and/or propagating the true and false labels. The evaluation of the simple logical operations
+// (e.g. equals, less than) themselves is done in generate_simple_logic_expression.
 bool generate_logic_expression_tree(ASTNode *exprAst, char *trueLabel, char *falseLabel) {
     ASTNode *left = exprAst->left;
     ASTNode *right = exprAst->right;
@@ -994,12 +1045,17 @@ bool generate_logic_expression_tree(ASTNode *exprAst, char *trueLabel, char *fal
     return result;
 }
 
+// Evaluates the *exprAst using generate_logic_expression_tree and generates true/false labels that
+// assign true or false into the *targetVarName variable.
+// *targetVarName must contain a target variable name (e.g. LF@var).
+// When *varName is NULL, the expression result will be pushed on stack.
+// Increments the jumping expression counter.
 bool generate_logic_expression_assignment(ASTNode *exprAst, const char *targetVarName) {
     unsigned counter = currentFunction.jumpingExprCounter;
     currentFunction.jumpingExprCounter++;
 
-    char i[11];
-    sprintf(i, "%i", counter);
+    char i[UINT_DIGITS];
+    sprintf(i, "%u", counter);
 
     MutableString trueLabelStr, falseLabelStr;
     mstr_make(&trueLabelStr, 5, "$", currentFunction.function->name, "_", i, "_true");
@@ -1030,6 +1086,10 @@ bool generate_logic_expression_assignment(ASTNode *exprAst, const char *targetVa
     return true;
 }
 
+// Evaluates the *value AST and generates an instruction to move the result into variable *varName.
+// *varName must contain a target variable name (e.g. LF@var).
+// When *varName is NULL, generates an assignment into REG_1 (GF@$r1).
+// Optimisation: when the *value AST is a constant or an ID, generates a MOVE instead of evaluating the constant on stack.
 void generate_assignment_for_varname(const char *varName, ASTNode *value) {
     if (varName == NULL) {
         if (value->actionType >= AST_LOGIC && value->actionType < AST_CONTROL) {
@@ -1343,7 +1403,7 @@ void generate_if_statement(CFStatement *stat) {
 
     // Make the names of the then/else labels
     char i[UINT_DIGITS];
-    sprintf(i, "%i", counter);
+    sprintf(i, "%u", counter);
 
     MutableString trueLabelStr, falseLabelStr;
 
@@ -1408,7 +1468,7 @@ void generate_for_statement(CFStatement *stat) {
         }
 
         char i[UINT_DIGITS];
-        sprintf(i, "%i", counter);
+        sprintf(i, "%u", counter);
 
         MutableString trueLabelStr, falseLabelStr;
 
