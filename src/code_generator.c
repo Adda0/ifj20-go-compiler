@@ -17,6 +17,7 @@
 #include "stacks.h"
 
 #define TCG_DEBUG 1
+#define UINT_DIGITS 21
 
 #define out_s(s) puts((s))
 #define out(...) printf(__VA_ARGS__); putchar('\n')
@@ -842,7 +843,6 @@ char *make_next_logic_label() {
     return a;
 }
 
-
 bool generate_simple_logic_expression(ASTNode *exprAst, CFStatement *stat, char *trueLabel, char *falseLabel) {
     ASTNode *left = exprAst->left;
     ASTNode *right = exprAst->right;
@@ -1195,6 +1195,8 @@ void generate_definition(ASTNode *defAst, CFStatement *stat) {
 void generate_return_statement(CFStatement *stat) {
     ASTNode *retAstList = stat->data.bodyAst;
 
+    // If we're generating main and we're not generating it as a function,
+    // end it with an EXIT instruction. Otherwise, generate it normally.
     if (currentFunction.isMain && !currentFunction.generateMainAsFunction) {
         if (retAstList != NULL && retAstList->dataCount != 0) {
             stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
@@ -1211,6 +1213,7 @@ void generate_return_statement(CFStatement *stat) {
                                 && currentFunction.function->returnValues->variable.name != NULL;
 
     if (stat->parentFunction->returnValuesCount == 0) {
+        // Function should have no return values, this statement has some values
         if (retAstList != NULL && retAstList->dataCount > 0) {
             stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
                            "Expected an empty return statement for function '%s'.\n",
@@ -1218,12 +1221,15 @@ void generate_return_statement(CFStatement *stat) {
             return;
         }
     } else {
+        // Function has unnamed return values -> it must have a non-empty return AST_LIST
         if (!hasNamedReturnValues && (retAstList == NULL || retAstList->actionType != AST_LIST)) {
             stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
                            "Unexpected AST in RETURN statement.\n");
             return;
         }
 
+        // Function has named return values -> the return statement can have values, but in that case,
+        // it must cover all of the return values
         if (hasNamedReturnValues && retAstList != NULL && retAstList->dataCount != 0
             && retAstList->dataCount != stat->parentFunction->returnValuesCount) {
             stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
@@ -1232,6 +1238,7 @@ void generate_return_statement(CFStatement *stat) {
             return;
         }
 
+        // Function has unnamed return values -> the statement must have a matching number of return values
         if (!hasNamedReturnValues && retAstList->dataCount != stat->parentFunction->returnValuesCount) {
             stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
                            "Return statement data count doesn't match function's '%s' return values count.\n",
@@ -1241,7 +1248,10 @@ void generate_return_statement(CFStatement *stat) {
     }
 
     CFVarListNode *argNode = currentFunction.function->returnValues;
-    if (retAstList != NULL && (!hasNamedReturnValues || retAstList->dataCount > 0)) {
+    if (retAstList != NULL && retAstList->dataCount > 0) {
+        // Evaluate return values ASTs on stack
+        // The first return value will be generated last (it will be on top of stack)
+
         for (unsigned i = 0; i < retAstList->dataCount; i++) {
             ASTNode *ast = retAstList->data[retAstList->dataCount - i - 1].astPtr;
 
@@ -1260,7 +1270,7 @@ void generate_return_statement(CFStatement *stat) {
             }
 
             if (ast->actionType >= AST_LOGIC && ast->actionType < AST_CONTROL) {
-                generate_logic_expression_assignment(ast, stat, REG_1);
+                generate_logic_expression_assignment(ast, stat, NULL);
             } else {
                 generate_expression_ast_result(ast, stat);
             }
@@ -1268,6 +1278,7 @@ void generate_return_statement(CFStatement *stat) {
             argNode = argNode->next;
         }
     } else {
+        // The function has named return values, so they're local variables -> push their values on stack
         for (unsigned i = 0; i < currentFunction.function->returnValuesCount; i++) {
             out_nnl("PUSHS ");
             print_var_name_id(argNode->variable.name, stat);
@@ -1280,10 +1291,13 @@ void generate_return_statement(CFStatement *stat) {
     // Delete the local frame
     out("POPFRAME");
     out("RETURN");
+
     currentFunction.terminated = true;
     currentFunction.terminatedInBranch = currentFunction.isInBranch;
 }
 
+// Generates a statement of CF_IF type, recursively generates the bodies of its THEN and ELSE blocks.
+// Increases the current function's IF-counter.
 void generate_if_statement(CFStatement *stat) {
     dbg("Generating if statement #%i", currentFunction.ifCounter);
 
@@ -1299,20 +1313,26 @@ void generate_if_statement(CFStatement *stat) {
 
     bool hasElse = !is_statement_empty(stat->data.ifData->elseStatement);
 
-    char i[11];
+    // Make the names of the then/else labels
+    char i[UINT_DIGITS];
     sprintf(i, "%i", counter);
 
     MutableString trueLabelStr, falseLabelStr;
 
     mstr_make(&trueLabelStr, 5, "$", stat->parentFunction->name, "_if", i, "_then");
+    // If this IF statement doesn't have an ELSE block, jump directly to its end when the conditional expression is false
     mstr_make(&falseLabelStr, 5, "$", stat->parentFunction->name, "_if", i, hasElse ? "_else" : "_end");
 
     generate_logic_expression_tree(stat->data.ifData->conditionalAst, stat, mstr_content(&trueLabelStr),
                                    mstr_content(&falseLabelStr));
 
+    // Backup the current state of the flag specifying whether we're inside of a branch
+    // and set it to true. (Used in return statements.)
+    bool originalBranchState = currentFunction.isInBranch;
     currentFunction.isInBranch = true;
     out("LABEL %s", mstr_content(&trueLabelStr));
 
+    // Push the THEN statement's symbol table, generate the statement (recursively) and pop the table.
     symtable_stack_push(&currentFunction.stStack, stat->data.ifData->thenStatement->localSymbolTable);
     generate_statement(stat->data.ifData->thenStatement);
     symtable_stack_pop(&currentFunction.stStack);
@@ -1324,7 +1344,8 @@ void generate_if_statement(CFStatement *stat) {
         generate_statement(stat->data.ifData->elseStatement);
         symtable_stack_pop(&currentFunction.stStack);
     }
-    currentFunction.isInBranch = false;
+
+    currentFunction.isInBranch = originalBranchState;
 
     out("LABEL $%s_if%i_end", stat->parentFunction->name, counter);
 
@@ -1333,9 +1354,11 @@ void generate_if_statement(CFStatement *stat) {
     dbg("Finished if #%i", counter);
 }
 
+// Generates a statement of CF_FOR type, recursively generates its body. Increases the current function's IF-counter.
 void generate_for_statement(CFStatement *stat) {
     dbg("Generating for statement (if #%i)", currentFunction.ifCounter);
 
+    // FORs have a special symtable for their header, push it
     symtable_stack_push(&currentFunction.stStack, stat->localSymbolTable);
 
     unsigned counter = currentFunction.ifCounter;
@@ -1372,11 +1395,16 @@ void generate_for_statement(CFStatement *stat) {
         mstr_free(&falseLabelStr);
     }
 
+    // Backup the current state of the flag specifying whether we're inside of a branch
+    // and set it to true. (Used in return statements.)
+    bool originalBranchState = currentFunction.isInBranch;
     currentFunction.isInBranch = true;
+
+    // The FOR body has another symbol table, push it.
     symtable_stack_push(&currentFunction.stStack, stat->data.forData->bodyStatement->localSymbolTable);
     generate_statement(stat->data.forData->bodyStatement);
     symtable_stack_pop(&currentFunction.stStack);
-    currentFunction.isInBranch = false;
+    currentFunction.isInBranch = originalBranchState;
 
     if (stat->data.forData->afterthoughtAst != NULL) {
         ast_infer_node_type(stat->data.forData->afterthoughtAst);
@@ -1390,6 +1418,8 @@ void generate_for_statement(CFStatement *stat) {
     dbg("Finished for (if #%i)", counter);
 }
 
+// Generates a statement of CF_BASIC type. Checks the type of the statement's body AST: basic statements
+// must always be function calls, variable definitions or assignments.
 void generate_basic_statement(CFStatement *stat) {
     if (stat->data.bodyAst == NULL) return;
     ast_infer_node_type(stat->data.bodyAst);
@@ -1417,6 +1447,7 @@ void generate_basic_statement(CFStatement *stat) {
     }
 }
 
+// Entry point for generation of a statement. Recursively generates the specified statement and its following statements.
 void generate_statement(CFStatement *stat) {
     if (is_statement_empty(stat)) {
         if (stat != NULL && stat->followingStatement != NULL && stat->followingStatement->statementType != CF_IF) {
@@ -1450,6 +1481,8 @@ void generate_statement(CFStatement *stat) {
     }
 }
 
+// Recursively assigns unique number to all scopes (symbol tables) in the current function
+// and generates DEFVAR instructions for all local variables in all found scopes.
 void generate_definitions(CFStatement *stat) {
     if (stat == NULL) return;
 
@@ -1563,9 +1596,12 @@ void generate_function(CFFunction *fun) {
     generate_definitions(fun->rootStatement);
     generate_statement(fun->rootStatement);
 
-    // Return from the function will be generated from the first RETURN statement
+    // Return from the function will be generated from the first RETURN statement.
+    // If it hasn't been generated, we must generate it explicitly.
     if (!currentFunction.terminated) {
         if (fun->returnValuesCount == 0 || fun->returnValues->variable.name != NULL) {
+            // generate_return_statement() expects an AST_LIST or null and the return statement
+            // passing a non-return statement is fine (the statement reference is used primarily for
             ASTNode *astBackup = fun->rootStatement->data.bodyAst;
             fun->rootStatement->data.bodyAst = NULL;
             generate_return_statement(fun->rootStatement);
@@ -1625,6 +1661,7 @@ void tcg_generate() {
         return;
     }
 
+    // During code generation, all data types must be resolved correctly and unequivocally
     ast_set_strict_inference_state(true);
 
     CFProgram *prog = get_program();
@@ -1636,6 +1673,9 @@ void tcg_generate() {
                        "Undefined main function.\n");
         return;
     }
+
+    // When main is called from the code, it must be generated as a function (ended using POPFRAME/RETURN);
+    // otherwise, it can be ended using EXIT directly.
     bool generateMainAsFunc = mainSym->data.reference_counter > 1;
 
     out(".IFJcode20");
@@ -1673,6 +1713,7 @@ void tcg_generate() {
 
         generate_function(&n->fun);
 
+        // This should alawys only pop one ST, the function's top-level one
         while (currentFunction.stStack.top != NULL) {
             symtable_stack_pop(&currentFunction.stStack);
         }
