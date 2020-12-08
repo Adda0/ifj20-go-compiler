@@ -34,7 +34,8 @@ ast.o: ast.c ast.h symtable.h stderr_message.h compiler.h
 control_flow.o: control_flow.c control_flow.h ast.h symtable.h
 code_generator.o: code_generator.c code_generator.h control_flow.h ast.h symtable.h \
 				  ast.h stderr_message.h compiler.h mutable_string.h
-optimiser.o: optimiser.c optimiser.h
+optimiser.o: optimiser.c optimiser.h control_flow.h symtable.h ast.h \
+			 code_generator.h stderr_message.h compiler.h
 
 
 test:

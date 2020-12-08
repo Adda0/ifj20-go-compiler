@@ -47,8 +47,11 @@ void clean_ast(ASTNode *node) {
         case AST_CONST_STRING:
             free((void *) node->data[0].stringConstantValue);
             break;
+        case AST_ID:
+            if (node->inheritedDataType != CF_BLACK_HOLE) {
+                node->data[0].symbolTableItemPtr->reference_counter--;
+            }
     }
-
     free(node);
 }
 

@@ -20,17 +20,6 @@ static double dabs(double x) {
     return x > 0 ? x : -x;
 }
 
-void reduce_ref_counter(ASTNode *ast) {
-    if (ast == NULL) {
-        return;
-    }
-    reduce_ref_counter(ast->left);
-    reduce_ref_counter(ast->right);
-    if (ast->actionType == AST_ID) {
-        ast->data[0].symbolTableItemPtr->reference_counter--;
-    }
-}
-
 void optimise_add(ASTNode **ast, bool *changed) {
     ASTNode *left_op = (*ast)->left;
     ASTNode *right_op = (*ast)->right;
@@ -153,13 +142,11 @@ void optimise_multiply(ASTNode **ast, bool *changed) {
         if ((right_op->actionType == AST_CONST_INT && right_op->data[0].intConstantValue == 0) ||
                 (left_op->actionType == AST_CONST_INT && left_op->data[0].intConstantValue == 1) ||
                 (left_op->actionType == AST_CONST_FLOAT && dabs(1 - left_op->data[0].floatConstantValue) < 1e-10)) {
-            reduce_ref_counter(left_op);
             (*ast)->right = NULL;
             target = right_op;
         } else if ((left_op->actionType == AST_CONST_INT && left_op->data[0].intConstantValue == 0) ||
                 (right_op->actionType == AST_CONST_INT && right_op->data[0].intConstantValue == 1) ||
                 (right_op->actionType == AST_CONST_FLOAT && dabs(1 - right_op->data[0].floatConstantValue) < 1e-10)) {
-            reduce_ref_counter(right_op);
             (*ast)->left = NULL;
             target = left_op;
         }
@@ -272,7 +259,6 @@ void optimise_log_and(ASTNode **ast, bool *changed) {
         *changed = true;
     } else if (left_op->actionType == AST_CONST_BOOL && !left_op->data[0].boolConstantValue) {
         // Short circuit optimization, the result will be false
-        reduce_ref_counter(right_op);
         (*ast)->left = NULL;
         clean_ast(*ast);
         (*ast) = left_op;
@@ -294,7 +280,6 @@ void optimise_log_or(ASTNode **ast, bool *changed) {
         *changed = true;
     } else if (left_op->actionType == AST_CONST_BOOL && left_op->data[0].boolConstantValue) {
         // Short circuit optimization, the result will be true
-        reduce_ref_counter(right_op);
         (*ast)->left = NULL;
         clean_ast(*ast);
         (*ast) = left_op;
