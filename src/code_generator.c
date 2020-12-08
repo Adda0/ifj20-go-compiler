@@ -40,8 +40,6 @@
 #define REG_2 "GF@$r2"
 #define REG_3 "GF@$r3"
 
-#define PRINT_VAR "GF@$print"
-
 // Global variables keeping the current state of the generator
 struct {
     CFFunction *function;
@@ -71,7 +69,6 @@ struct {
     STSymbol *inputf;
     STSymbol *inputb;
 
-    bool printUsed;
     bool reg3Used;
 } symbs;
 
@@ -105,8 +102,6 @@ void find_internal_symbols(SymbolTable *globSt) {
     symbs.inputf = find_internal_symbol("inputf");
     symbs.inputb = find_internal_symbol("inputb");
 
-    symbs.printUsed =
-            symbs.print != NULL && symbs.print->reference_counter > 0;
     symbs.reg3Used =
             (symbs.ord != NULL && symbs.ord->reference_counter > 0)
             || (symbs.substr != NULL && symbs.substr->reference_counter > 0);
@@ -279,8 +274,8 @@ void generate_print(ASTNode *argAstList) {
 
                 } else {
                     generate_expression_ast_result(ast);
-                    out("POPS %s", PRINT_VAR);
-                    out("WRITE %s", PRINT_VAR);
+                    out("POPS %s", REG_1);
+                    out("WRITE %s", REG_1);
                 }
                 break;
         }
@@ -1197,6 +1192,16 @@ void generate_multi_assignment(ASTNode *asgAst) {
     } else {
         for (unsigned i = 0; i < asgAst->left->dataCount; i++) {
             ASTNode *valNode = asgAst->right->data[i].astPtr;
+            ASTNode *idNode = asgAst->left->data[i].astPtr;
+
+            if (!valNode->hasInnerFuncCalls && valNode->actionType != AST_FUNC_CALL
+                && (idNode->inheritedDataType == CF_BLACK_HOLE
+                || idNode->data[0].symbolTableItemPtr->reference_counter == 0)) {
+
+                // If the variable that is being assigned to has no references or is a throwaway
+                // and the expression contains no function calls, we can safely omit its generation
+                continue;
+            }
 
             if (valNode->actionType >= AST_LOGIC && valNode->actionType < AST_CONTROL) {
                 generate_logic_expression_assignment(valNode, NULL);
@@ -1208,10 +1213,15 @@ void generate_multi_assignment(ASTNode *asgAst) {
         for (unsigned i = 0; i < asgAst->left->dataCount; i++) {
             unsigned currentVarIndex = asgAst->left->dataCount - i - 1;
             ASTNode *idNode = asgAst->left->data[currentVarIndex].astPtr;
+            ASTNode *valNode = asgAst->right->data[currentVarIndex].astPtr;
 
             if (idNode->inheritedDataType == CF_BLACK_HOLE
                 || idNode->data[0].symbolTableItemPtr->reference_counter == 0) {
-                out("POPS %s", REG_1);
+
+                // Expressions with function calls have been evaluated, pop them into a throwaway variable
+                if (valNode->hasInnerFuncCalls || valNode->actionType == AST_FUNC_CALL) {
+                    out("POPS %s", REG_1);
+                }
             } else {
                 // Check whether there's the same variable in the assignment list that's to the right
                 // side of this one. If so, throw the result away.
@@ -1775,9 +1785,7 @@ void tcg_generate() {
     out("DEFVAR %s", REG_2);
 
     find_internal_symbols(prog->globalSymtable);
-    if (symbs.printUsed) {
-        out("DEFVAR %s", PRINT_VAR);
-    }
+
     if (symbs.reg3Used) {
         out("DEFVAR %s", REG_3);
     }
