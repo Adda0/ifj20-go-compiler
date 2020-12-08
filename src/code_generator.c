@@ -1196,7 +1196,7 @@ void generate_multi_assignment(ASTNode *asgAst) {
 
             if (!valNode->hasInnerFuncCalls && valNode->actionType != AST_FUNC_CALL
                 && (idNode->inheritedDataType == CF_BLACK_HOLE
-                || idNode->data[0].symbolTableItemPtr->reference_counter == 0)) {
+                    || idNode->data[0].symbolTableItemPtr->reference_counter == 0)) {
 
                 // If the variable that is being assigned to has no references or is a throwaway
                 // and the expression contains no function calls, we can safely omit its generation
@@ -1263,14 +1263,17 @@ void generate_assignment(ASTNode *asgAst) {
         return;
     }
 
-    if (asgAst->left->inheritedDataType == CF_BLACK_HOLE) {
-        generate_assignment_for_varname(NULL, asgAst->right);
-    } else if (asgAst->left->actionType != AST_ID) { // Sanity check
+    if (asgAst->left->actionType != AST_ID) { // Sanity check
         stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
                        "Invalid assignment.\n");
         return;
-    } else if (asgAst->left->data[0].symbolTableItemPtr->reference_counter == 0) {
-        dbg("Omitting assignment into unused variable");
+    } else if (asgAst->left->inheritedDataType == CF_BLACK_HOLE
+               || asgAst->left->data[0].symbolTableItemPtr->reference_counter == 0) {
+
+        if (asgAst->right->hasInnerFuncCalls || asgAst->right->actionType == AST_FUNC_CALL) {
+            // Inner func call may have side effects, evaluate the expression and throw the result away
+            generate_assignment_for_varname(NULL, asgAst->right);
+        }
     } else {
         MutableString varName = make_var_name(asgAst->left->data[0].symbolTableItemPtr->identifier, false);
         onlyFindDefinedSymbols = true;
