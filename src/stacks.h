@@ -83,7 +83,9 @@ SymtableNode *symtable_stack_top(SymtableStack *stack);
 /** @brief Searches for a symbol in symtable stack, returns the first occurrence. */
 STItem *symtable_stack_find_symbol(SymtableStack *stack, const char *symbol);
 
-/** @brief Searches for a symbol in symtable stack, returns the first occurrence. */
+/** @brief Searches for a symbol in symtable stack, returns the first occurrence.
+ *  @param defined_only Specifies whether only variable symbols with their STVariableData.defined flag set to true should be returned.
+ */
 STItem *symtable_stack_find_symbol_and_symtable(SymtableStack *stack, const char *symbol, SymbolTable **table, bool defined_only);
 
 /** @brief Removes the top symbol table from the stack. */

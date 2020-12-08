@@ -10,7 +10,7 @@
 #ifndef _AST_H
 #define _AST_H 1
 
-#define AST_DEBUG 1
+#define AST_DEBUG 0
 
 #include <stdint.h>
 #include "symtable.h"
@@ -214,9 +214,5 @@ bool ast_infer_node_type(ASTNode *node);
 void ast_set_strict_inference_state(bool state);
 
 ASTDataType ast_data_type_for_node_type(ASTNodeType nodeType);
-
-#if AST_DEBUG
-void ast_print(ASTNode *node);
-#endif
 
 #endif // _AST_H
