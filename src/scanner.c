@@ -964,8 +964,7 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
             break;
 
         case STATE_ESCAPE_HEXA_IN_STRING:
-            if (isdigit(read_char) || (read_char >= 'a' && read_char <= 'f') ||
-                (read_char >= 'A' && read_char <= 'F')) {
+            if (isxdigit(read_char)) {
                 mstr_append(mutable_string, read_char);
                 *automaton_state = STATE_ESCAPE_HEXA_ONE_IN_STRING;
                 read_char = EMPTY_CHAR;
@@ -978,13 +977,12 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
             break;
 
         case STATE_ESCAPE_HEXA_ONE_IN_STRING:
-            if (isdigit(read_char) || (read_char >= 'a' && read_char <= 'f') ||
-                (read_char >= 'A' && read_char <= 'F')) {
+            if (isxdigit(read_char)) {
                 mstr_append(mutable_string, read_char);
                 read_char = EMPTY_CHAR;
 
                 // get the hexadecimal number from a string and replace it with equivalent char
-                char *hexa_number_string = calloc(sizeof(char), 5);
+                char *hexa_number_string = (char *) calloc(sizeof(char), 5);
                 if (hexa_number_string == NULL) {
                     stderr_message("scanner", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
                                    "Malloc of string for a hexadecimal escape sequence in a string failed.\n");

@@ -5606,3 +5606,15 @@ TEST_F(ParserScannerTest, Brackets5) {
 
     ComplexTest(inputStr, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL);
 }
+
+TEST_F(ParserScannerTest, LineCommentEOF) {
+    std::string inputStr = \
+        "package main\n"
+        "func main() {\n"
+        "    \n"
+        "}\n"
+        "func foo() {\n"
+        "}//test";
+
+    ComplexTest(inputStr, COMPILER_RESULT_SUCCESS);
+}
