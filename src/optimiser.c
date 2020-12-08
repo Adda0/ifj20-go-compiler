@@ -448,16 +448,21 @@ void optimise_expressions(CFStatement *stat, bool *changed) {
         switch (stat->statementType) {
             case CF_BASIC:
             case CF_RETURN:
+                if (!ast_infer_node_type(stat->data.bodyAst)) return;
                 optimise_ast(&stat->data.bodyAst, changed);
                 break;
             case CF_IF:
+                if (!ast_infer_node_type(stat->data.ifData->conditionalAst)) return;
                 optimise_ast(&stat->data.ifData->conditionalAst, changed);
                 optimise_expressions(stat->data.ifData->thenStatement, changed);
                 optimise_expressions(stat->data.ifData->elseStatement, changed);
                 break;
             case CF_FOR:
+                if (!ast_infer_node_type(stat->data.forData->definitionAst)) return;
                 optimise_ast(&stat->data.forData->definitionAst, changed);
+                if (!ast_infer_node_type(stat->data.forData->conditionalAst)) return;
                 optimise_ast(&stat->data.forData->conditionalAst, changed);
+                if (!ast_infer_node_type(stat->data.forData->afterthoughtAst)) return;
                 optimise_ast(&stat->data.forData->afterthoughtAst, changed);
                 optimise_expressions(stat->data.forData->bodyStatement, changed);
                 break;
