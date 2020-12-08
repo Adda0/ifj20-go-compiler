@@ -25,6 +25,7 @@ extern "C" {
 #include "control_flow.h"
 #include "ast.h"
 #include "code_generator.h"
+#include "optimiser.h"
 }
 
 
@@ -116,6 +117,7 @@ void ParserScannerTest::ComplexTest(std::string &inputStr, CompilerResult expect
         }
 
         if (compiler_result == COMPILER_RESULT_SUCCESS) {
+            optimiser_optimise();
             tcg_generate();
             cf_clean_all();
         }

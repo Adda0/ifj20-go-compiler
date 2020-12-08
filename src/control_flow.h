@@ -219,6 +219,9 @@ CFStatement *cf_make_if_else_statement(CFStatementType statementType);
 // If the active statement is not an FOR statement, throws an error.
 CFStatement *cf_make_for_body_statement(CFStatementType statementType);
 
+// Checks whether a statement has effect.
+bool is_statement_empty(CFStatement *stat);
+
 // ---- Deprecated functions ----
 
 // Creates a new AST and sets it as the active AST node.

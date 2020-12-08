@@ -28,6 +28,8 @@ int main() {
     parser_parse();
     if (compiler_result == COMPILER_RESULT_SUCCESS) {
         optimiser_optimise();
+    }
+    if (compiler_result == COMPILER_RESULT_SUCCESS) {
         tcg_generate();
     }
 

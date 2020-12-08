@@ -33,6 +33,32 @@ ASTNode *ast_node(ASTNodeType nodeType) {
     return node;
 }
 
+void clean_ast(ASTNode *node) {
+    if (node == NULL) return;
+    clean_ast(node->left);
+    clean_ast(node->right);
+
+    switch (node->actionType) {
+        case AST_LIST:
+            for (unsigned i = 0; i < node->dataCount; i++) {
+                clean_ast(node->data[i].astPtr);
+            }
+            break;
+        case AST_CONST_STRING:
+            free((void *) node->data[0].stringConstantValue);
+            break;
+        case AST_ID:
+            if (node->inheritedDataType != CF_BLACK_HOLE) {
+                node->data[0].symbolTableItemPtr->reference_counter--;
+            }
+    }
+    free(node);
+}
+
+bool is_ast_empty(ASTNode *ast) {
+    return ast == NULL || (ast->left == NULL && ast->right == NULL && ast->dataCount == 0);
+}
+
 ASTNode *ast_node_data(ASTNodeType nodeType, unsigned dataCount) {
     ASTNode *node = calloc(1, sizeof(ASTNode) + dataCount * sizeof(ASTNodeData));
     AST_ALLOC_CHECK_RN(node);

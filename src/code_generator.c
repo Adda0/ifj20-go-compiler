@@ -1,5 +1,6 @@
 /** @file code_generator.c
  *
+ *
  * IFJ20 compiler
  *
  * @brief Implements the target code generator.
@@ -94,38 +95,6 @@ void find_internal_symbols(SymbolTable *globSt) {
     symbs.reg3Used =
             (symbs.ord != NULL && symbs.ord->reference_counter > 0)
             || (symbs.substr != NULL && symbs.substr->reference_counter > 0);
-}
-
-bool is_ast_empty(ASTNode *ast) {
-    return ast == NULL || (ast->left == NULL && ast->right == NULL && ast->dataCount == 0);
-}
-
-bool is_statement_empty(CFStatement *stat) {
-    if (stat == NULL) return true;
-
-    switch (stat->statementType) {
-        case CF_BASIC:
-            if (stat->parentStatement != NULL && (stat->parentStatement->statementType == CF_IF
-                                                  || stat->parentStatement->statementType == CF_FOR)) {
-                return false;
-            }
-
-            return is_ast_empty(stat->data.bodyAst);
-        case CF_IF:
-            return is_ast_empty(stat->data.ifData->conditionalAst) ||
-                   (is_statement_empty(stat->data.ifData->thenStatement) &&
-                    is_statement_empty(stat->data.ifData->elseStatement));
-        case CF_FOR:
-            return is_statement_empty(stat->data.forData->bodyStatement);
-        case CF_RETURN:
-            for (unsigned i = 0; i < stat->data.bodyAst->dataCount; i++) {
-                if (is_ast_empty(stat->data.bodyAst->data[i].astPtr)) return true;
-            }
-
-            return false;
-        default:
-            return true;
-    }
 }
 
 char *convert_to_target_string_form_cb(const char *input, bool prependType) {
