@@ -1800,3 +1800,44 @@ TEST_F(ScannerTest, InvalidCharacter6) {
 TEST_F(ScannerTest, IntWithUnderscore) {
     LEX("1_ ", EOL_OPTIONAL, SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT, COMPILER_RESULT_ERROR_LEXICAL);
 }
+
+TEST_F(ScannerTest, OctalNumberWithUnderscore1) {
+    std::string inputStr = "0_4";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_INT, {.intVal = 4}),
+    };
+
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ScannerTest, OctalNumberWithUnderscore2) {
+    std::string inputStr = "0_4.2";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_INT, {.intVal = 4}),
+            ExpectedToken(SCANNER_RESULT_INVALID_STATE, TOKEN_DEFAULT),
+    };
+
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_ERROR_LEXICAL);
+}
+
+TEST_F(ScannerTest, IntegerWithUnderscore1) {
+    std::string inputStr = "4_4";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_INT, {.intVal = 44}),
+    };
+
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_SUCCESS);
+}
+
+TEST_F(ScannerTest, IntegerWithUnderscore2) {
+    std::string inputStr = "4_4_5_794";
+
+    auto expectedResult = std::list<ExpectedToken>{
+            ExpectedToken(TOKEN_INT, {.intVal = 445794}),
+    };
+
+    ComplexTest(inputStr, expectedResult, COMPILER_RESULT_SUCCESS);
+}

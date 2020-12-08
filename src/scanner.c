@@ -769,14 +769,6 @@ static char resolve_read_char(char read_char, size_t line_num, size_t char_num, 
             *token_done = true;
             break;
 
-        case STATE_TRUE:
-            *token_done = true;
-            break;
-
-        case STATE_FALSE:
-            *token_done = true;
-            break;
-
         case STATE_NOT:
             if (read_char == '=') {
                 *automaton_state = STATE_NOT_EQUAL_TO;
