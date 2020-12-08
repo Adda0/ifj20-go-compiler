@@ -35,7 +35,7 @@ control_flow.o: control_flow.c control_flow.h ast.h symtable.h
 code_generator.o: code_generator.c code_generator.h control_flow.h ast.h symtable.h \
 				  ast.h stderr_message.h compiler.h mutable_string.h
 optimiser.o: optimiser.c optimiser.h control_flow.h symtable.h ast.h \
-			 code_generator.h stderr_message.h compiler.h
+			 code_generator.h stderr_message.h compiler.h variable_vector.h
 variable_vector.o: variable_vector.c variable_vector.h symtable.h ast.h stderr_message.h
 
 

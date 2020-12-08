@@ -14,6 +14,7 @@
 #include "control_flow.h"
 #include "ast.h"
 #include "stderr_message.h"
+#include "variable_vector.h"
 
 
 static double dabs(double x) {
@@ -485,6 +486,160 @@ void fold_constants(bool *changed) {
     }
 }
 
+void propagate_into_expression(ASTNode **ast, bool *changed, VariableVector *vector) {
+    if (*ast == NULL) {
+        return;
+    }
+    if ((*ast)->actionType == AST_LIST) {
+        // Walk through all elements of the list
+        for (unsigned i = 0; i < (*ast)->dataCount; i++) {
+            propagate_into_expression(&(*ast)->data[i].astPtr, changed, vector);
+        }
+    } else {
+        if ((*ast)->actionType != AST_FUNC_CALL) {
+            propagate_into_expression(&(*ast)->left, changed, vector);
+        }
+        propagate_into_expression(&(*ast)->right, changed, vector);
+    }
+
+    if ((*ast)->actionType == AST_ID) {
+        Variable *found = vv_find(vector, (*ast)->data[0].symbolTableItemPtr);
+        if (found) {
+            // Replace ID with a constant
+            ASTNode *tmp = *ast;
+            switch(found->data.type) {
+                case AST_CONST_BOOL:
+                    *ast = ast_leaf_constb(found->data.data.boolConstantValue);
+                    break;
+                case AST_CONST_INT:
+                    *ast = ast_leaf_consti(found->data.data.intConstantValue);
+                    break;
+                case AST_CONST_FLOAT:
+                    *ast = ast_leaf_constf(found->data.data.floatConstantValue);
+                    break;
+                case AST_CONST_STRING:
+                    *ast = ast_leaf_consts(found->data.data.stringConstantValue);
+                    break;
+                default:
+                    return;
+            }
+            if (*ast == NULL) {
+                stderr_message("optimiser", ERROR, COMPILER_RESULT_ERROR_INTERNAL, "Out of memory\n");
+            }
+            *changed = true;
+            clean_ast(tmp);
+        }
+    }
+}
+
+void propagate_ast_constants(ASTNode **ast, bool remove_only, bool *changed, VariableVector *vector) {
+    // First try to propagate in the expression. For assignments and definitions
+    // propagate only on the right side. This covers cases such as
+    // a := 5
+    // b := a
+    if (!remove_only) {
+        switch ((*ast)->actionType) {
+            case AST_DEFINE:
+            case AST_ASSIGN:
+                propagate_into_expression(&(*ast)->right, changed, vector);
+                break;
+            default:
+                propagate_into_expression(ast, changed, vector);
+                break;
+        }
+    }
+
+    // Now introduce new constants and remove what is no longer constant
+    if ((*ast)->actionType == AST_DEFINE) {
+        // Check if a constant isn't assigned in the definition
+        if ((*ast)->left->dataCount == (*ast)->right->dataCount) {
+            for (unsigned i = 0; i < (*ast)->left->dataCount; i++) {
+                bool new_constant = false;
+                VariableData data;
+                ASTNode *current = (*ast)->right->data[i].astPtr;
+                STSymbol *symbol = (*ast)->left->data[i].astPtr->data[0].symbolTableItemPtr;
+                switch (current->actionType) {
+                    case AST_CONST_FLOAT:
+                        new_constant = true;
+                        data.data.floatConstantValue = current->data[0].floatConstantValue;
+                        data.type = AST_CONST_FLOAT;
+                        break;
+                    case AST_CONST_INT:
+                        new_constant = true;
+                        data.data.intConstantValue = current->data[0].intConstantValue;
+                        data.type = AST_CONST_INT;
+                        break;
+                    case AST_CONST_STRING:
+                        new_constant = true;
+                        data.data.stringConstantValue = current->data[0].stringConstantValue;
+                        data.type = AST_CONST_STRING;
+                        break;
+                    case AST_CONST_BOOL:
+                        new_constant = true;
+                        data.data.boolConstantValue = current->data[0].boolConstantValue;
+                        data.type = AST_CONST_BOOL;
+                        break;
+                    default:
+                        // This could be a redefinition of a symbol with a non-constant, remove it
+                        vv_remove_symbol(vector, symbol);
+                        break;
+                }
+                if (new_constant && !remove_only) {
+                    data.symbol = symbol;
+                    vv_append(vector, data);
+                }
+            }
+        } else {
+            // Function call, we can't deduce constants, just remove all variables on LHS from vector
+            for (unsigned i = 0; i < (*ast)->left->dataCount; i++) {
+                vv_remove_symbol(vector, (*ast)->left->data[i].astPtr->data[0].symbolTableItemPtr);
+            }
+        }
+    } else if ((*ast)->actionType == AST_ASSIGN) {
+        // Assignment, invalidate all assigned variables as constants
+        for (unsigned i = 0; i < (*ast)->left->dataCount; i++) {
+            vv_remove_symbol(vector, (*ast)->left->data[8].astPtr->data[0].symbolTableItemPtr);
+        }
+    }
+}
+
+void propagate_function_constants(CFStatement *stat, bool *changed, VariableVector *vector) {
+    if (stat != NULL && !is_statement_empty(stat)) {
+        switch(stat->statementType) {
+            case CF_BASIC:
+            case CF_RETURN:
+                if (stat->data.bodyAst != NULL && !ast_infer_node_type(stat->data.bodyAst)) return;
+                propagate_ast_constants(&stat->data.bodyAst, false, changed, vector);
+                break;
+            case CF_IF:
+                if (!ast_infer_node_type(stat->data.ifData->conditionalAst)) return;
+                propagate_ast_constants(&stat->data.ifData->conditionalAst, false, changed, vector);
+                propagate_function_constants(stat->data.ifData->thenStatement, changed, vector);
+                propagate_function_constants(stat->data.ifData->elseStatement, changed, vector);
+                break;
+            case CF_FOR:
+                // First invalidate all variables created in for definition, afterthought and its body
+                break;
+        }
+    }
+
+    if (stat != NULL && stat->followingStatement != NULL) {
+        propagate_function_constants(stat->followingStatement, changed, vector);
+    }
+}
+
+void propagate_constants(bool *changed) {
+    CFProgram *prog = get_program();
+    CFFuncListNode *n = prog->functionList;
+    while (n != NULL) {
+        VariableVector vector;
+        vv_init(&vector);
+        propagate_function_constants(n->fun.rootStatement, changed, &vector);
+        n = n->next;
+        vv_free(&vector);
+    }
+}
+
 void rebind_adjacent_statements(CFStatement *stat, CFFunction *fun) {
     if (stat == fun->rootStatement) {
         fun->rootStatement = stat->followingStatement;
@@ -576,6 +731,7 @@ void optimiser_optimise() {
     while (compiler_result == COMPILER_RESULT_SUCCESS && changed) {
         changed = false;
         fold_constants(&changed);
+        propagate_constants(&changed);
     }
     remove_dead_code();
 }
