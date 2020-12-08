@@ -442,7 +442,7 @@ bool is_statement_empty(CFStatement *stat) {
     }
 }
 
-static void clean_stat(CFStatement *stat) {
+void clean_stat(CFStatement *stat) {
     if (stat == NULL) return;
     switch (stat->statementType) {
         case CF_BASIC:

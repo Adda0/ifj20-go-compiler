@@ -448,7 +448,7 @@ void optimise_expressions(CFStatement *stat, bool *changed) {
         switch (stat->statementType) {
             case CF_BASIC:
             case CF_RETURN:
-                if (!ast_infer_node_type(stat->data.bodyAst)) return;
+                if (stat->data.bodyAst != NULL && !ast_infer_node_type(stat->data.bodyAst)) return;
                 optimise_ast(&stat->data.bodyAst, changed);
                 break;
             case CF_IF:
@@ -458,11 +458,13 @@ void optimise_expressions(CFStatement *stat, bool *changed) {
                 optimise_expressions(stat->data.ifData->elseStatement, changed);
                 break;
             case CF_FOR:
-                if (!ast_infer_node_type(stat->data.forData->definitionAst)) return;
+                if (stat->data.forData->definitionAst != NULL &&
+                        !ast_infer_node_type(stat->data.forData->definitionAst)) return;
                 optimise_ast(&stat->data.forData->definitionAst, changed);
                 if (!ast_infer_node_type(stat->data.forData->conditionalAst)) return;
                 optimise_ast(&stat->data.forData->conditionalAst, changed);
-                if (!ast_infer_node_type(stat->data.forData->afterthoughtAst)) return;
+                if (stat->data.forData->afterthoughtAst != NULL &&
+                    !ast_infer_node_type(stat->data.forData->afterthoughtAst)) return;
                 optimise_ast(&stat->data.forData->afterthoughtAst, changed);
                 optimise_expressions(stat->data.forData->bodyStatement, changed);
                 break;
@@ -483,10 +485,97 @@ void fold_constants(bool *changed) {
     }
 }
 
+void rebind_adjacent_statements(CFStatement *stat, CFFunction *fun) {
+    if (stat == fun->rootStatement) {
+        fun->rootStatement = stat->followingStatement;
+        if (stat->followingStatement != NULL) {
+            stat->followingStatement->parentStatement = NULL;
+        }
+    } else {
+        stat->parentStatement->followingStatement = stat->followingStatement;
+        if (stat->followingStatement != NULL) {
+            stat->followingStatement->parentStatement = stat->parentStatement;
+        }
+    }
+}
+
+void remove_function_dead_code(CFStatement *stat, CFFunction *fun) {
+    if (stat != NULL && !is_statement_empty(stat)) {
+        switch (stat->statementType) {
+            case CF_IF:
+                if (stat->data.ifData->conditionalAst->actionType == AST_CONST_BOOL &&
+                        !stat->data.ifData->conditionalAst->data[0].boolConstantValue) {
+                    // If false, remove the block
+                    if (stat->data.ifData->elseStatement == NULL) {
+                        // If without else, completely remove the statement
+                        rebind_adjacent_statements(stat, fun);
+                        stat->followingStatement = NULL;
+                        CFStatement *tmp = stat;
+                        stat = stat->parentStatement;
+                        clean_stat(tmp);
+                    } else {
+                        // Has else, convert else into if true
+                        symtable_free(stat->data.ifData->thenStatement->localSymbolTable);
+                        stat->data.ifData->conditionalAst->data[0].boolConstantValue = true;
+                        clean_stat(stat->data.ifData->thenStatement);
+                        stat->data.ifData->thenStatement = stat->data.ifData->elseStatement;
+                        stat->data.ifData->elseStatement = NULL;
+                        remove_function_dead_code(stat->data.ifData->thenStatement, fun);
+                    }
+                } else if (stat->data.ifData->conditionalAst->actionType == AST_CONST_BOOL &&
+                        stat->data.ifData->conditionalAst->data[0].boolConstantValue){
+                    // If true, remove useless else
+                    if (stat->data.ifData->elseStatement != NULL) {
+                        if (stat->data.ifData->elseStatement->localSymbolTable !=
+                                stat->data.ifData->elseStatement->parentStatement->localSymbolTable) {
+                            symtable_free(stat->data.ifData->elseStatement->localSymbolTable);
+                        }
+                        clean_stat(stat->data.ifData->elseStatement);
+                        stat->data.ifData->elseStatement = NULL;
+                    }
+                    remove_function_dead_code(stat->data.ifData->thenStatement, fun);
+                } else {
+                    remove_function_dead_code(stat->data.ifData->thenStatement, fun);
+                    remove_function_dead_code(stat->data.ifData->elseStatement, fun);
+                }
+                break;
+            case CF_FOR:
+                if (stat->data.forData->conditionalAst->actionType == AST_CONST_BOOL &&
+                        !stat->data.forData->conditionalAst->data[0].boolConstantValue) {
+                    // Discard dead for loop
+                    rebind_adjacent_statements(stat, fun);
+                    // Move one step back so that stat->followingStatement moves correctly forward
+                    stat->followingStatement = NULL;
+                    CFStatement *tmp = stat;
+                    stat = stat->parentStatement;
+                    clean_stat(tmp);
+                } else {
+                    remove_function_dead_code(stat->data.forData->bodyStatement, fun);
+                }
+                break;
+            default:
+                break;
+        }
+    }
+    if (stat != NULL && stat->followingStatement != NULL) {
+        remove_function_dead_code(stat->followingStatement, fun);
+    }
+}
+
+void remove_dead_code() {
+    CFProgram *prog = get_program();
+    CFFuncListNode *n = prog->functionList;
+    while (n != NULL) {
+        remove_function_dead_code(n->fun.rootStatement, &n->fun);
+        n = n->next;
+    }
+}
+
 void optimiser_optimise() {
     bool changed = true;
     while (compiler_result == COMPILER_RESULT_SUCCESS && changed) {
         changed = false;
         fold_constants(&changed);
     }
+    remove_dead_code();
 }

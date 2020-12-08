@@ -135,6 +135,9 @@ extern CFError cf_error;
 // Initializes the control flow graph generator.
 void cf_init();
 
+// Clears memory allocated by CFStatement
+void clean_stat(CFStatement *stat);
+
 /* Recursively walks trough the generated program and frees:
  *  - Memory assigned to AST_CONST_STRING data, pointed to by the stringConstantValue pointer.
  *  - Memory occupied by all AST nodes, CFG statement nodes, CFG function nodes and CFG root program node.
