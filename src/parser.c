@@ -215,6 +215,10 @@ int params_n(STItem *current_function, bool ret_type, bool already_found, STPara
                 syntax_error();
             }
             id = token.data.str_val;
+            if (strcmp(mstr_content(&id), "_") == 0) {
+                stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
+                               "Line %u: _ is not a valid argument/return value\n", token.context.line_num);
+            }
             check_new_token(EOL_FORBIDDEN);
             STDataType data_type;
             check_nonterminal(type(&data_type));
@@ -288,6 +292,10 @@ int params(STItem *current_function, bool ret_type, bool already_found) {
         case TOKEN_ID:
             // rule <params> -> id <type> <params_n>
             id = token.data.str_val;
+            if (strcmp(mstr_content(&id), "_") == 0) {
+                stderr_message("parser", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,
+                               "Line %u: _ is not a valid argument/return value\n", token.context.line_num);
+            }
             check_new_token(EOL_FORBIDDEN);
             STDataType data_type;
             check_nonterminal(type(&data_type));
