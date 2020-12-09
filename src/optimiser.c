@@ -532,11 +532,14 @@ void propagate_into_expression(ASTNode **ast, bool *changed, VariableVector *vec
     }
 }
 
-void propagate_ast_constants(ASTNode **ast, bool remove_only, bool *changed, VariableVector *vector) {
+void propagate_ast_constants(ASTNode **ast, bool remove_only, bool add_new, bool *changed, VariableVector *vector) {
     // First try to propagate in the expression. For assignments and definitions
     // propagate only on the right side. This covers cases such as
     // a := 5
     // b := a
+    if (*ast == NULL) {
+        return;
+    }
     if (!remove_only) {
         switch ((*ast)->actionType) {
             case AST_DEFINE:
@@ -584,7 +587,7 @@ void propagate_ast_constants(ASTNode **ast, bool remove_only, bool *changed, Var
                         vv_remove_symbol(vector, symbol);
                         break;
                 }
-                if (new_constant && !remove_only) {
+                if (new_constant && !remove_only && add_new) {
                     data.symbol = symbol;
                     vv_append(vector, data);
                 }
@@ -598,33 +601,42 @@ void propagate_ast_constants(ASTNode **ast, bool remove_only, bool *changed, Var
     } else if ((*ast)->actionType == AST_ASSIGN) {
         // Assignment, invalidate all assigned variables as constants
         for (unsigned i = 0; i < (*ast)->left->dataCount; i++) {
-            vv_remove_symbol(vector, (*ast)->left->data[8].astPtr->data[0].symbolTableItemPtr);
+            vv_remove_symbol(vector, (*ast)->left->data[i].astPtr->data[0].symbolTableItemPtr);
         }
     }
 }
 
-void propagate_function_constants(CFStatement *stat, bool *changed, VariableVector *vector) {
+void propagate_function_constants(CFStatement *stat, bool remove, bool add, bool *changed, VariableVector *vector) {
+    // Handle blocks nested in for, we can't add new constants inside a for block.
     if (stat != NULL && !is_statement_empty(stat)) {
         switch(stat->statementType) {
             case CF_BASIC:
             case CF_RETURN:
                 if (stat->data.bodyAst != NULL && !ast_infer_node_type(stat->data.bodyAst)) return;
-                propagate_ast_constants(&stat->data.bodyAst, false, changed, vector);
+                propagate_ast_constants(&stat->data.bodyAst, remove, add, changed, vector);
                 break;
             case CF_IF:
                 if (!ast_infer_node_type(stat->data.ifData->conditionalAst)) return;
-                propagate_ast_constants(&stat->data.ifData->conditionalAst, false, changed, vector);
-                propagate_function_constants(stat->data.ifData->thenStatement, changed, vector);
-                propagate_function_constants(stat->data.ifData->elseStatement, changed, vector);
+                propagate_ast_constants(&stat->data.ifData->conditionalAst, remove, add, changed, vector);
+                propagate_function_constants(stat->data.ifData->thenStatement, remove, add, changed, vector);
+                propagate_function_constants(stat->data.ifData->elseStatement, remove, add, changed, vector);
                 break;
             case CF_FOR:
                 // First invalidate all variables created in for definition, afterthought and its body
+                if (!ast_infer_node_type(stat->data.forData->definitionAst)) return;
+                propagate_ast_constants(&stat->data.forData->definitionAst, true, false, changed, vector);
+                if (!ast_infer_node_type(stat->data.forData->conditionalAst)) return;
+                propagate_ast_constants(&stat->data.forData->afterthoughtAst, true, false, changed, vector);
+                propagate_function_constants(stat->data.forData->bodyStatement, true, false, changed, vector);
+                // Now propagate whatever is constant after processing the whole loop
+                propagate_ast_constants(&stat->data.forData->conditionalAst, false, true, changed, vector);
+                propagate_function_constants(stat->data.forData->bodyStatement, false, false, changed, vector);
                 break;
         }
     }
 
     if (stat != NULL && stat->followingStatement != NULL) {
-        propagate_function_constants(stat->followingStatement, changed, vector);
+        propagate_function_constants(stat->followingStatement, remove, add, changed, vector);
     }
 }
 
@@ -634,7 +646,7 @@ void propagate_constants(bool *changed) {
     while (n != NULL) {
         VariableVector vector;
         vv_init(&vector);
-        propagate_function_constants(n->fun.rootStatement, changed, &vector);
+        propagate_function_constants(n->fun.rootStatement, false, true, changed, &vector);
         n = n->next;
         vv_free(&vector);
     }
