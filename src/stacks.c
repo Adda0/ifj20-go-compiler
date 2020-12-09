@@ -81,6 +81,10 @@ void precedence_stack_dispose(PrecedenceStack *stack) {
     PrecedenceNode *current = stack->top;
     while (current != NULL) {
         PrecedenceNode *next = current->lptr;
+        if (current->data.type == SYMB_ID || current->data.type == SYMB_FUNCTION ||
+                current->data.type == TOKEN_STRING) {
+            mstr_free(&current->data.data.str_val);
+        }
         free(current);
         current = next;
     }
