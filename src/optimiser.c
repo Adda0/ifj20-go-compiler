@@ -600,8 +600,12 @@ void propagate_ast_constants(ASTNode **ast, bool remove_only, bool add_new, bool
         }
     } else if ((*ast)->actionType == AST_ASSIGN) {
         // Assignment, invalidate all assigned variables as constants
-        for (unsigned i = 0; i < (*ast)->left->dataCount; i++) {
-            vv_remove_symbol(vector, (*ast)->left->data[i].astPtr->data[0].symbolTableItemPtr);
+        if ((*ast)->left->actionType == AST_ID) {
+            vv_remove_symbol(vector, (*ast)->left->data[0].symbolTableItemPtr);
+        } else {
+            for (unsigned i = 0; i < (*ast)->left->dataCount; i++) {
+                vv_remove_symbol(vector, (*ast)->left->data[i].astPtr->data[0].symbolTableItemPtr);
+            }
         }
     }
 }
@@ -667,6 +671,8 @@ void rebind_adjacent_statements(CFStatement *stat, CFFunction *fun) {
 }
 
 void remove_function_dead_code(CFStatement *stat, CFFunction *fun) {
+    SymbolTable *table;
+    SymbolTable *parent_table;
     if (stat != NULL && !is_statement_empty(stat)) {
         switch (stat->statementType) {
             case CF_IF:
@@ -682,23 +688,28 @@ void remove_function_dead_code(CFStatement *stat, CFFunction *fun) {
                         clean_stat(tmp, tmp->localSymbolTable);
                     } else {
                         // Has else, convert else into if true
-                        symtable_free(stat->data.ifData->thenStatement->localSymbolTable);
+                        table = stat->data.ifData->thenStatement->localSymbolTable;
+                        parent_table = stat->data.ifData->thenStatement->parentStatement->localSymbolTable;
                         stat->data.ifData->conditionalAst->data[0].boolConstantValue = true;
                         clean_stat(stat->data.ifData->thenStatement, stat->localSymbolTable);
                         stat->data.ifData->thenStatement = stat->data.ifData->elseStatement;
                         stat->data.ifData->elseStatement = NULL;
+                        if (table != parent_table) {
+                            symtable_free(table);
+                        }
                         remove_function_dead_code(stat->data.ifData->thenStatement, fun);
                     }
                 } else if (stat->data.ifData->conditionalAst->actionType == AST_CONST_BOOL &&
                         stat->data.ifData->conditionalAst->data[0].boolConstantValue){
                     // If true, remove useless else
                     if (stat->data.ifData->elseStatement != NULL) {
-                        if (stat->data.ifData->elseStatement->localSymbolTable !=
-                                stat->data.ifData->elseStatement->parentStatement->localSymbolTable) {
-                            symtable_free(stat->data.ifData->elseStatement->localSymbolTable);
-                        }
+                        table = stat->data.ifData->elseStatement->localSymbolTable;
+                        parent_table = stat->data.ifData->elseStatement->parentStatement->localSymbolTable;
                         clean_stat(stat->data.ifData->elseStatement, stat->localSymbolTable);
                         stat->data.ifData->elseStatement = NULL;
+                        if (table != parent_table) {
+                            symtable_free(table);
+                        }
                     }
                     remove_function_dead_code(stat->data.ifData->thenStatement, fun);
                 } else {
