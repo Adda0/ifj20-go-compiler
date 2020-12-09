@@ -6,7 +6,7 @@
 .PHONY: all clean test pack
 
 CC = gcc
-CFLAGS = -std=c11 -pedantic -Wall -Wextra
+CFLAGS = -std=c11 -pedantic -Wall -Wextra -O2
 
 CTESTFLAGS ?= ""
 
