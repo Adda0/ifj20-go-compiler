@@ -679,12 +679,12 @@ void remove_function_dead_code(CFStatement *stat, CFFunction *fun) {
                         stat->followingStatement = NULL;
                         CFStatement *tmp = stat;
                         stat = stat->parentStatement;
-                        clean_stat(tmp);
+                        clean_stat(tmp, tmp->localSymbolTable);
                     } else {
                         // Has else, convert else into if true
                         symtable_free(stat->data.ifData->thenStatement->localSymbolTable);
                         stat->data.ifData->conditionalAst->data[0].boolConstantValue = true;
-                        clean_stat(stat->data.ifData->thenStatement);
+                        clean_stat(stat->data.ifData->thenStatement, stat->localSymbolTable);
                         stat->data.ifData->thenStatement = stat->data.ifData->elseStatement;
                         stat->data.ifData->elseStatement = NULL;
                         remove_function_dead_code(stat->data.ifData->thenStatement, fun);
@@ -697,7 +697,7 @@ void remove_function_dead_code(CFStatement *stat, CFFunction *fun) {
                                 stat->data.ifData->elseStatement->parentStatement->localSymbolTable) {
                             symtable_free(stat->data.ifData->elseStatement->localSymbolTable);
                         }
-                        clean_stat(stat->data.ifData->elseStatement);
+                        clean_stat(stat->data.ifData->elseStatement, stat->localSymbolTable);
                         stat->data.ifData->elseStatement = NULL;
                     }
                     remove_function_dead_code(stat->data.ifData->thenStatement, fun);
@@ -715,7 +715,7 @@ void remove_function_dead_code(CFStatement *stat, CFFunction *fun) {
                     stat->followingStatement = NULL;
                     CFStatement *tmp = stat;
                     stat = stat->parentStatement;
-                    clean_stat(tmp);
+                    clean_stat(tmp, tmp->localSymbolTable);
                 } else {
                     remove_function_dead_code(stat->data.forData->bodyStatement, fun);
                 }

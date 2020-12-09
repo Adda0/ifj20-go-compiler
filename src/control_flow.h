@@ -136,7 +136,7 @@ extern CFError cf_error;
 void cf_init();
 
 // Clears memory allocated by CFStatement
-void clean_stat(CFStatement *stat);
+void clean_stat(CFStatement *stat, SymbolTable *parentTable);
 
 /* Recursively walks trough the generated program and frees:
  *  - Memory assigned to AST_CONST_STRING data, pointed to by the stringConstantValue pointer.
