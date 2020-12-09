@@ -486,25 +486,25 @@ void fold_constants(bool *changed) {
     }
 }
 
-void propagate_into_expression(ASTNode **ast, bool *changed, VariableVector *vector) {
+void propagate_into_expression(ASTNode **ast, bool *changed, VariableVector *vector, STSymbol *unary_symb) {
     if (*ast == NULL) {
         return;
     }
     if ((*ast)->actionType == AST_LIST) {
         // Walk through all elements of the list
         for (unsigned i = 0; i < (*ast)->dataCount; i++) {
-            propagate_into_expression(&(*ast)->data[i].astPtr, changed, vector);
+            propagate_into_expression(&(*ast)->data[i].astPtr, changed, vector, unary_symb);
         }
     } else {
         if ((*ast)->actionType != AST_FUNC_CALL) {
-            propagate_into_expression(&(*ast)->left, changed, vector);
+            propagate_into_expression(&(*ast)->left, changed, vector, unary_symb);
         }
-        propagate_into_expression(&(*ast)->right, changed, vector);
+        propagate_into_expression(&(*ast)->right, changed, vector, unary_symb);
     }
 
     if ((*ast)->actionType == AST_ID) {
         Variable *found = vv_find(vector, (*ast)->data[0].symbolTableItemPtr);
-        if (found) {
+        if (found != NULL) {
             // Replace ID with a constant
             ASTNode *tmp = *ast;
             switch(found->data.type) {
@@ -527,6 +527,9 @@ void propagate_into_expression(ASTNode **ast, bool *changed, VariableVector *vec
                 stderr_message("optimiser", ERROR, COMPILER_RESULT_ERROR_INTERNAL, "Out of memory\n");
             }
             *changed = true;
+            if (found->data.symbol == unary_symb) {
+                unary_symb->reference_counter++;
+            }
             clean_ast(tmp);
         }
     }
@@ -540,14 +543,22 @@ void propagate_ast_constants(ASTNode **ast, bool remove_only, bool add_new, bool
     if (*ast == NULL) {
         return;
     }
+    STSymbol *symb = NULL;
     if (!remove_only) {
         switch ((*ast)->actionType) {
             case AST_DEFINE:
             case AST_ASSIGN:
-                propagate_into_expression(&(*ast)->right, changed, vector);
+                // A bit of a hack, using unary assign operator (e.g. +=) can be determined based on actionType.
+                // Normal assignments have AST_LIST on the left, whereas unary assignments have only AST_ID (only
+                // one thing can be assigned at a time). We want to avoid reducing reference counter when cleaning
+                // the AST as the UNARY assignment doesn't count as a reference
+                if ((*ast)->left->actionType == AST_ID) {
+                    symb = (*ast)->left->data[0].symbolTableItemPtr;
+                }
+                propagate_into_expression(&(*ast)->right, changed, vector, symb);
                 break;
             default:
-                propagate_into_expression(ast, changed, vector);
+                propagate_into_expression(ast, changed, vector, NULL);
                 break;
         }
     }
