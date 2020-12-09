@@ -70,6 +70,7 @@ struct {
     STSymbol *inputb;
 
     bool reg3Used;
+    bool divUsed;
 } symbs;
 
 bool onlyFindDefinedSymbols = false;
@@ -732,6 +733,19 @@ void generate_expression_ast(ASTNode *exprAst) {
         out("MULS");
             break;
         case AST_DIVIDE:
+            symbs.divUsed = true;
+
+            if (exprAst->right->actionType == AST_ID) {
+                out_nnl("JUMPIFEQ $$zero_div %s ", exprAst->inheritedDataType == CF_INT ? "int@0" : "float@0x0p+0");
+                print_var_name(exprAst->right);
+                out_nl();
+            } else {
+                out("POPS %s", REG_1);
+                out("JUMPIFEQ $$zero_div %s %s", REG_1,
+                    exprAst->inheritedDataType == CF_INT ? "int@0" : "float@0x0p+0");
+                out("PUSHS %s", REG_1);
+            }
+
             if (exprAst->inheritedDataType == CF_INT) {
                 out("IDIVS");
             } else {
@@ -1818,5 +1832,10 @@ void tcg_generate() {
         }
 
         n = n->next;
+    }
+
+    if (symbs.divUsed) {
+        out("LABEL $$zero_div");
+        out("EXIT int@9");
     }
 }
