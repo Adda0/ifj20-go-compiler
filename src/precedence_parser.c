@@ -1145,6 +1145,7 @@ int parse_expression(AssignRule assign_rule, bool eol_before_allowed, ASTNode **
             stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL,
                            "Line %u: expected pure expression (no definitions or assignments)\n",
                            token.context.line_num);
+            precedence_stack_dispose(&stack);
             syntax_error();
         }
         StackSymbol current_symbol = copy_token_to_symbol();
@@ -1152,11 +1153,13 @@ int parse_expression(AssignRule assign_rule, bool eol_before_allowed, ASTNode **
         PrecedenceNode *to_reduce;
         if (top == NULL) {
             stderr_message("precendece_parser", ERROR, COMPILER_RESULT_ERROR_INTERNAL, "no terminal on stack\n");
+            precedence_stack_dispose(&stack);
             return COMPILER_RESULT_ERROR_INTERNAL;
         }
         int top_index = get_table_index(top->data.type, true, true); // we don't care about EOLs in the stack
         int symbol_index = get_table_index(current_symbol.type, eol_allowed, current_symbol.context.eol_read);
         if (top_index == -1 || symbol_index == -1) {
+            precedence_stack_dispose(&stack);
             syntax_error();
         }
         if (current_symbol.type == TOKEN_ID && symbol_index == INDEX_F) {
@@ -1173,6 +1176,7 @@ int parse_expression(AssignRule assign_rule, bool eol_before_allowed, ASTNode **
         switch (precedence_table[top_index][symbol_index]) {
             case '=':
                 if (!precedence_stack_push(&stack, current_symbol)) {
+                    precedence_stack_dispose(&stack);
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
                 update_token_counters(current_symbol.type, &definitions, &assignments, &function_calls, &other_tokens,
@@ -1182,9 +1186,11 @@ int parse_expression(AssignRule assign_rule, bool eol_before_allowed, ASTNode **
                 break;
             case '<':
                 if (!precedence_stack_post_insert(&stack, top, start_symb)) {
+                    precedence_stack_dispose(&stack);
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
                 if (!precedence_stack_push(&stack, current_symbol)) {
+                    precedence_stack_dispose(&stack);
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
                 update_token_counters(current_symbol.type, &definitions, &assignments, &function_calls, &other_tokens,
@@ -1197,12 +1203,14 @@ int parse_expression(AssignRule assign_rule, bool eol_before_allowed, ASTNode **
                 if (to_reduce == NULL) {
                     stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_INTERNAL,
                                    "supposed to reduce but not reduction start found\n");
+                    precedence_stack_dispose(&stack);
                     return COMPILER_RESULT_ERROR_INTERNAL;
                 }
                 if (!reduce(&stack, to_reduce, &function_level)) {
                     stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL,
                                    "Line %u, col %u: tried to reduce the preceeding expression, no rule found\n",
                                    token.context.line_num, token.context.char_num);
+                    precedence_stack_dispose(&stack);
                     syntax_error();
                 }
                 break;
@@ -1213,11 +1221,13 @@ int parse_expression(AssignRule assign_rule, bool eol_before_allowed, ASTNode **
                 stderr_message("precedence_parser", ERROR, COMPILER_RESULT_ERROR_SYNTAX_OR_WRONG_EOL,
                                "Line %u, col %u: no rule found in the precedence table\n",
                                token.context.line_num, token.context.char_num);
+                precedence_stack_dispose(&stack);
                 syntax_error();
         }
     }
 
     if (!matches_assign_rule(assign_rule, definitions, assignments, function_calls, other_tokens)) {
+        precedence_stack_dispose(&stack);
         syntax_error();
     }
     *result = stack.top->data.ast;

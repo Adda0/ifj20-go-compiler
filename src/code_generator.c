@@ -1714,7 +1714,7 @@ void generate_function(CFFunction *fun) {
     // Return from the function will be generated from the first RETURN statement.
     // If it hasn't been generated, we must generate it explicitly.
     if (!currentFunction.terminated) {
-        if (fun->returnValuesCount == 0 || fun->returnValues->variable.name != NULL) {
+        if (fun->returnValuesCount == 0) {
             generate_return_statement(NULL);
         } else {
             stderr_message("codegen", ERROR, COMPILER_RESULT_ERROR_WRONG_PARAMETER_OR_RETURN_VALUE,

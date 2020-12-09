@@ -442,7 +442,7 @@ bool is_statement_empty(CFStatement *stat) {
     }
 }
 
-static void clean_stat(CFStatement *stat) {
+void clean_stat(CFStatement *stat, SymbolTable *parentTable) {
     if (stat == NULL) return;
     switch (stat->statementType) {
         case CF_BASIC:
@@ -455,17 +455,26 @@ static void clean_stat(CFStatement *stat) {
             clean_ast(stat->data.ifData->conditionalAst);
 
             if (stat->data.ifData->thenStatement != NULL) {
+                // This could be an optimised if statement, we may not want to clean this table
                 SymbolTable *table = stat->data.ifData->thenStatement->localSymbolTable;
-                clean_stat(stat->data.ifData->thenStatement);
-                symtable_free(table);
+                bool clean;
+                if (stat->parentStatement == NULL) {
+                    clean = parentTable != table;
+                } else {
+                    clean = stat->parentStatement->localSymbolTable != table;
+                }
+                clean_stat(stat->data.ifData->thenStatement, parentTable);
+                if (clean) {
+                    symtable_free(table);
+                }
             }
 
             if (stat->data.ifData->elseStatement != NULL) {
                 if (stat->data.ifData->elseStatement->statementType == CF_IF) {
-                    clean_stat(stat->data.ifData->elseStatement);
+                    clean_stat(stat->data.ifData->elseStatement, parentTable);
                 } else {
                     SymbolTable *table = stat->data.ifData->elseStatement->localSymbolTable;
-                    clean_stat(stat->data.ifData->elseStatement);
+                    clean_stat(stat->data.ifData->elseStatement, parentTable);
                     symtable_free(table);
                 }
             }
@@ -482,7 +491,7 @@ static void clean_stat(CFStatement *stat) {
 
             if (stat->data.forData->bodyStatement != NULL) {
                 SymbolTable *table = stat->data.forData->bodyStatement->localSymbolTable;
-                clean_stat(stat->data.forData->bodyStatement);
+                clean_stat(stat->data.forData->bodyStatement, parentTable);
                 symtable_free(table);
             }
 
@@ -491,7 +500,7 @@ static void clean_stat(CFStatement *stat) {
             break;
     }
 
-    clean_stat(stat->followingStatement);
+    clean_stat(stat->followingStatement, parentTable);
     free(stat);
 }
 
@@ -510,7 +519,7 @@ void cf_clean_all() {
     CFFuncListNode *n = program->functionList;
 
     while (n != NULL) {
-        clean_stat(n->fun.rootStatement);
+        clean_stat(n->fun.rootStatement, n->fun.symbolTable);
         if (n->fun.symbolTable != NULL) {
             symtable_free(n->fun.symbolTable);
         }

@@ -14,6 +14,7 @@
 #include "control_flow.h"
 #include "ast.h"
 #include "stderr_message.h"
+#include "variable_vector.h"
 
 
 static double dabs(double x) {
@@ -448,7 +449,7 @@ void optimise_expressions(CFStatement *stat, bool *changed) {
         switch (stat->statementType) {
             case CF_BASIC:
             case CF_RETURN:
-                if (!ast_infer_node_type(stat->data.bodyAst)) return;
+                if (stat->data.bodyAst != NULL && !ast_infer_node_type(stat->data.bodyAst)) return;
                 optimise_ast(&stat->data.bodyAst, changed);
                 break;
             case CF_IF:
@@ -458,11 +459,13 @@ void optimise_expressions(CFStatement *stat, bool *changed) {
                 optimise_expressions(stat->data.ifData->elseStatement, changed);
                 break;
             case CF_FOR:
-                if (!ast_infer_node_type(stat->data.forData->definitionAst)) return;
+                if (stat->data.forData->definitionAst != NULL &&
+                        !ast_infer_node_type(stat->data.forData->definitionAst)) return;
                 optimise_ast(&stat->data.forData->definitionAst, changed);
                 if (!ast_infer_node_type(stat->data.forData->conditionalAst)) return;
                 optimise_ast(&stat->data.forData->conditionalAst, changed);
-                if (!ast_infer_node_type(stat->data.forData->afterthoughtAst)) return;
+                if (stat->data.forData->afterthoughtAst != NULL &&
+                    !ast_infer_node_type(stat->data.forData->afterthoughtAst)) return;
                 optimise_ast(&stat->data.forData->afterthoughtAst, changed);
                 optimise_expressions(stat->data.forData->bodyStatement, changed);
                 break;
@@ -483,10 +486,286 @@ void fold_constants(bool *changed) {
     }
 }
 
+void propagate_into_expression(ASTNode **ast, bool *changed, VariableVector *vector, STSymbol *unary_symb) {
+    if (*ast == NULL) {
+        return;
+    }
+    if ((*ast)->actionType == AST_LIST) {
+        // Walk through all elements of the list
+        for (unsigned i = 0; i < (*ast)->dataCount; i++) {
+            propagate_into_expression(&(*ast)->data[i].astPtr, changed, vector, unary_symb);
+        }
+    } else {
+        if ((*ast)->actionType != AST_FUNC_CALL) {
+            propagate_into_expression(&(*ast)->left, changed, vector, unary_symb);
+        }
+        propagate_into_expression(&(*ast)->right, changed, vector, unary_symb);
+    }
+
+    if ((*ast)->actionType == AST_ID) {
+        Variable *found = vv_find(vector, (*ast)->data[0].symbolTableItemPtr);
+        if (found != NULL) {
+            // Replace ID with a constant
+            ASTNode *tmp = *ast;
+            switch(found->data.type) {
+                case AST_CONST_BOOL:
+                    *ast = ast_leaf_constb(found->data.data.boolConstantValue);
+                    break;
+                case AST_CONST_INT:
+                    *ast = ast_leaf_consti(found->data.data.intConstantValue);
+                    break;
+                case AST_CONST_FLOAT:
+                    *ast = ast_leaf_constf(found->data.data.floatConstantValue);
+                    break;
+                case AST_CONST_STRING:
+                    *ast = ast_leaf_consts(found->data.data.stringConstantValue);
+                    break;
+                default:
+                    return;
+            }
+            if (*ast == NULL) {
+                stderr_message("optimiser", ERROR, COMPILER_RESULT_ERROR_INTERNAL, "Out of memory\n");
+            }
+            *changed = true;
+            if (found->data.symbol == unary_symb) {
+                unary_symb->reference_counter++;
+            }
+            clean_ast(tmp);
+        }
+    }
+}
+
+void propagate_ast_constants(ASTNode **ast, bool remove_only, bool add_new, bool *changed, VariableVector *vector) {
+    // First try to propagate in the expression. For assignments and definitions
+    // propagate only on the right side. This covers cases such as
+    // a := 5
+    // b := a
+    if (*ast == NULL) {
+        return;
+    }
+    STSymbol *symb = NULL;
+    if (!remove_only) {
+        switch ((*ast)->actionType) {
+            case AST_DEFINE:
+            case AST_ASSIGN:
+                // A bit of a hack, using unary assign operator (e.g. +=) can be determined based on actionType.
+                // Normal assignments have AST_LIST on the left, whereas unary assignments have only AST_ID (only
+                // one thing can be assigned at a time). We want to avoid reducing reference counter when cleaning
+                // the AST as the UNARY assignment doesn't count as a reference
+                if ((*ast)->left->actionType == AST_ID) {
+                    symb = (*ast)->left->data[0].symbolTableItemPtr;
+                }
+                propagate_into_expression(&(*ast)->right, changed, vector, symb);
+                break;
+            default:
+                propagate_into_expression(ast, changed, vector, NULL);
+                break;
+        }
+    }
+
+    // Now introduce new constants and remove what is no longer constant
+    if ((*ast)->actionType == AST_DEFINE) {
+        // Check if a constant isn't assigned in the definition
+        if ((*ast)->left->dataCount == (*ast)->right->dataCount) {
+            for (unsigned i = 0; i < (*ast)->left->dataCount; i++) {
+                bool new_constant = false;
+                VariableData data;
+                ASTNode *current = (*ast)->right->data[i].astPtr;
+                STSymbol *symbol = (*ast)->left->data[i].astPtr->data[0].symbolTableItemPtr;
+                switch (current->actionType) {
+                    case AST_CONST_FLOAT:
+                        new_constant = true;
+                        data.data.floatConstantValue = current->data[0].floatConstantValue;
+                        data.type = AST_CONST_FLOAT;
+                        break;
+                    case AST_CONST_INT:
+                        new_constant = true;
+                        data.data.intConstantValue = current->data[0].intConstantValue;
+                        data.type = AST_CONST_INT;
+                        break;
+                    case AST_CONST_STRING:
+                        new_constant = true;
+                        data.data.stringConstantValue = current->data[0].stringConstantValue;
+                        data.type = AST_CONST_STRING;
+                        break;
+                    case AST_CONST_BOOL:
+                        new_constant = true;
+                        data.data.boolConstantValue = current->data[0].boolConstantValue;
+                        data.type = AST_CONST_BOOL;
+                        break;
+                    default:
+                        // This could be a redefinition of a symbol with a non-constant, remove it
+                        vv_remove_symbol(vector, symbol);
+                        break;
+                }
+                if (new_constant && !remove_only && add_new) {
+                    data.symbol = symbol;
+                    vv_append(vector, data);
+                }
+            }
+        } else {
+            // Function call, we can't deduce constants, just remove all variables on LHS from vector
+            for (unsigned i = 0; i < (*ast)->left->dataCount; i++) {
+                vv_remove_symbol(vector, (*ast)->left->data[i].astPtr->data[0].symbolTableItemPtr);
+            }
+        }
+    } else if ((*ast)->actionType == AST_ASSIGN) {
+        // Assignment, invalidate all assigned variables as constants
+        if ((*ast)->left->actionType == AST_ID) {
+            vv_remove_symbol(vector, (*ast)->left->data[0].symbolTableItemPtr);
+        } else {
+            for (unsigned i = 0; i < (*ast)->left->dataCount; i++) {
+                vv_remove_symbol(vector, (*ast)->left->data[i].astPtr->data[0].symbolTableItemPtr);
+            }
+        }
+    }
+}
+
+void propagate_function_constants(CFStatement *stat, bool remove, bool add, bool *changed, VariableVector *vector) {
+    // Handle blocks nested in for, we can't add new constants inside a for block.
+    if (stat != NULL && !is_statement_empty(stat)) {
+        switch(stat->statementType) {
+            case CF_BASIC:
+            case CF_RETURN:
+                if (stat->data.bodyAst != NULL && !ast_infer_node_type(stat->data.bodyAst)) return;
+                propagate_ast_constants(&stat->data.bodyAst, remove, add, changed, vector);
+                break;
+            case CF_IF:
+                if (!ast_infer_node_type(stat->data.ifData->conditionalAst)) return;
+                propagate_ast_constants(&stat->data.ifData->conditionalAst, remove, add, changed, vector);
+                propagate_function_constants(stat->data.ifData->thenStatement, remove, add, changed, vector);
+                propagate_function_constants(stat->data.ifData->elseStatement, remove, add, changed, vector);
+                break;
+            case CF_FOR:
+                // First invalidate all variables created in for definition, afterthought and its body
+                if (!ast_infer_node_type(stat->data.forData->definitionAst)) return;
+                propagate_ast_constants(&stat->data.forData->definitionAst, true, false, changed, vector);
+                if (!ast_infer_node_type(stat->data.forData->conditionalAst)) return;
+                propagate_ast_constants(&stat->data.forData->afterthoughtAst, true, false, changed, vector);
+                propagate_function_constants(stat->data.forData->bodyStatement, true, false, changed, vector);
+                // Now propagate whatever is constant after processing the whole loop
+                propagate_ast_constants(&stat->data.forData->conditionalAst, false, true, changed, vector);
+                propagate_function_constants(stat->data.forData->bodyStatement, false, false, changed, vector);
+                break;
+        }
+    }
+
+    if (stat != NULL && stat->followingStatement != NULL) {
+        propagate_function_constants(stat->followingStatement, remove, add, changed, vector);
+    }
+}
+
+void propagate_constants(bool *changed) {
+    CFProgram *prog = get_program();
+    CFFuncListNode *n = prog->functionList;
+    while (n != NULL) {
+        VariableVector vector;
+        vv_init(&vector);
+        propagate_function_constants(n->fun.rootStatement, false, true, changed, &vector);
+        n = n->next;
+        vv_free(&vector);
+    }
+}
+
+void rebind_adjacent_statements(CFStatement *stat, CFFunction *fun) {
+    if (stat == fun->rootStatement) {
+        fun->rootStatement = stat->followingStatement;
+        if (stat->followingStatement != NULL) {
+            stat->followingStatement->parentStatement = NULL;
+        }
+    } else {
+        stat->parentStatement->followingStatement = stat->followingStatement;
+        if (stat->followingStatement != NULL) {
+            stat->followingStatement->parentStatement = stat->parentStatement;
+        }
+    }
+}
+
+void remove_function_dead_code(CFStatement *stat, CFFunction *fun) {
+    SymbolTable *table;
+    SymbolTable *parent_table;
+    if (stat != NULL && !is_statement_empty(stat)) {
+        switch (stat->statementType) {
+            case CF_IF:
+                if (stat->data.ifData->conditionalAst->actionType == AST_CONST_BOOL &&
+                        !stat->data.ifData->conditionalAst->data[0].boolConstantValue) {
+                    // If false, remove the block
+                    if (stat->data.ifData->elseStatement == NULL) {
+                        // If without else, completely remove the statement
+                        rebind_adjacent_statements(stat, fun);
+                        stat->followingStatement = NULL;
+                        CFStatement *tmp = stat;
+                        stat = stat->parentStatement;
+                        clean_stat(tmp, tmp->localSymbolTable);
+                    } else {
+                        // Has else, convert else into if true
+                        table = stat->data.ifData->thenStatement->localSymbolTable;
+                        parent_table = stat->data.ifData->thenStatement->parentStatement->localSymbolTable;
+                        stat->data.ifData->conditionalAst->data[0].boolConstantValue = true;
+                        clean_stat(stat->data.ifData->thenStatement, stat->localSymbolTable);
+                        stat->data.ifData->thenStatement = stat->data.ifData->elseStatement;
+                        stat->data.ifData->elseStatement = NULL;
+                        if (table != parent_table) {
+                            symtable_free(table);
+                        }
+                        remove_function_dead_code(stat->data.ifData->thenStatement, fun);
+                    }
+                } else if (stat->data.ifData->conditionalAst->actionType == AST_CONST_BOOL &&
+                        stat->data.ifData->conditionalAst->data[0].boolConstantValue){
+                    // If true, remove useless else
+                    if (stat->data.ifData->elseStatement != NULL) {
+                        table = stat->data.ifData->elseStatement->localSymbolTable;
+                        parent_table = stat->data.ifData->elseStatement->parentStatement->localSymbolTable;
+                        clean_stat(stat->data.ifData->elseStatement, stat->localSymbolTable);
+                        stat->data.ifData->elseStatement = NULL;
+                        if (table != parent_table) {
+                            symtable_free(table);
+                        }
+                    }
+                    remove_function_dead_code(stat->data.ifData->thenStatement, fun);
+                } else {
+                    remove_function_dead_code(stat->data.ifData->thenStatement, fun);
+                    remove_function_dead_code(stat->data.ifData->elseStatement, fun);
+                }
+                break;
+            case CF_FOR:
+                if (stat->data.forData->conditionalAst->actionType == AST_CONST_BOOL &&
+                        !stat->data.forData->conditionalAst->data[0].boolConstantValue) {
+                    // Discard dead for loop
+                    rebind_adjacent_statements(stat, fun);
+                    // Move one step back so that stat->followingStatement moves correctly forward
+                    stat->followingStatement = NULL;
+                    CFStatement *tmp = stat;
+                    stat = stat->parentStatement;
+                    clean_stat(tmp, tmp->localSymbolTable);
+                } else {
+                    remove_function_dead_code(stat->data.forData->bodyStatement, fun);
+                }
+                break;
+            default:
+                break;
+        }
+    }
+    if (stat != NULL && stat->followingStatement != NULL) {
+        remove_function_dead_code(stat->followingStatement, fun);
+    }
+}
+
+void remove_dead_code() {
+    CFProgram *prog = get_program();
+    CFFuncListNode *n = prog->functionList;
+    while (n != NULL) {
+        remove_function_dead_code(n->fun.rootStatement, &n->fun);
+        n = n->next;
+    }
+}
+
 void optimiser_optimise() {
     bool changed = true;
     while (compiler_result == COMPILER_RESULT_SUCCESS && changed) {
         changed = false;
         fold_constants(&changed);
+        propagate_constants(&changed);
     }
+    remove_dead_code();
 }
