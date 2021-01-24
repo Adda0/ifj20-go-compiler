@@ -1,0 +1,2 @@
+parser: error: Line 3, col 15: expected float64, int, string or bool keyword, got identifier
+precedence_parser: error: Line 4: expected pure expression (no definitions or assignments)
