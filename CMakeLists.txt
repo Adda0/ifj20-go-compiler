@@ -44,6 +44,7 @@ add_executable(Compiler
         src/stacks.h src/stacks.c
         src/control_flow.h src/control_flow.c
         src/optimiser.h src/optimiser.c
+        src/xml_gen.h src/xml_gen_impl.h src/xml_gen_impl.cpp
         src/code_generator.h src/code_generator.c
         src/ast.h src/ast.c
         src/symtable.h src/symtable.c src/variable_vector.h src/variable_vector.c)

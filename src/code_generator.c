@@ -18,16 +18,27 @@
 
 #define TCG_DEBUG 1
 #define UINT_DIGITS 21
+#define XML_GEN 1
 
-#define out_s(s) puts((s))
+#if XML_GEN
+#include "xml_gen.h"
+#define out(...) xml_out(__VA_ARGS__); xml_nl()
+#define out_nnl(...) xml_out(__VA_ARGS__)
+#define out_nl() xml_nl()
+#else
 #define out(...) printf(__VA_ARGS__); putchar('\n')
 #define out_nnl(...) printf(__VA_ARGS__)
 #define out_nl() putchar('\n')
+#endif
 
 #define is_direct_ast(ast) ((ast)->actionType > AST_VALUE)
 
 #if TCG_DEBUG
+#if XML_GEN
+#define dbg(msg, ...) printf("<!-- "); printf((msg),##__VA_ARGS__); printf(" -->\n"); fflush(stdout)
+#else
 #define dbg(msg, ...) printf("# --> "); printf((msg),##__VA_ARGS__); putchar('\n'); fflush(stdout)
+#endif
 #else
 #define dbg(msg, ...)
 #endif
@@ -1793,7 +1804,11 @@ void tcg_generate() {
     // otherwise, it can be ended using EXIT directly.
     bool generateMainAsFunc = mainSym->data.reference_counter > 1;
 
+#if XML_GEN
+    xml_begin();
+#else
     out(".IFJcode20");
+#endif
 
     out("DEFVAR %s", COND_RES_VAR);
     out("DEFVAR %s", COND_LHS_VAR);
@@ -1838,4 +1853,8 @@ void tcg_generate() {
         out("LABEL $$zero_div");
         out("EXIT int@9");
     }
+
+#if XML_GEN
+    xml_end();
+#endif
 }
